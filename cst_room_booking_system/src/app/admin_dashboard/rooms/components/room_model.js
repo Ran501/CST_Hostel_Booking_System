@@ -1,7 +1,8 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { ChevronDown, ArrowLeft, Eye, Download, FileSpreadsheet} from "lucide-react";
+import { useRouter } from "next/navigation";
 import RoomCard from "./room_card";
 
 const rooms = [
@@ -51,8 +52,17 @@ export default function HostelFloorPage() {
   const [disableOpen, setDisableOpen] = useState(false);
   const [roomAction, setRoomAction] = useState("Disable");
 
+  const router = useRouter();
+
   const [actionMode, setActionMode] = useState(null);
  // null | "edit" | "allocate" | "deallocate" | "enable" | "disable"
+
+  const [hostelOpen, setHostelOpen] = useState(false);
+  const [floorOpen, setFloorOpen] = useState(false);
+
+  const [hostel, setHostel] = useState("HF");
+  const [floor, setFloor] = useState("Floor 1");
+
 
  const handleActionClick = (mode) => {
   setSelectedRooms([]);
@@ -61,7 +71,7 @@ export default function HostelFloorPage() {
 };
 
   const [selectedRooms, setSelectedRooms] = useState([]);
-  const selectedSet = new Set(selectedRooms);
+  const hasSelection = selectedRooms.length > 0;
 
   const toggleRoomSelection = (roomId) => {
   setSelectedRooms((prev) =>
@@ -70,6 +80,49 @@ export default function HostelFloorPage() {
       : [...prev, roomId]
   );
 };
+
+const handleConfirmAction = () => {
+  if (!actionMode || selectedRooms.length === 0) return;
+
+  const query = selectedRooms.join(",");
+
+  switch (actionMode) {
+    case "edit":
+      router.push(`/edit-rooms?rooms=${query}`);
+      break;
+
+    case "allocate":
+      router.push(`/allocate-rooms?rooms=${query}`);
+      break;
+
+    case "deallocate":
+      router.push(`/deallocate-rooms?rooms=${query}`);
+      break;
+
+    case "disable":
+      router.push(`/disable-rooms?rooms=${query}`);
+      break;
+
+    case "enable":
+      router.push(`/enable-rooms?rooms=${query}`);
+      break;
+
+    default:
+      break;
+  }
+};
+
+useEffect(() => {
+  const handleClickOutside = () => {
+    setHostelOpen(false);
+    setFloorOpen(false);
+    setDisableOpen(false);
+  };
+
+  window.addEventListener("click", handleClickOutside);
+
+  return () => window.removeEventListener("click", handleClickOutside);
+}, []);
   
   return (
     <div className="min-h-screen bg-[#ececec]">
@@ -88,10 +141,35 @@ export default function HostelFloorPage() {
                   <ArrowLeft className="w-6 h-6" />
                 </button>
 
-                <button className="flex items-center text-[#2b7cff] text-[20px] md:text-[22px]">
-                  HF
-                  <ChevronDown size={16} className="ml-1" />
-                </button>
+                <div className="relative">
+                  <button
+                    onClick={(e) => {
+                          e.stopPropagation();
+                          setHostelOpen((prev) => !prev);
+                        }}
+                    className="flex items-center text-[#2b7cff] text-[20px] md:text-[22px]"
+                  >
+                    {hostel}
+                    <ChevronDown size={16} className="ml-1" />
+                  </button>
+
+                  {hostelOpen && (
+                    <div className="absolute top-full mt-2 left-0 w-32 bg-white border rounded-lg shadow-lg z-50 overflow-hidden">
+                      {["HF", "RKA", "RKB","NK"].map((item) => (
+                        <button
+                          key={item}
+                          onClick={() => {
+                            setHostel(item);
+                            setHostelOpen(false);
+                          }}
+                          className="w-full text-left px-4 py-2 hover:bg-gray-100"
+                        >
+                          {item}
+                        </button>
+                      ))}
+                    </div>
+                  )}
+                </div>
 
                 <div className="flex flex-wrap gap-2">
                   <Badge color="bg-[#56d154] text-white">Active</Badge>
@@ -124,10 +202,35 @@ export default function HostelFloorPage() {
               {/* Floor + Management Controls */}
               <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4">
                 <div className="flex flex-wrap items-center gap-4 text-[18px] md:text-[20px]">
-                  <button className="text-[#2b7cff] flex items-center gap-1">
-                    Floor 1
-                    <ChevronDown size={16} />
-                  </button>
+                  <div className="relative">
+                    <button
+                      onClick={(e) => {
+                            e.stopPropagation();
+                            setFloorOpen((prev) => !prev);
+                          }}
+                      className="text-[#2b7cff] flex items-center gap-1"
+                    >
+                      {floor}
+                      <ChevronDown size={16} />
+                    </button>
+
+                    {floorOpen && (
+                      <div className="absolute top-full mt-2 left-0 w-32 bg-white border rounded-lg shadow-lg z-50 overflow-hidden">
+                        {["Floor 1", "Floor 2", "Floor 3","Floor 4"].map((item) => (
+                          <button
+                            key={item}
+                            onClick={() => {
+                              setFloor(item);
+                              setFloorOpen(false);
+                            }}
+                            className="w-full text-left px-4 py-2 hover:bg-gray-100"
+                          >
+                            {item}
+                          </button>
+                        ))}
+                      </div>
+                    )}
+                  </div>
 
                   <span>18/18 Occupied</span>
                   <span>•</span>
@@ -135,6 +238,17 @@ export default function HostelFloorPage() {
                 </div>
 
                 <div className="flex flex-wrap gap-4 text-[18px] md:text-[20px]">
+                  {hasSelection && (
+                      <button
+                        onClick={handleConfirmAction}
+                        className={`hover:text-blue-600 transition ${
+                          actionMode ? "text-blue-600 font-semibold" : ""
+                        }`}
+                      >
+                        OK
+                      </button>
+                    )}
+
                   <button
                       onClick={() => handleActionClick("edit")}
                       className={`hover:text-blue-600 transition ${
@@ -178,7 +292,10 @@ export default function HostelFloorPage() {
 
                     {/* Chevron toggle */}
                     <button
-                      onClick={() => setDisableOpen((prev) => !prev)}
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setDisableOpen((prev) => !prev);
+                      }}
                       className="hover:text-blue-600 transition"
                     >
                       <ChevronDown
@@ -194,7 +311,8 @@ export default function HostelFloorPage() {
                       <div className="absolute right-0 top-full mt-2 w-36 bg-white border rounded-lg shadow-lg z-50 overflow-hidden">
 
                         <button
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
                             setRoomAction("Disable");
                             setDisableOpen(false);
                             handleActionClick("disable");
