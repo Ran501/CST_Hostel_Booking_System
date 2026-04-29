@@ -4,10 +4,10 @@ export default function RoomCard({ room, status, capacity, occupants }) {
   const percentage = Math.round((occupants.length / capacity) * 100);
 
   const statusColors = {
-    full: "bg-pink-600 text-white",
-    partial: "bg-orange-500 text-white",
-    empty: "bg-blue-500 text-white",
-    disabled: "bg-red-500 text-white",
+    full: "bg-red-500 text-white",
+    partial: "bg-orange-400 text-white",
+    empty: "bg-green-500 text-white",
+    disabled: "bg-gray-500 text-white",
   };
 
   return (
