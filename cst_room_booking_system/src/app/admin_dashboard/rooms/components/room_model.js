@@ -51,10 +51,25 @@ export default function HostelFloorPage() {
   const [disableOpen, setDisableOpen] = useState(false);
   const [roomAction, setRoomAction] = useState("Disable");
 
-  const [selectionMode, setSelectionMode] = useState(null);
-  // null | "edit" | "allocate" | "deallocate" | "enable" | "disable"
+  const [actionMode, setActionMode] = useState(null);
+ // null | "edit" | "allocate" | "deallocate" | "enable" | "disable"
+
+ const handleActionClick = (mode) => {
+  setSelectedRooms([]);
+
+  setActionMode((prev) => (prev === mode ? null : mode));
+};
 
   const [selectedRooms, setSelectedRooms] = useState([]);
+  const selectedSet = new Set(selectedRooms);
+
+  const toggleRoomSelection = (roomId) => {
+  setSelectedRooms((prev) =>
+    prev.includes(roomId)
+      ? prev.filter((id) => id !== roomId)
+      : [...prev, roomId]
+  );
+};
   
   return (
     <div className="min-h-screen bg-[#ececec]">
@@ -120,30 +135,50 @@ export default function HostelFloorPage() {
                 </div>
 
                 <div className="flex flex-wrap gap-4 text-[18px] md:text-[20px]">
-                  <button className="hover:text-blue-600 transition">
-                    Edit
-                  </button>
+                  <button
+                      onClick={() => handleActionClick("edit")}
+                      className={`hover:text-blue-600 transition ${
+                        actionMode === "edit" ? "text-blue-600 font-semibold" : ""
+                      }`}
+                    >
+                      Edit
+                    </button>
 
-                  <button className="hover:text-blue-600 transition">
-                    Allocate
-                  </button>
+                    <button
+                      onClick={() => handleActionClick("allocate")}
+                      className={`hover:text-blue-600 transition ${
+                        actionMode === "allocate" ? "text-blue-600 font-semibold" : ""
+                      }`}
+                    >
+                      Allocate
+                    </button>
 
-                  <button className="hover:text-blue-600 transition">
-                    Deallocate
-                  </button>
+                    <button
+                      onClick={() => handleActionClick("deallocate")}
+                      className={`hover:text-blue-600 transition ${
+                        actionMode === "deallocate" ? "text-blue-600 font-semibold" : ""
+                      }`}
+                    >
+                      Deallocate
+                    </button>
 
                   <div className="relative flex items-center gap-1">
-                    {/* Action button */}
+
+                    {/* Main Action Button */}
                     <button
-                      onClick={() => console.log(roomAction)}
-                      className="hover:text-blue-600 transition"
+                      onClick={() => handleActionClick(roomAction.toLowerCase())}
+                      className={`hover:text-blue-600 transition ${
+                        actionMode === roomAction.toLowerCase()
+                          ? "text-blue-600 font-semibold"
+                          : ""
+                      }`}
                     >
                       {roomAction}
                     </button>
 
                     {/* Chevron toggle */}
                     <button
-                      onClick={() => setDisableOpen(!disableOpen)}
+                      onClick={() => setDisableOpen((prev) => !prev)}
                       className="hover:text-blue-600 transition"
                     >
                       <ChevronDown
@@ -157,10 +192,12 @@ export default function HostelFloorPage() {
                     {/* Dropdown */}
                     {disableOpen && (
                       <div className="absolute right-0 top-full mt-2 w-36 bg-white border rounded-lg shadow-lg z-50 overflow-hidden">
+
                         <button
                           onClick={() => {
                             setRoomAction("Disable");
                             setDisableOpen(false);
+                            handleActionClick("disable");
                           }}
                           className="w-full text-left px-4 py-2 hover:bg-gray-100"
                         >
@@ -171,11 +208,13 @@ export default function HostelFloorPage() {
                           onClick={() => {
                             setRoomAction("Enable");
                             setDisableOpen(false);
+                            handleActionClick("enable");
                           }}
                           className="w-full text-left px-4 py-2 hover:bg-gray-100"
                         >
                           Enable
                         </button>
+
                       </div>
                     )}
                   </div>
@@ -196,6 +235,9 @@ export default function HostelFloorPage() {
                 status={r.status}
                 capacity={r.capacity}
                 occupants={r.occupants}
+                selectionMode={actionMode}
+                selected={selectedRooms.includes(r.room)}
+                onSelect={toggleRoomSelection}
               />
             ))}
           </div>
