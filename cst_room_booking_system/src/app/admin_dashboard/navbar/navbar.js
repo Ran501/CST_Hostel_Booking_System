@@ -24,7 +24,7 @@ export default function Navbar() {
 //   const [userEmail, setUserEmail] = useState("");
 //   const [gender, setGender] = useState("male");
 
-  const navItems = ["Dashboard", "Guest", "Rooms", "Hostel"];
+  const navItems = ["Dashboard", "Students", "Rooms", "Hostel"];
 
   const [confirmation, setConfirmation] = useState({
     message: "",
@@ -41,7 +41,7 @@ export default function Navbar() {
 
   const isActive = (item) => {
     if (item === "Dashboard") return pathname === "/admin_dashboard";
-    if (item === "Guest") return pathname.startsWith("/admin_dashboard/guests");
+    if (item === "Guest") return pathname.startsWith("/admin_dashboard/students");
     if (item === "Rooms") return pathname.startsWith("/admin_dashboard/rooms");
     if (item === "Hostel") return pathname.startsWith("/admin_dashboard/hostel");
     return false;
@@ -52,7 +52,7 @@ export default function Navbar() {
       case "Dashboard":
         return router.push("/admin_dashboard");
       case "Guest":
-        return router.push("/admin_dashboard/guests");
+        return router.push("/admin_dashboard/students");
       case "Rooms":
         return router.push("/admin_dashboard/rooms");
       case "Hostel":
