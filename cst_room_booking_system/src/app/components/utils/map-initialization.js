@@ -1,3 +1,4 @@
+// src/app/components/utils/map-initialization.js
 import maplibregl from 'maplibre-gl';
 import { getDeviceMapSettings } from './map-utils';
 import { 
@@ -8,7 +9,7 @@ import {
   highlightMarker,
   resetMarker 
 } from './marker-utils';
-import { MAP_BOUNDS, GATE_COORDINATES } from '../constants';
+import { MAP_BOUNDS, GATE_COORDINATES, HOSTELS, getHostelCoordinates } from '../constants';
 import { MAP_STYLE } from '../config/map-styles';
 
 export const initializeMap = (container, style, bounds) => {
@@ -29,15 +30,21 @@ export const initializeMap = (container, style, bounds) => {
 };
 
 export const addHostelMarkers = (map, hostels, markersRef, onHostelSelect) => {
+  // Detect if mobile
+  const isMobile = typeof window !== 'undefined' && window.innerWidth < 768;
+  
   hostels.forEach(hostel => {
+    // Get responsive coordinates for this hostel
+    const coordinates = getHostelCoordinates(hostel, isMobile);
+    
+    // Create marker with the responsive coordinates
     const markerEl = createHostelMarker(hostel.name, false);
     
-    // Use anchor: 'bottom' to prevent marker movement
     const marker = new maplibregl.Marker({ 
       element: markerEl,
       anchor: 'bottom'
     })
-      .setLngLat({ lng: hostel.lng, lat: hostel.lat })
+      .setLngLat({ lng: coordinates.lng, lat: coordinates.lat })
       .addTo(map);
 
     // Create popup for hover
@@ -46,10 +53,10 @@ export const addHostelMarkers = (map, hostels, markersRef, onHostelSelect) => {
       closeButton: false,
       closeOnClick: false
     })
-      .setLngLat({ lng: hostel.lng, lat: hostel.lat })
+      .setLngLat({ lng: coordinates.lng, lat: coordinates.lat })
       .setHTML(`<div style="padding: 4px 8px; color:black;font-size: 13px; font-weight: 500;">${hostel.name}</div>`);
 
-    // Add hover effects - only if not selected (blue)
+    // Add hover effects
     markerEl.addEventListener('mouseenter', () => {
       applyHoverEffect(markerEl);
       hoverPopup.addTo(map);
@@ -60,7 +67,7 @@ export const addHostelMarkers = (map, hostels, markersRef, onHostelSelect) => {
       hoverPopup.remove();
     });
 
-    // Add click handler: highlight marker, reset others, show card
+    // Add click handler
     markerEl.addEventListener('click', () => {
       // Reset all markers to red first
       Object.keys(markersRef.current).forEach((key) => {
@@ -69,10 +76,10 @@ export const addHostelMarkers = (map, hostels, markersRef, onHostelSelect) => {
         resetMarker(otherMarkerEl);
       });
 
-      // Highlight this marker (blue + shadow)
+      // Highlight this marker
       highlightMarker(markerEl);
 
-      // Open hostel card
+      // Open hostel card with the hostel object
       onHostelSelect(hostel);
     });
 

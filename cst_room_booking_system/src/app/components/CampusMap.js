@@ -105,6 +105,28 @@ export default function CampusMap() {
     return () => clearTimeout(timer);
   }, [mapRef.current]); // This runs when mapRef.current changes (when map is ready)
 
+  // In your CampusMap.js, add this effect
+useEffect(() => {
+  if (!mapRef.current) return;
+
+  const handleResize = () => {
+    const isMobile = window.innerWidth < 768;
+    
+    // Update all markers with new responsive coordinates
+    Object.values(markersRef.current).forEach((marker, index) => {
+      const hostel = HOSTELS[index];
+      if (hostel && hostel.coordinates) {
+        const newCoords = isMobile ? hostel.coordinates.mobile : hostel.coordinates.desktop;
+        marker.setLngLat([newCoords.lng, newCoords.lat]);
+      }
+    });
+  };
+
+  window.addEventListener('resize', handleResize);
+  return () => window.removeEventListener('resize', handleResize);
+}, [mapRef.current, markersRef.current]);
+
+
   return (
     <div ref={containerRef} className="relative w-full h-full">
       <StatsCards stats={stats} />
