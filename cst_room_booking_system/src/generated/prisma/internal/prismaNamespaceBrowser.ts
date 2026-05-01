@@ -17,8 +17,8 @@
 
 import * as runtime from "@prisma/client/runtime/index-browser"
 
-export type * from '../models.ts'
-export type * from './prismaNamespace.ts'
+export type * from '../models'
+export type * from './prismaNamespace'
 
 export const Decimal = runtime.Decimal
 
@@ -51,7 +51,11 @@ export const AnyNull = runtime.AnyNull
 
 
 export const ModelName = {
-
+  User: 'User',
+  Hostel: 'Hostel',
+  Room: 'Room',
+  Booking: 'Booking',
+  FloorAllocation: 'FloorAllocation'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -68,4 +72,83 @@ export const TransactionIsolationLevel = runtime.makeStrictEnum({
 } as const)
 
 export type TransactionIsolationLevel = (typeof TransactionIsolationLevel)[keyof typeof TransactionIsolationLevel]
+
+
+export const UserScalarFieldEnum = {
+  id: 'id',
+  email: 'email',
+  studentNumber: 'studentNumber',
+  password: 'password',
+  name: 'name',
+  role: 'role',
+  year: 'year',
+  gender: 'gender',
+  phoneNumber: 'phoneNumber'
+} as const
+
+export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
+
+
+export const HostelScalarFieldEnum = {
+  id: 'id',
+  hostelName: 'hostelName',
+  numberOfFloor: 'numberOfFloor',
+  gender: 'gender',
+  status: 'status',
+  year: 'year',
+  capacity: 'capacity'
+} as const
+
+export type HostelScalarFieldEnum = (typeof HostelScalarFieldEnum)[keyof typeof HostelScalarFieldEnum]
+
+
+export const RoomScalarFieldEnum = {
+  id: 'id',
+  roomNumber: 'roomNumber',
+  floor: 'floor',
+  capacity: 'capacity',
+  status: 'status',
+  year: 'year',
+  hostel_id: 'hostel_id'
+} as const
+
+export type RoomScalarFieldEnum = (typeof RoomScalarFieldEnum)[keyof typeof RoomScalarFieldEnum]
+
+
+export const BookingScalarFieldEnum = {
+  id: 'id',
+  userPhone: 'userPhone',
+  roomId: 'roomId',
+  checkIn: 'checkIn',
+  checkOut: 'checkOut',
+  createdAt: 'createdAt'
+} as const
+
+export type BookingScalarFieldEnum = (typeof BookingScalarFieldEnum)[keyof typeof BookingScalarFieldEnum]
+
+
+export const FloorAllocationScalarFieldEnum = {
+  id: 'id',
+  hostelId: 'hostelId',
+  floor: 'floor',
+  studentYear: 'studentYear'
+} as const
+
+export type FloorAllocationScalarFieldEnum = (typeof FloorAllocationScalarFieldEnum)[keyof typeof FloorAllocationScalarFieldEnum]
+
+
+export const SortOrder = {
+  asc: 'asc',
+  desc: 'desc'
+} as const
+
+export type SortOrder = (typeof SortOrder)[keyof typeof SortOrder]
+
+
+export const QueryMode = {
+  default: 'default',
+  insensitive: 'insensitive'
+} as const
+
+export type QueryMode = (typeof QueryMode)[keyof typeof QueryMode]
 

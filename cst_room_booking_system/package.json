@@ -11,6 +11,7 @@
   "dependencies": {
     "@prisma/client": "^7.8.0",
     "@react-spring/web": "^10.0.3",
+    "csv-parser": "^3.2.0",
     "lucide-react": "^1.11.0",
     "maplibre-gl": "^5.24.0",
     "next": "16.2.4",
