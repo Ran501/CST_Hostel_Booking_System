@@ -85,6 +85,20 @@ export default function RoomManagement() {
   const [selectedRooms, setSelectedRooms] = useState([]);
   const hasSelection = selectedRooms.length > 0;
 
+  const allRoomIds = rooms.map((r) => r.room);
+
+const isAllSelected =
+  selectedRooms.length > 0 &&
+  selectedRooms.length === allRoomIds.length;
+
+  const handleSelectAll = () => {
+  if (isAllSelected) {
+    setSelectedRooms([]);
+  } else {
+    setSelectedRooms(allRoomIds);
+  }
+};
+
  const toggleRoomSelection = (roomId) => {
   setSelectedRooms((prev) => {
     const safePrev = Array.isArray(prev) ? prev : [];
@@ -300,6 +314,14 @@ useEffect(() => {
                 </div>
 
                 <div className="flex flex-wrap gap-4 text-[18px] md:text-[20px]">
+                  {["edit","allocate", "deallocate", "disable", "enable"].includes(actionMode) && (
+                      <button
+                        onClick={handleSelectAll}
+                        className="text-blue-600 font-medium hover:underline"
+                      >
+                        {isAllSelected ? "Unselect All" : "Select All"}
+                      </button>
+                    )}
                   {hasSelection && (
                       <button
                         onClick={handleConfirmAction}
