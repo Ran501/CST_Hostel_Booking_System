@@ -4,47 +4,60 @@ generator client {
 }
 
 datasource db {
-  provider = "postgresql"
+  provider  = "postgresql"
 }
 
 model User {
-  phoneNumber String    @id
-  name        String
-  email       String    @unique
-  gender      String
-  role        String    @default("user")
-  createdAt   DateTime  @default(now())
-  bookings    Booking[]
+  id            String    @id @default(uuid())
+  email         String    @unique
+  studentNumber String    @unique
+  password      String
+  name          String
+  role          String    @default("user")
+  year          Int       // student's current year (1st, 2nd, etc.)
+  gender        String
+  phoneNumber   String    @unique
+  bookings      Booking[]
+
+  @@index([email])
+  @@index([year])
 }
 
 model Hostel {
-  id          String        @id @default(uuid())
-  name        String
-  totalFloors Int
-  isActive    Boolean?      @default(true)
-  capacity    Int?
-  totalRooms  Int?
-  forGender   String?
-  FloorGender FloorGender[]
-  Room        Room[]
+  id              String    @id @default(uuid())
+  hostelName      String
+  numberOfFloor   Int
+  gender          String    // which genders allowed (e.g., "male", "female", "any")
+  status          String    @default("active") // active, inactive, maintenance
+  year            Int       // which student year this hostel is primarily for (optional)
+  capacity        Int       // total capacity across all rooms
+  rooms           Room[]
+  floorAllocations FloorAllocation[]
+
+  @@index([status])
+  @@index([year])
 }
 
 model Room {
-  id             String    @id @default(uuid())
-  roomNumber     String
-  floor          Int
-  capacity       Int
-  hostelId       String
-  isActive       Boolean?  @default(true)
-  occupied       Int?
-  disabledReason String?
-  bookings       Booking[]
-  Hostel         Hostel    @relation(fields: [hostelId], references: [id])
+  id         String    @id @default(uuid())
+  roomNumber String
+  floor      Int
+  capacity   Int       @default(3) // each room up to 3 students
+  status     String    @default("available") // available, full, maintenance
+  year       Int       // which student year this room is for (can override floor allocation)
+  hostel_id  String
+  hostel     Hostel    @relation(fields: [hostel_id], references: [id], onDelete: Cascade)
+  bookings   Booking[]
+
+  @@unique([hostel_id, roomNumber]) // no duplicate room numbers within same hostel
+  @@index([hostel_id])
+  @@index([floor])
+  @@index([status])
 }
 
 model Booking {
   id        String   @id @default(uuid())
-  studentNumber String
+  studentNumber String   // references User.phoneNumber
   roomId    String
   checkIn   DateTime
   checkOut  DateTime
@@ -57,12 +70,14 @@ model Booking {
   @@index([checkIn, checkOut]) // for date-range queries
 }
 
-model FloorGender {
-  id        String @id
-  hostelId  String
-  floor     Int
-  forGender String
-  Hostel    Hostel @relation(fields: [hostelId], references: [id], onDelete: Cascade)
+// New model: allocate specific floors to student years (e.g., Floor 1 → 1st year, Floor 2 → 2nd year)
+model FloorAllocation {
+  id          String   @id @default(uuid())
+  hostelId    String
+  floor       Int
+  studentYear Int      // e.g., 1, 2, 3, 4
+  hostel      Hostel   @relation(fields: [hostelId], references: [id], onDelete: Cascade)
 
-  @@unique([hostelId, floor])
+  @@unique([hostelId, floor])        // each floor in a hostel can have only one allocation
+  @@index([studentYear])
 }
