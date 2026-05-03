@@ -1,13 +1,13 @@
 "use client";
 
-import HostelFloorPage from "./components/room_model"; // adjust path if needed
+import RoomManagement from "./components/room_model"; // adjust path if needed
 import Navbar from "../navbar/navbar";
 
 export default function AdminDashboardPage() {
   return (
     <div className="min-h-screen bg-white">
       <Navbar />
-      <HostelFloorPage />
+      <RoomManagement />
     </div>
   );
 }

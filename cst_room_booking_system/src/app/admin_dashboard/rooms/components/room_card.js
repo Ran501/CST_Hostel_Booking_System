@@ -18,8 +18,10 @@ export default function RoomCard({
     disabled: "bg-gray-500 text-white",
   };
 
+  const isDisabled = status === "disabled";
+
   const handleClick = () => {
-    if (selectionMode) {
+    if (selectionMode && !isDisabled) {
       onSelect(room);
     }
   };
@@ -27,13 +29,14 @@ export default function RoomCard({
   return (
     <div
       onClick={handleClick}
-      className={`relative border rounded-md p-3 min-h-[175px] transition cursor-pointer
-        hover:shadow-md
+      className={`relative border rounded-md p-3 min-h-[175px] transition
+        ${selectionMode && !isDisabled ? "cursor-pointer hover:shadow-md" : ""}
         ${
           selected
             ? "border-blue-500 bg-blue-50 shadow-md"
             : "bg-[#f5f5f5] border-gray-200"
         }
+        ${isDisabled ? "opacity-70 cursor-not-allowed" : ""}
       `}
     >
       {/* Checkbox (only in selection mode) */}
@@ -41,7 +44,12 @@ export default function RoomCard({
         <input
           type="checkbox"
           checked={selected}
+          disabled={isDisabled}
           readOnly
+          onClick={(e) => {
+            e.stopPropagation(); // prevent parent click
+            if (!isDisabled) onSelect(room);
+          }}
           className="absolute top-3 left-3 w-4 h-4 accent-blue-600"
         />
       )}
@@ -93,7 +101,7 @@ export default function RoomCard({
           </ul>
         ) : (
           <span className="italic text-gray-500">
-            {status === "disabled" ? "Disabled (Luggage Room)" : "No occupants"}
+            {isDisabled ? "Disabled (Luggage Room)" : "No occupants"}
           </span>
         )}
       </div>

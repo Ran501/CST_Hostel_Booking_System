@@ -4,6 +4,9 @@ import { useState, useEffect } from "react";
 import { ChevronDown, ArrowLeft, Eye, Download, FileSpreadsheet} from "lucide-react";
 import { useRouter } from "next/navigation";
 import RoomCard from "./room_card";
+import EditRoomsModal from "./room_edit";
+import AllocateStudents from "./room_allocate";
+import DeallocateStudents from "./room_deallocate";
 
 const rooms = [
   { room: "HF-101", status: "full", capacity: 3, occupants: ["Alice", "Bob", "Charlie"] },
@@ -40,6 +43,7 @@ const rooms = [
   { room: "HF-132", status: "disabled", capacity: 3, occupants: [] },
 ];
 
+
 function Badge({ children, color }) {
   return (
     <span className={`px-2.5 py-1 rounded-full text-sm md:text-base ${color}`}>
@@ -48,7 +52,7 @@ function Badge({ children, color }) {
   );
 }
 
-export default function HostelFloorPage() {
+export default function RoomManagement() {  
   const [disableOpen, setDisableOpen] = useState(false);
   const [roomAction, setRoomAction] = useState("Disable");
 
@@ -63,6 +67,14 @@ export default function HostelFloorPage() {
   const [hostel, setHostel] = useState("HF");
   const [floor, setFloor] = useState("Floor 1");
 
+  const [disableReasonOpen, setDisableReasonOpen] = useState(false);
+  // const [selectedRoom, setSelectedRoom] = useState(null);
+  const [reason, setReason] = useState("");
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [open, setOpen] = useState(true);
+  const [allocateStudentsOpen, setAllocateStudentsOpen] = useState(false);
+  const [deallocateStudentsOpen, setDeallocateStudentsOpen] = useState(false);
+
 
  const handleActionClick = (mode) => {
   setSelectedRooms([]);
@@ -73,13 +85,66 @@ export default function HostelFloorPage() {
   const [selectedRooms, setSelectedRooms] = useState([]);
   const hasSelection = selectedRooms.length > 0;
 
-  const toggleRoomSelection = (roomId) => {
-  setSelectedRooms((prev) =>
-    prev.includes(roomId)
-      ? prev.filter((id) => id !== roomId)
-      : [...prev, roomId]
-  );
+  const allRoomIds = rooms.map((r) => r.room);
+
+const isAllSelected =
+  selectedRooms.length > 0 &&
+  selectedRooms.length === allRoomIds.length;
+
+  const handleSelectAll = () => {
+  if (isAllSelected) {
+    setSelectedRooms([]);
+  } else {
+    setSelectedRooms(allRoomIds);
+  }
 };
+
+ const toggleRoomSelection = (roomId) => {
+  setSelectedRooms((prev) => {
+    const safePrev = Array.isArray(prev) ? prev : [];
+
+    return safePrev.includes(roomId)
+      ? safePrev.filter((id) => id !== roomId)
+      : [...safePrev, roomId];
+  });
+};
+const enableRooms = () => {
+  setRooms((prev) =>
+    prev.map((room) =>
+      selectedRooms.includes(room.id)
+        ? { ...room, isActive: true }
+        : room
+    )
+  );
+
+  setSelectedRooms([]);
+  setActionMode(null);
+};
+
+const startDisableFlow = () => {
+  if (!hasSelection) return;
+  setDisableReasonOpen(true);
+};
+
+const confirmDisable = () => {
+  setRooms((prev) =>
+    prev.map((room) =>
+      selectedRooms.includes(room.id)
+        ? {
+            ...room,
+            isActive: false,
+            disableReason: reason,
+          }
+        : room
+    )
+  );
+
+  setSelectedRooms([]);
+  setReason("");
+  setDisableReasonOpen(false);
+  setActionMode(null);
+};
+
 
 const handleConfirmAction = () => {
   if (!actionMode || selectedRooms.length === 0) return;
@@ -88,29 +153,40 @@ const handleConfirmAction = () => {
 
   switch (actionMode) {
     case "edit":
-      router.push(`/edit-rooms?rooms=${query}`);
+      setEditModalOpen(true);
       break;
 
     case "allocate":
-      router.push(`/allocate-rooms?rooms=${query}`);
+      setAllocateStudentsOpen(true);
       break;
 
     case "deallocate":
-      router.push(`/deallocate-rooms?rooms=${query}`);
+      setDeallocateStudentsOpen(true);
       break;
 
     case "disable":
-      router.push(`/disable-rooms?rooms=${query}`);
+      setActionMode("disable");
+      setDisableReasonOpen(true); // open reason UI ONLY if needed in same step OR later
       break;
 
     case "enable":
-      router.push(`/enable-rooms?rooms=${query}`);
+      setActionMode("enable");
+      setSelectedRooms(query); // just select
       break;
 
     default:
       break;
   }
 };
+
+const students = rooms.flatMap((roomObj) =>
+  (roomObj.occupants || []).map((name, index) => ({
+    id: `${roomObj.room}-${index}`, // generate unique id
+    name: name,
+    room: roomObj.room,
+    year: "N/A", // you don’t have this data yet
+  }))
+);
 
 useEffect(() => {
   const handleClickOutside = () => {
@@ -238,6 +314,14 @@ useEffect(() => {
                 </div>
 
                 <div className="flex flex-wrap gap-4 text-[18px] md:text-[20px]">
+                  {["edit","allocate", "deallocate", "disable", "enable"].includes(actionMode) && (
+                      <button
+                        onClick={handleSelectAll}
+                        className="text-blue-600 font-medium hover:underline"
+                      >
+                        {isAllSelected ? "Unselect All" : "Select All"}
+                      </button>
+                    )}
                   {hasSelection && (
                       <button
                         onClick={handleConfirmAction}
@@ -278,7 +362,7 @@ useEffect(() => {
 
                   <div className="relative flex items-center gap-1">
 
-                    {/* Main Action Button */}
+                    {/* Main Action Button (JUST SELECT MODE) */}
                     <button
                       onClick={() => handleActionClick(roomAction.toLowerCase())}
                       className={`hover:text-blue-600 transition ${
@@ -310,25 +394,34 @@ useEffect(() => {
                     {disableOpen && (
                       <div className="absolute right-0 top-full mt-2 w-36 bg-white border rounded-lg shadow-lg z-50 overflow-hidden">
 
+                        {/* 🔴 DISABLE (ONLY SELECT MODE) */}
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
+
                             setRoomAction("Disable");
                             setDisableOpen(false);
+
+                            // only select mode + selection
                             handleActionClick("disable");
                           }}
-                          className="w-full text-left px-4 py-2 hover:bg-gray-100"
+                          className="w-full text-left px-4 py-2 hover:bg-gray-100 text-red-600"
                         >
                           Disable
                         </button>
 
+                        {/* 🟢 ENABLE (ONLY SELECT MODE) */}
                         <button
-                          onClick={() => {
+                          onClick={(e) => {
+                            e.stopPropagation();
+
                             setRoomAction("Enable");
                             setDisableOpen(false);
+
+                            // only select mode + selection
                             handleActionClick("enable");
                           }}
-                          className="w-full text-left px-4 py-2 hover:bg-gray-100"
+                          className="w-full text-left px-4 py-2 hover:bg-gray-100 text-green-600"
                         >
                           Enable
                         </button>
@@ -385,6 +478,103 @@ useEffect(() => {
         </div>
 
       </div>
+      {disableReasonOpen && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50">
+
+          <div className="w-[90%] max-w-md rounded-2xl overflow-hidden shadow-2xl">
+
+            {/* 🔵 HEADER */}
+            <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-5 text-center">
+              <h2 className="text-xl font-bold text-white">
+                Disable Rooms
+              </h2>
+              <p className="text-sm text-blue-100 mt-1">
+                Provide a reason for disabling selected rooms
+              </p>
+
+              {/* Selected Count Badge */}
+              <div className="mt-3 inline-block px-3 py-1 text-xs rounded-full bg-white/20 text-white">
+                {selectedRooms.length} room(s) selected
+              </div>
+            </div>
+
+            {/* ⚪ BODY */}
+            <div className="bg-white px-6 py-5">
+
+              {/* Label */}
+              <label className="block text-sm font-medium text-gray-700 mb-2">
+                Reason
+              </label>
+
+              {/* Textarea */}
+              <textarea
+                value={reason}
+                onChange={(e) => setReason(e.target.value)}
+                placeholder="Enter reason for disabling rooms..."
+                className="w-full rounded-xl border border-blue-200 bg-blue-50 p-3 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                rows={4}
+              />
+
+              {/* Buttons */}
+              <div className="flex justify-end gap-3 mt-6">
+
+                {/* Cancel */}
+                <button
+                  onClick={() => setDisableReasonOpen(false)}
+                  className="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition"
+                >
+                  Cancel
+                </button>
+
+                {/* Confirm */}
+                <button
+                  onClick={confirmDisable}
+                  className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition shadow-sm"
+                >
+                  Confirm Disable
+                </button>
+
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      <EditRoomsModal
+        isOpen={editModalOpen}
+        onClose={() => setEditModalOpen(false)}
+        selectedCount={selectedRooms.length}
+        onSave={(data) => {
+          console.log("Edited:", data);
+
+          // 👉 apply changes to rooms here
+          setEditModalOpen(false);
+          setSelectedRooms([]);
+          setActionMode(null);
+        }}
+      />
+
+      {/* Allocate */}
+      <AllocateStudents
+        isOpen={allocateStudentsOpen}
+        onClose={() => setAllocateStudentsOpen(false)}
+        rooms={rooms}
+        onNext={(data) => {
+          console.log("Allocate:", data);
+          setAllocateStudentsOpen(false);
+        }}
+      />
+
+      {/* Deallocate */}
+      <DeallocateStudents
+        isOpen={deallocateStudentsOpen}
+        onClose={() => setDeallocateStudentsOpen(false)}
+        students={students}
+        onConfirm={(selectedIds) => {
+          console.log("Deallocate:", selectedIds);
+          setDeallocateStudentsOpen(false);
+        }}
+      />
     </div>
   );
 }
