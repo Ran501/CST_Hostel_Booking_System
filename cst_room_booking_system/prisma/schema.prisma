@@ -44,12 +44,17 @@ model Room {
 
 model Booking {
   id        String   @id @default(uuid())
-  userPhone String
+  studentNumber String
   roomId    String
   checkIn   DateTime
   checkOut  DateTime
-  room      Room     @relation(fields: [roomId], references: [id])
-  user      User     @relation(fields: [userPhone], references: [phoneNumber])
+  createdAt DateTime @default(now())
+  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [studentNumber], references: [studentNumber], onDelete: Cascade)
+
+  @@index([studentNumber])
+  @@index([roomId])
+  @@index([checkIn, checkOut]) // for date-range queries
 }
 
 model FloorGender {
