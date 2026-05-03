@@ -8,56 +8,88 @@ datasource db {
 }
 
 model User {
-  phoneNumber String    @id
-  name        String
-  email       String    @unique
-  gender      String
-  role        String    @default("user")
-  createdAt   DateTime  @default(now())
-  bookings    Booking[]
+  id            String    @id @default(uuid())
+  email         String    @unique
+  studentNumber String    @unique
+  password      String
+  name          String
+  role          String    @default("user")
+  year          Int
+  gender        String
+  phoneNumber   String    @unique
+  bookings      Booking[]
+
+  @@index([email])
+  @@index([year])
 }
 
 model Hostel {
-  id          String        @id @default(uuid())
-  name        String
-  totalFloors Int
-  isActive    Boolean?      @default(true)
-  capacity    Int?
-  totalRooms  Int?
-  forGender   String?
-  FloorGender FloorGender[]
-  Room        Room[]
+  id               String            @id @default(uuid())
+  hostelName       String
+  numberOfFloor    Int
+  gender           String
+  status           String            @default("active")
+  year             Int
+  capacity         Int
+  floorAllocations FloorAllocation[]
+  rooms            Room[]
+
+  @@index([status])
+  @@index([year])
 }
 
 model Room {
-  id             String    @id @default(uuid())
-  roomNumber     String
-  floor          Int
-  capacity       Int
-  hostelId       String
-  isActive       Boolean?  @default(true)
-  occupied       Int?
-  disabledReason String?
-  bookings       Booking[]
-  Hostel         Hostel    @relation(fields: [hostelId], references: [id])
+  id         String    @id @default(uuid())
+  roomNumber String
+  floor      Int
+  capacity   Int       @default(3)
+  status     String    @default("available")
+  year       Int
+  hostel_id  String
+  bookings   Booking[]
+  hostel     Hostel    @relation(fields: [hostel_id], references: [id], onDelete: Cascade)
+
+  @@unique([hostel_id, roomNumber])
+  @@index([hostel_id])
+  @@index([floor])
+  @@index([status])
 }
 
 model Booking {
-  id        String   @id @default(uuid())
-  userPhone String
-  roomId    String
-  checkIn   DateTime
-  checkOut  DateTime
-  room      Room     @relation(fields: [roomId], references: [id])
-  user      User     @relation(fields: [userPhone], references: [phoneNumber])
+  id            String   @id @default(uuid())
+  studentNumber String
+  roomId        String
+  checkIn       DateTime
+  checkOut      DateTime
+  createdAt     DateTime @default(now())
+  room          Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user          User     @relation(fields: [studentNumber], references: [studentNumber], onDelete: Cascade)
+
+  @@index([studentNumber])
+  @@index([roomId])
+  @@index([checkIn, checkOut])
 }
 
-model FloorGender {
-  id        String @id
-  hostelId  String
-  floor     Int
-  forGender String
-  Hostel    Hostel @relation(fields: [hostelId], references: [id], onDelete: Cascade)
+model FloorAllocation {
+  id          String @id @default(uuid())
+  hostelId    String
+  floor       Int
+  studentYear Int
+  hostel      Hostel @relation(fields: [hostelId], references: [id], onDelete: Cascade)
 
   @@unique([hostelId, floor])
+  @@index([studentYear])
+}
+
+model OTP {
+  id        String   @id
+  email     String
+  otpHash   String
+  expiresAt DateTime
+  attempts  Int      @default(0)
+  used      Boolean  @default(false)
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@index([expiresAt])
 }

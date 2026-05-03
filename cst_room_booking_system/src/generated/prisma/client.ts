@@ -66,3 +66,8 @@ export type Booking = Prisma.BookingModel
  * 
  */
 export type FloorAllocation = Prisma.FloorAllocationModel
+/**
+ * Model OTP
+ * 
+ */
+export type OTP = Prisma.OTPModel

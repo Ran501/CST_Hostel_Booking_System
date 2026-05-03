@@ -55,7 +55,8 @@ export const ModelName = {
   Hostel: 'Hostel',
   Room: 'Room',
   Booking: 'Booking',
-  FloorAllocation: 'FloorAllocation'
+  FloorAllocation: 'FloorAllocation',
+  OTP: 'OTP'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -117,7 +118,7 @@ export type RoomScalarFieldEnum = (typeof RoomScalarFieldEnum)[keyof typeof Room
 
 export const BookingScalarFieldEnum = {
   id: 'id',
-  userPhone: 'userPhone',
+  studentNumber: 'studentNumber',
   roomId: 'roomId',
   checkIn: 'checkIn',
   checkOut: 'checkOut',
@@ -135,6 +136,19 @@ export const FloorAllocationScalarFieldEnum = {
 } as const
 
 export type FloorAllocationScalarFieldEnum = (typeof FloorAllocationScalarFieldEnum)[keyof typeof FloorAllocationScalarFieldEnum]
+
+
+export const OTPScalarFieldEnum = {
+  id: 'id',
+  email: 'email',
+  otpHash: 'otpHash',
+  expiresAt: 'expiresAt',
+  attempts: 'attempts',
+  used: 'used',
+  createdAt: 'createdAt'
+} as const
+
+export type OTPScalarFieldEnum = (typeof OTPScalarFieldEnum)[keyof typeof OTPScalarFieldEnum]
 
 
 export const SortOrder = {
