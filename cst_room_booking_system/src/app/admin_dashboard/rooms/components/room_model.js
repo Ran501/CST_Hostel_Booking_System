@@ -87,15 +87,19 @@ export default function RoomManagement() {
 
   const allRoomIds = rooms.map((r) => r.room);
 
+const selectableRoomIds = rooms
+  .filter(room => room.status !== "disabled")
+  .map(room => room.room);
+
 const isAllSelected =
   selectedRooms.length > 0 &&
-  selectedRooms.length === allRoomIds.length;
+  selectedRooms.length === selectableRoomIds.length;
 
-  const handleSelectAll = () => {
+const handleSelectAll = () => {
   if (isAllSelected) {
     setSelectedRooms([]);
   } else {
-    setSelectedRooms(allRoomIds);
+    setSelectedRooms(selectableRoomIds);
   }
 };
 
