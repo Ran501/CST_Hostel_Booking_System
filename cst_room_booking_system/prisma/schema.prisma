@@ -1,0 +1,63 @@
+generator client {
+  provider = "prisma-client"
+  output   = "../src/generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  phoneNumber String    @id
+  name        String
+  email       String    @unique
+  gender      String
+  role        String    @default("user")
+  createdAt   DateTime  @default(now())
+  bookings    Booking[]
+}
+
+model Hostel {
+  id          String        @id @default(uuid())
+  name        String
+  totalFloors Int
+  isActive    Boolean?      @default(true)
+  capacity    Int?
+  totalRooms  Int?
+  forGender   String?
+  FloorGender FloorGender[]
+  Room        Room[]
+}
+
+model Room {
+  id             String    @id @default(uuid())
+  roomNumber     String
+  floor          Int
+  capacity       Int
+  hostelId       String
+  isActive       Boolean?  @default(true)
+  occupied       Int?
+  disabledReason String?
+  bookings       Booking[]
+  Hostel         Hostel    @relation(fields: [hostelId], references: [id])
+}
+
+model Booking {
+  id        String   @id @default(uuid())
+  userPhone String
+  roomId    String
+  checkIn   DateTime
+  checkOut  DateTime
+  room      Room     @relation(fields: [roomId], references: [id])
+  user      User     @relation(fields: [userPhone], references: [phoneNumber])
+}
+
+model FloorGender {
+  id        String @id
+  hostelId  String
+  floor     Int
+  forGender String
+  Hostel    Hostel @relation(fields: [hostelId], references: [id], onDelete: Cascade)
+
+  @@unique([hostelId, floor])
+}

@@ -1,0 +1,37 @@
+{
+  "compilerOptions": {
+    "target": "ES2017",
+    "lib": [
+      "dom",
+      "dom.iterable",
+      "esnext"
+    ],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "strict": false,
+    "noEmit": true,
+    "incremental": true,
+    "module": "esnext",
+    "esModuleInterop": true,
+    "moduleResolution": "bundler",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "jsx": "react-jsx",
+    "plugins": [
+      {
+        "name": "next"
+      }
+    ]
+  },
+  "include": [
+    "next-env.d.ts",
+    ".next/types/**/*.ts",
+    ".next/dev/types/**/*.ts",
+    "**/*.mts",
+    "**/*.ts",
+    "**/*.tsx"
+, "src/app/map/page.js", "src/app/manual/page.jsx", "src/app/login/page.js", "src/app/lib/validation.jsx", "src/app/lib/mail.js", "src/app/help/page.js", "src/app/components/types.js", "src/app/components/statsCard.js", "src/app/components/mapcontrol.js", "src/app/components/hostelcard.js", "src/app/components/hostelButtons.js", "src/app/components/HomeContent.js", "src/app/components/constants.js", "src/app/components/CampusMap.js", "src/app/components/AuthGate.js", "src/app/components/utils/marker-utils.js", "src/app/components/utils/stats-utils.js", "src/app/components/utils/marker-utils.js", "src/app/components/utils/map-utils.js", "src/app/components/utils/map-initialization.js", "src/app/components/ManualPage/page.js", "src/app/components/hooks/useMapStats.js", "src/app/components/hooks/usecampusMap.js", "src/app/components/help/page.js", "src/app/components/config/map-styles.js"  ],
+  "exclude": [
+    "node_modules"
+  ]
+}
