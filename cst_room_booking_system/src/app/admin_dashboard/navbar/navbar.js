@@ -180,13 +180,13 @@ export default function Navbar() {
                     )}
                   </div>
 
-                  <button
+                  {/* <button
                     className="w-full px-4 py-2 text-left hover:bg-gray-100"
                     onClick={() => setAdminModalOpen(true)}
                   >
                     <Settings className="inline w-4 h-4 mr-2" />
                     Manage Admin
-                  </button>
+                  </button> */}
 
                   <button
                     className="w-full px-4 py-2 text-left text-red-600 hover:bg-red-100"
