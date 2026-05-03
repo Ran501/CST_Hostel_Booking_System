@@ -55,8 +55,7 @@ export const ModelName = {
   Hostel: 'Hostel',
   Room: 'Room',
   Booking: 'Booking',
-  FloorAllocation: 'FloorAllocation',
-  OTP: 'OTP'
+  FloorAllocation: 'FloorAllocation'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -136,19 +135,6 @@ export const FloorAllocationScalarFieldEnum = {
 } as const
 
 export type FloorAllocationScalarFieldEnum = (typeof FloorAllocationScalarFieldEnum)[keyof typeof FloorAllocationScalarFieldEnum]
-
-
-export const OTPScalarFieldEnum = {
-  id: 'id',
-  email: 'email',
-  otpHash: 'otpHash',
-  expiresAt: 'expiresAt',
-  attempts: 'attempts',
-  used: 'used',
-  createdAt: 'createdAt'
-} as const
-
-export type OTPScalarFieldEnum = (typeof OTPScalarFieldEnum)[keyof typeof OTPScalarFieldEnum]
 
 
 export const SortOrder = {

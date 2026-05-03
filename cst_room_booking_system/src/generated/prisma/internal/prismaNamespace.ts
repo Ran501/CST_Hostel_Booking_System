@@ -388,8 +388,7 @@ export const ModelName = {
   Hostel: 'Hostel',
   Room: 'Room',
   Booking: 'Booking',
-  FloorAllocation: 'FloorAllocation',
-  OTP: 'OTP'
+  FloorAllocation: 'FloorAllocation'
 } as const
 
 export type ModelName = (typeof ModelName)[keyof typeof ModelName]
@@ -405,7 +404,7 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
     omit: GlobalOmitOptions
   }
   meta: {
-    modelProps: "user" | "hostel" | "room" | "booking" | "floorAllocation" | "oTP"
+    modelProps: "user" | "hostel" | "room" | "booking" | "floorAllocation"
     txIsolationLevel: TransactionIsolationLevel
   }
   model: {
@@ -779,80 +778,6 @@ export type TypeMap<ExtArgs extends runtime.Types.Extensions.InternalArgs = runt
         }
       }
     }
-    OTP: {
-      payload: Prisma.$OTPPayload<ExtArgs>
-      fields: Prisma.OTPFieldRefs
-      operations: {
-        findUnique: {
-          args: Prisma.OTPFindUniqueArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$OTPPayload> | null
-        }
-        findUniqueOrThrow: {
-          args: Prisma.OTPFindUniqueOrThrowArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$OTPPayload>
-        }
-        findFirst: {
-          args: Prisma.OTPFindFirstArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$OTPPayload> | null
-        }
-        findFirstOrThrow: {
-          args: Prisma.OTPFindFirstOrThrowArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$OTPPayload>
-        }
-        findMany: {
-          args: Prisma.OTPFindManyArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$OTPPayload>[]
-        }
-        create: {
-          args: Prisma.OTPCreateArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$OTPPayload>
-        }
-        createMany: {
-          args: Prisma.OTPCreateManyArgs<ExtArgs>
-          result: BatchPayload
-        }
-        createManyAndReturn: {
-          args: Prisma.OTPCreateManyAndReturnArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$OTPPayload>[]
-        }
-        delete: {
-          args: Prisma.OTPDeleteArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$OTPPayload>
-        }
-        update: {
-          args: Prisma.OTPUpdateArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$OTPPayload>
-        }
-        deleteMany: {
-          args: Prisma.OTPDeleteManyArgs<ExtArgs>
-          result: BatchPayload
-        }
-        updateMany: {
-          args: Prisma.OTPUpdateManyArgs<ExtArgs>
-          result: BatchPayload
-        }
-        updateManyAndReturn: {
-          args: Prisma.OTPUpdateManyAndReturnArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$OTPPayload>[]
-        }
-        upsert: {
-          args: Prisma.OTPUpsertArgs<ExtArgs>
-          result: runtime.Types.Utils.PayloadToResult<Prisma.$OTPPayload>
-        }
-        aggregate: {
-          args: Prisma.OTPAggregateArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.AggregateOTP>
-        }
-        groupBy: {
-          args: Prisma.OTPGroupByArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.OTPGroupByOutputType>[]
-        }
-        count: {
-          args: Prisma.OTPCountArgs<ExtArgs>
-          result: runtime.Types.Utils.Optional<Prisma.OTPCountAggregateOutputType> | number
-        }
-      }
-    }
   }
 } & {
   other: {
@@ -955,19 +880,6 @@ export const FloorAllocationScalarFieldEnum = {
 export type FloorAllocationScalarFieldEnum = (typeof FloorAllocationScalarFieldEnum)[keyof typeof FloorAllocationScalarFieldEnum]
 
 
-export const OTPScalarFieldEnum = {
-  id: 'id',
-  email: 'email',
-  otpHash: 'otpHash',
-  expiresAt: 'expiresAt',
-  attempts: 'attempts',
-  used: 'used',
-  createdAt: 'createdAt'
-} as const
-
-export type OTPScalarFieldEnum = (typeof OTPScalarFieldEnum)[keyof typeof OTPScalarFieldEnum]
-
-
 export const SortOrder = {
   asc: 'asc',
   desc: 'desc'
@@ -1029,13 +941,6 @@ export type DateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel
  * Reference to a field of type 'DateTime[]'
  */
 export type ListDateTimeFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'DateTime[]'>
-    
-
-
-/**
- * Reference to a field of type 'Boolean'
- */
-export type BooleanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Boolean'>
     
 
 
@@ -1167,7 +1072,6 @@ export type GlobalOmitConfig = {
   room?: Prisma.RoomOmit
   booking?: Prisma.BookingOmit
   floorAllocation?: Prisma.FloorAllocationOmit
-  oTP?: Prisma.OTPOmit
 }
 
 /* Types for Logging */
