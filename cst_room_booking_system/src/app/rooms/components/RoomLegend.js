@@ -2,26 +2,34 @@
 
 export default function RoomLegend() {
   return (
-    <div className="bg-white rounded-lg border border-slate-200 p-4 shadow-sm">
-      <h3 className="font-semibold text-sm text-slate-700 mb-3">Legend</h3>
-      <div className="space-y-2">
-        <div className="flex items-center gap-3">
-          <div className="w-6 h-6 rounded border border-slate-200 bg-white"></div>
-          <span className="text-xs text-slate-600">Available</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="w-6 h-6 rounded border border-amber-200 bg-amber-50"></div>
-          <span className="text-xs text-slate-600">Partially Occupied</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="w-6 h-6 rounded border border-red-200 bg-red-50"></div>
-          <span className="text-xs text-slate-600">Fully Booked</span>
-        </div>
-        <div className="flex items-center gap-3">
-          <div className="w-6 h-6 rounded border border-slate-200 bg-slate-100"></div>
-          <span className="text-xs text-slate-600">Inactive</span>
-        </div>
-      </div>
+     <div className="mt-3 xs:mt-4 sm:mt-5 lg:mt-6">
+  <div className="flex flex-wrap justify-center gap-2 xs:gap-3 sm:gap-4 text-xs xs:text-sm md:text-base text-slate-700">
+
+    {/* Available */}
+    <div className="flex items-center gap-1 xs:gap-2">
+      <div className="h-2 xs:h-3 w-2 xs:w-3 rounded-full bg-white border border-slate-300 ring-1 ring-slate-200" />
+      <span>Available</span>
     </div>
+
+    {/* Partially Booked */}
+    <div className="flex items-center gap-1 xs:gap-2">
+      <div className="h-2 xs:h-3 w-2 xs:w-3 rounded-full bg-amber-50 border border-amber-300 ring-1 ring-amber-200" />
+      <span>Partially Booked</span>
+    </div>
+
+    {/* Fully Booked */}
+    <div className="flex items-center gap-1 xs:gap-2">
+      <div className="h-2 xs:h-3 w-2 xs:w-3 rounded-full bg-red-50 border border-red-300 ring-1 ring-red-200" />
+      <span>Fully Booked</span>
+    </div>
+
+    {/* Inactive (NEW) */}
+    <div className="flex items-center gap-1 xs:gap-2">
+      <div className="h-2 xs:h-3 w-2 xs:w-3 rounded-full bg-slate-100 border border-slate-300 ring-1 ring-slate-200" />
+      <span>Inactive</span>
+    </div>
+
+  </div>
+</div>
   );
 }
