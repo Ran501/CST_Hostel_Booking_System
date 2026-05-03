@@ -8,4 +8,9 @@
  *
  * 🟢 You can import this file directly.
  */
-export type * from './commonInputTypes.ts'
+export type * from './models/User'
+export type * from './models/Hostel'
+export type * from './models/Room'
+export type * from './models/Booking'
+export type * from './models/FloorAllocation'
+export type * from './commonInputTypes'

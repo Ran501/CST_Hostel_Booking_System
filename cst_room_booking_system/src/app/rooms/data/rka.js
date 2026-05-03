@@ -1,0 +1,25 @@
+// RKA Hostel Building Data Configuration
+
+export const RKA_NAME = "RKA";
+
+export function leftColumnRoomsForFloor(floorNum) {
+  // Returns room numbers for left column based on floor
+  const roomMap = {
+    1: [101, 102, 103, 104, 105, 106],
+    2: [201, 202, 203, 204, 205, 206],
+    3: [301, 302, 303, 304, 305, 306],
+    4: [401, 402, 403, 404, 405, 406],
+  };
+  return roomMap[floorNum] || [];
+}
+
+export function rightColumnRoomsForFloor(floorNum) {
+  // Returns room numbers for right column based on floor
+  const roomMap = {
+    1: [107, 108, 109, 110, 111, 112],
+    2: [207, 208, 209, 210, 211, 212],
+    3: [307, 308, 309, 310, 311, 312],
+    4: [407, 408, 409, 410, 411, 412],
+  };
+  return roomMap[floorNum] || [];
+}
