@@ -1,9 +1,10 @@
 // src/app/page.tsx
+import AdminDashboardPage from "./admin_dashboard/page";
 import HomeContent from "./components/HomeContent";
 import LoginModal from "./login/page";
 
 export default function HomePage() {
-  return <HomeContent/>;
+  return <AdminDashboardPage />;
 }
 // import { redirect } from "next/navigation";
 

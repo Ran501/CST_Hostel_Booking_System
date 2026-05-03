@@ -6,8 +6,8 @@ export default function AdminDashboardPage() {
   return (
     <div className="min-h-screen bg-white p-4 sm:p-6 space-y-10">
       <Navbar />
-      <BookingInfo />
-      <HostelGrid />
+      <BookingInfo/>
+      <HostelGrid/>
     </div>
   );
 }
