@@ -33,6 +33,7 @@ function useResponsiveLayout() {
   };
 }
 
+
 function floorLabel(n) {
   return ["First", "Second", "Third", "Fourth"][n - 1] || String(n);
 }
@@ -106,7 +107,13 @@ const desktopLayout = {
 };
 
 // ADDED: EnterArrow component to display arrows under specific rooms
-function EnterArrow({ roomNumber, top, left, roomCardHeight = 60, size = "desktop" }) {
+function EnterArrow({ 
+  roomNumber, 
+  top, 
+  left, 
+  roomCardHeight = 60, 
+  size = "desktop" 
+}) {
   const isLeftArrow = roomNumber % 100 === 4; // 104, 204, 304
   const isRightArrow = roomNumber % 100 === 5; // 105, 205, 305
   
@@ -142,7 +149,9 @@ function EnterArrow({ roomNumber, top, left, roomCardHeight = 60, size = "deskto
   );
 }
 
-export default function NkFloorPage({ params }) {
+export default function NkFloorPage({ 
+  params 
+}) {
   const router = useRouter();
   const { floor } = use(params);
   const rawFloor = Number(floor);
@@ -155,19 +164,61 @@ export default function NkFloorPage({ params }) {
   const { isMobile, isMid, isDesktop } = useResponsiveLayout();
 
   // Simple States
+  const [roomsData, setRoomsData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [isBooking, setIsBooking] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState(null);
+  const [toast, setToast] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [currentUser, setCurrentUser] = useState(null);
   const [mobileCarouselPage, setMobileCarouselPage] = useState(1);
+
 
   // Kitchen numbering per floor: (floor-1)*2 + 1 and +2
   const kitchenStart = (floorNum - 1) * 2 + 1;
   const kitchenLeftLabel = `Luggage Room `;
   const kitchenRightLabel = `Luggage Room`;
 
+  // 1. Retrieve User Session
+  // useEffect(() => {
+  //   const session = localStorage.getItem("session");
+  //   if (session) {
+  //     try {
+  //       setCurrentUser(JSON.parse(session));
+  //     } catch (err) {
+  //       console.error("Failed to parse user session:", err);
+  //     }
+  //   }
+  // }, []);
+
   // Simple redirect logic
   useEffect(() => {
     if (!isValid) router.replace("/rooms/3/floor/1");
   }, [isValid, router]);
+
+  // 2. Fetch Rooms
+  useEffect(() => {
+    async function fetchRooms() {
+      try {
+        setLoading(true);
+        const res = await fetch(`/api/rooms?floor=${floorNum}&building=NK`);
+        const data = await res.json();
+        if (data.success) {
+          setRoomsData(data.rooms || []);
+        }
+      } catch (err) {
+        console.error("Fetch error:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    if (isValid) fetchRooms();
+  }, [floorNum, isValid]);
+    
+  const getRoomInfo = (roomNo) => {
+    const fullRoomId = `${NK_NAME}-${roomNo}`;
+    return roomsData.find((r) => String(r.roomNumber) === fullRoomId);
+  };
 
   // Simple booking action - no API calls
   function handleConfirmBooking() {
@@ -178,23 +229,70 @@ export default function NkFloorPage({ params }) {
     setSelectedRoom(null);
   }
 
-  // 4. MATCHING LOGIC 
-  const getRoomInfo = (roomNo) => {
-    return null;
-  };
+  
 
   // --- GENDER VALIDATION LOGIC --- (Backend Logic)
   const validateGender = (roomNo) => {
     return true;
   };
+  
 
   // Simple Room Card component - no API calls
   function RoomCard({ room, top, left }) {
+    const roomInfo = getRoomInfo(room);
+    const fullRoomId = `${NK_NAME}-${room}`;
+      // 1. Fallback for when data is loading
+      if (!roomInfo || loading) {
+      return (
+        <div
+          className="absolute flex items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 animate-pulse"
+          style={{
+            top,
+            left,
+            transform: "translate(-50%, -50%)",
+            width: "65px",
+            height: "65px",
+          }}
+        >
+          <span className="text-[10px] text-slate-400">...</span>
+        </div>
+      );
+    }
+
+    const dbValue = roomInfo.isActive ?? roomInfo.is_active;
+    const isRoomActive =
+      dbValue !== false && String(dbValue).toUpperCase() !== "FALSE";
+    const occupied = roomInfo.occupied || 0;
+    const capacity = roomInfo.capacity || 3;
+    const isPartial = occupied > 0 && occupied < capacity;
     const isSelected = selectedRoom === room;
+    const isFully = occupied >= capacity;
+    
+    const ringColor = !isRoomActive
+      ? "ring-slate-200"
+      : isFully
+        ? "ring-red-300"
+        : isPartial
+          ? "ring-amber-300"
+          : isSelected
+            ? "ring-emerald-300"
+            : "ring-slate-200";
+    
+      const colors = !isRoomActive
+      ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
+      : isFully
+        ? "bg-red-50 text-red-700 border-red-200 cursor-not-allowed"
+        : isPartial
+          ? "border-amber-200 bg-amber-50 text-amber-700 hover:border-amber-300 hover:bg-amber-50/80 hover:-translate-y-0.5 hover:shadow-md active:scale-[0.98]"
+          : isSelected
+            ? "border-emerald-200 bg-emerald-50 text-emerald-700 ring-2 ring-emerald-300/70"
+            : "border-slate-200 bg-white text-slate-800 hover:border-slate-300 hover:bg-slate-50 hover:-translate-y-0.5 hover:shadow-md active:scale-[0.98]";
+
 
     return (
       <button
         onClick={() => setSelectedRoom(room)}
+        disabled={!isRoomActive || isFully || loading || isBooking}
         className={`
           cursor-pointer group absolute rounded-2xl border bg-white text-slate-800 shadow-sm 
           transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md
@@ -213,8 +311,14 @@ export default function NkFloorPage({ params }) {
           <span className="text-xs xs:text-sm sm:text-base md:text-lg font-semibold">
             {room}
           </span>
-          <span className="text-[8px] xs:text-[9px] sm:text-[10px] md:text-[11px] text-green-600 whitespace-nowrap">
-            Available
+          <span className="text-[9px] xs:text-[10px] sm:text-[11px] text-slate-700 whitespace-nowrap">
+            {!isRoomActive
+              ? roomInfo.disabledReason || "Inactive"
+              : isFully
+                ? "Fully Booked"
+                : isPartial
+                  ? `${occupied}/${capacity} Occupied`
+                  : `0/${capacity} Available`}
           </span>
         </div>
         <div className="pointer-events-none absolute inset-0 rounded-2xl ring-0 transition group-hover:ring-1 group-hover:ring-slate-300/50" />
