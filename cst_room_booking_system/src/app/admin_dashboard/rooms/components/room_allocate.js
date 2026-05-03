@@ -7,7 +7,6 @@ export default function AllocateStudents({
   isOpen,
   onClose,
   onNext,
-  selectedRooms,
   rooms = [],
 }) {
   const [search, setSearch] = useState("");
@@ -60,55 +59,7 @@ export default function AllocateStudents({
             <button className="px-6 py-3 rounded-xl bg-blue-600 text-white hover:bg-blue-700 transition shadow-md">
               Search
             </button>
-          </div>
-
-          {/* ROOM DROPDOWN */}
-          <div className="relative w-full">
-
-            {/* FIELD */}
-            <div
-              onClick={() => setSelectedRoomsOpen((prev) => !prev)}
-              className="w-full px-4 py-3 rounded-xl border-2 border-blue-300 bg-white text-gray-700 flex items-center justify-between cursor-pointer"
-            >
-              <span className={selectedRoomValue ? "text-gray-800" : "text-gray-400"}>
-                {selectedRoomValue || "Select room"}
-              </span>
-
-              <ChevronDown
-                size={18}
-                className={`text-blue-500 transition-transform ${
-                  selectedRoomsOpen ? "rotate-180" : ""
-                }`}
-              />
-            </div>
-
-            {/* DROPDOWN */}
-            {selectedRoomsOpen && (
-              <div className="absolute left-0 right-0 top-full mt-2 bg-white border rounded-xl shadow-lg z-50 max-h-60 overflow-auto">
-
-                {rooms
-                  .filter((room) => room.status !== "disabled") // ❌ remove disabled rooms
-                  .map((room) => (
-                    <div
-                      key={room.room}
-                      onClick={() => {
-                        setSelectedRoomValue(room.room);
-                        setSelectedRoomsOpen(false);
-                      }}
-                      className={`px-4 py-2 cursor-pointer hover:bg-blue-50 flex justify-between ${
-                        selectedRoomValue === room.room ? "bg-blue-100" : ""
-                      }`}
-                    >
-                      <span>{room.room}</span>
-                      <span className="text-xs text-gray-500">
-                        {room.status}
-                      </span>
-                    </div>
-                  ))}
-
-              </div>
-            )}
-          </div>
+          </div> 
 
           {/* ACTIONS */}
           <div className="flex justify-end gap-4 pt-4">
@@ -128,7 +79,7 @@ export default function AllocateStudents({
                   : "bg-blue-300 cursor-not-allowed"
               }`}
             >
-              Next
+              Allocate
             </button>
           </div>
 
