@@ -559,6 +559,7 @@ useEffect(() => {
         isOpen={allocateStudentsOpen}
         onClose={() => setAllocateStudentsOpen(false)}
         rooms={rooms}
+        selectedRooms={selectedRooms}
         onNext={(data) => {
           console.log("Allocate:", data);
           setAllocateStudentsOpen(false);

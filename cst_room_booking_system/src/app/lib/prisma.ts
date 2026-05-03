@@ -3,16 +3,15 @@ import { PrismaPg } from "@prisma/adapter-pg";
 
 const globalForPrisma = globalThis as unknown as { prisma?: PrismaClient };
 
-// Create the adapter with your DATABASE_URL
 const adapter = new PrismaPg({
-  connectionString: process.env.DATABASE_URL!, // must be defined
+  connectionString: process.env.DATABASE_URL!,
 });
 
 export const prisma =
   globalForPrisma.prisma ??
   new PrismaClient({
     adapter,
-    log: ["query"], // now this works
+    log: ["query"],
   });
 
 if (process.env.NODE_ENV !== "production") {
