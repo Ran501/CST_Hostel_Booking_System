@@ -8,37 +8,37 @@ import EditRoomsModal from "./room_edit";
 import AllocateStudents from "./room_allocate";
 import DeallocateStudents from "./room_deallocate";
 
-const rooms = [
-  { room: "HF-101", status: "full", capacity: 3, occupants: ["Alice", "Bob", "Charlie"] },
-  { room: "HF-102", status: "partial", capacity: 3, occupants: ["David"] },
+const initialRooms = [
+  { room: "HF-101", status: "full", capacity: 3, occupants: ["02230122  Alice", "1234567  Bob", "1010101  Charlie"] },
+  { room: "HF-102", status: "partial", capacity: 3, occupants: ["02230122  David"] },
   { room: "HF-103", status: "empty", capacity: 3, occupants: [] },
   { room: "HF-104", status: "disabled", capacity: 3, occupants: [] },
-  { room: "HF-105", status: "partial", capacity: 3, occupants: ["Emma", "Frank"] },
-  { room: "HF-106", status: "full", capacity: 3, occupants: ["Grace", "Henry", "Ivy"] },
+  { room: "HF-105", status: "partial", capacity: 3, occupants: ["02230122  Emma", "1234567  Frank"] },
+  { room: "HF-106", status: "full", capacity: 3, occupants: ["02230122  Grace", "1234567  Henry", "1010101  Ivy"] },
   { room: "HF-107", status: "empty", capacity: 3, occupants: [] },
   { room: "HF-108", status: "disabled", capacity: 3, occupants: [] },
-  { room: "HF-109", status: "full", capacity: 3, occupants: ["Alice", "Bob", "Charlie"] },
-  { room: "HF-110", status: "partial", capacity: 3, occupants: ["David"] },
+  { room: "HF-109", status: "full", capacity: 3, occupants: ["02230122  Alice", "1234567  Bob", "1010101  Charlie"] },
+  { room: "HF-110", status: "partial", capacity: 3, occupants: ["02230122  David"] },
   { room: "HF-111", status: "empty", capacity: 3, occupants: [] },
   { room: "HF-112", status: "disabled", capacity: 3, occupants: [] },
-  { room: "HF-113", status: "partial", capacity: 3, occupants: ["Emma", "Frank"] },
-  { room: "HF-114", status: "full", capacity: 3, occupants: ["Grace", "Henry", "Ivy"] },
+  { room: "HF-113", status: "partial", capacity: 3, occupants: ["02230122  Emma", "1234567  Frank"] },
+  { room: "HF-114", status: "full", capacity: 3, occupants: ["02230122  Grace", "1234567  Henry", "1010101  Ivy"] },
   { room: "HF-115", status: "empty", capacity: 3, occupants: [] },
   { room: "HF-116", status: "disabled", capacity: 3, occupants: [] },
-  { room: "HF-117", status: "full", capacity: 3, occupants: ["Alice", "Bob", "Charlie"] },
-  { room: "HF-118", status: "partial", capacity: 3, occupants: ["David"] },
+  { room: "HF-117", status: "full", capacity: 3, occupants: ["02230122  Alice", "1234567  Bob", "1010101  Charlie"] },
+  { room: "HF-118", status: "partial", capacity: 3, occupants: ["02230122  David"] },
   { room: "HF-119", status: "empty", capacity: 3, occupants: [] },
   { room: "HF-120", status: "disabled", capacity: 3, occupants: [] },
-  { room: "HF-121", status: "partial", capacity: 3, occupants: ["Emma", "Frank"] },
-  { room: "HF-122", status: "full", capacity: 3, occupants: ["Grace", "Henry", "Ivy"] },
+  { room: "HF-121", status: "partial", capacity: 3, occupants: ["02230122  Emma", "1234567  Frank"] },
+  { room: "HF-122", status: "full", capacity: 3, occupants: ["02230122  Grace", "1234567  Henry", "1010101  Ivy"] },
   { room: "HF-123", status: "empty", capacity: 3, occupants: [] },
   { room: "HF-124", status: "disabled", capacity: 3, occupants: [] },
-  { room: "HF-125", status: "full", capacity: 3, occupants: ["Alice", "Bob", "Charlie"] },
-  { room: "HF-126", status: "partial", capacity: 3, occupants: ["David"] },
+  { room: "HF-125", status: "full", capacity: 3, occupants: ["0344343  Alice", "0932483276  Bob", "02395743892  Charlie"] },
+  { room: "HF-126", status: "partial", capacity: 3, occupants: ["02230122  David"] },
   { room: "HF-127", status: "empty", capacity: 3, occupants: [] },
   { room: "HF-128", status: "disabled", capacity: 3, occupants: [] },
-  { room: "HF-129", status: "partial", capacity: 3, occupants: ["Emma", "Frank"] },
-  { room: "HF-130", status: "full", capacity: 3, occupants: ["Grace", "Henry", "Ivy"] },
+  { room: "HF-129", status: "partial", capacity: 3, occupants: ["02230122  Emma", "1234567  Frank"] },
+  { room: "HF-130", status: "full", capacity: 3, occupants: ["02230122  Grace", "1234567  Henry", "1010101  Ivy"] },
   { room: "HF-131", status: "empty", capacity: 3, occupants: [] },
   { room: "HF-132", status: "disabled", capacity: 3, occupants: [] },
 ];
@@ -52,171 +52,156 @@ function Badge({ children, color }) {
   );
 }
 
-export default function RoomManagement() {  
-  const [disableOpen, setDisableOpen] = useState(false);
-  const [roomAction, setRoomAction] = useState("Disable");
-
-  const router = useRouter();
-
-  const [actionMode, setActionMode] = useState(null);
- // null | "edit" | "allocate" | "deallocate" | "enable" | "disable"
-
+export default function RoomManagement() {
   const [hostelOpen, setHostelOpen] = useState(false);
   const [floorOpen, setFloorOpen] = useState(false);
-
+  const [disableOpen, setDisableOpen] = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [deallocateStudentsOpen, setDeallocateStudentsOpen] = useState(false);
+  const [disableReasonOpen, setDisableReasonOpen] = useState(false);
+  const [reason, setReason] = useState("");
   const [hostel, setHostel] = useState("HF");
   const [floor, setFloor] = useState("Floor 1");
 
-  const [disableReasonOpen, setDisableReasonOpen] = useState(false);
-  // const [selectedRoom, setSelectedRoom] = useState(null);
-  const [reason, setReason] = useState("");
-  const [editModalOpen, setEditModalOpen] = useState(false);
-  const [open, setOpen] = useState(true);
-  const [allocateStudentsOpen, setAllocateStudentsOpen] = useState(false);
-  const [deallocateStudentsOpen, setDeallocateStudentsOpen] = useState(false);
-  const [allocateRoom, setAllocateRoom] = useState(null);
-  const isSelectionMode =
-  actionMode === "edit" ||
-  actionMode === "deallocate" ||
-  actionMode === "disable" ||
-  actionMode === "enable";
-
-const isAllocateMode = actionMode === "allocate";
-
-
- const handleActionClick = (mode) => {
-  setSelectedRooms([]);
-
-  if (mode === "allocate") {
-    setActionMode((prev) => (prev === "allocate" ? null : "allocate"));
-    return;
-  }
-
-  setActionMode((prev) => (prev === mode ? null : mode));
-};
+  const [rooms, setRooms] = useState(initialRooms);
 
   const [selectedRooms, setSelectedRooms] = useState([]);
-  const hasSelection = selectedRooms.length > 0;
+  const [allocateRoom, setAllocateRoom] = useState(null);
+  const [allocateStudentsOpen, setAllocateStudentsOpen] = useState(false);
+  const [actionMode, setActionMode] = useState(null);
+  // "edit" | "deallocate" | "disable" | null
 
-  const allRoomIds = rooms.map((r) => r.room);
+  const [roomAction, setRoomAction] = useState("Disable");
+  const [selectionMode, setSelectionMode] = useState(false);
 
-const selectableRoomIds = rooms
-  .filter(room => room.status !== "disabled")
-  .map(room => room.room);
-
-const isAllSelected =
-  selectedRooms.length > 0 &&
-  selectedRooms.length === selectableRoomIds.length;
-
-const handleSelectAll = () => {
-  if (isAllSelected) {
-    setSelectedRooms([]);
-  } else {
-    setSelectedRooms(selectableRoomIds);
-  }
-};
-
- const toggleRoomSelection = (roomId) => {
-  if (isAllocateMode) return; // ❗ block selection system
-
-  setSelectedRooms((prev) =>
-    prev.includes(roomId)
-      ? prev.filter((id) => id !== roomId)
-      : [...prev, roomId]
-  );
-};
-
-const enableRooms = () => {
-  setRooms((prev) =>
-    prev.map((room) =>
-      selectedRooms.includes(room.id)
-        ? { ...room, isActive: true }
-        : room
-    ) 
-  );
-
-  setSelectedRooms([]);
-  setActionMode(null);
-};
-
-const startDisableFlow = () => {
-  if (!hasSelection) return;
-  setDisableReasonOpen(true);
-};
-
-const confirmDisable = () => {
-  setRooms((prev) =>
-    prev.map((room) =>
-      selectedRooms.includes(room.id)
-        ? {
-            ...room,
-            isActive: false,
-            disableReason: reason,
-          }
-        : room
-    )
-  );
-
-  setSelectedRooms([]);
-  setReason("");
-  setDisableReasonOpen(false);
-  setActionMode(null);
-};
-
-
-const handleConfirmAction = () => {
-  if (!actionMode || selectedRooms.length === 0) return;
-
-  const query = selectedRooms.join(",");
-
-  switch (actionMode) {
-    case "edit":
-      setEditModalOpen(true);
-      break;
-
-    // case "allocate":
-    //   setAllocateStudentsOpen(true);
-    //   break;
-
-    case "deallocate":
-      setDeallocateStudentsOpen(true);
-      break;
-
-    case "disable":
-      setActionMode("disable");
-      setDisableReasonOpen(true); // open reason UI ONLY if needed in same step OR later
-      break;
-
-    case "enable":
-      setActionMode("enable");
-      setSelectedRooms(query); // just select
-      break;
-
-    default:
-      break;
-  }
-};
-
-const students = rooms.flatMap((roomObj) =>
+  const students = rooms.flatMap((roomObj) =>
   (roomObj.occupants || []).map((name, index) => ({
-    id: `${roomObj.room}-${index}`, // generate unique id
-    name: name,
+    id: `${roomObj.room}-${index}`,
+    name,
     room: roomObj.room,
-    year: "N/A", // you don’t have this data yet
+    year: "N/A",
   }))
 );
 
-useEffect(() => {
-  const handleClickOutside = () => {
-    setHostelOpen(false);
-    setFloorOpen(false);
-    setDisableOpen(false);
+const confirmDisable = () => {
+  setRooms((prev) =>
+    prev.map((r) =>
+      selectedRooms.includes(r.room)
+        ? { ...r, status: "disabled" }
+        : r
+    )
+  );
+
+  setDisableReasonOpen(false);
+  setReason("");
+  setSelectedRooms([]);
+};
+
+  const selectableRoomIds = rooms
+    .filter((room) => room.status !== "disabled")
+    .map((room) => room.room);
+
+  const isAllSelected =
+    selectedRooms.length > 0 &&
+    selectedRooms.length === selectableRoomIds.length;
+
+   const handleSelectAll = () => {
+    if (isAllSelected) {
+      setSelectedRooms([]);
+    } else {
+      setSelectedRooms(selectableRoomIds);
+    }
   };
 
-  window.addEventListener("click", handleClickOutside);
+  const toggleRoomSelection = (roomId) => {
+    setSelectedRooms((prev) =>
+      prev.includes(roomId)
+        ? prev.filter((id) => id !== roomId)
+        : [...prev, roomId]
+    );
+  };
 
-  return () => window.removeEventListener("click", handleClickOutside);
-}, []);
+  const handleBulkAction = (type) => {
+  if (selectedRooms.length === 0) return;
+
+  if (type === "edit") {
+    setEditModalOpen(true);
+  }
+
+  if (type === "deallocate") {
+    setDeallocateStudentsOpen(true);
+  }
+
+  if (type === "disable") {
+    setDisableReasonOpen(true);
+  }
+};
+
+   // ✅ NEW CLICK LOGIC
+  const handleRoomClick = (roomId, status) => {
+    if (status === "disabled") {
+      // Enable room
+      setRooms((prev) =>
+        prev.map((r) =>
+          r.room === roomId ? { ...r, status: "empty" } : r
+        )
+      );
+    } else {
+      // Open allocate modal
+      setAllocateRoom(roomId);
+      setAllocateStudentsOpen(true);
+    }
+  };
+
+   // ✅ KEYBOARD SHORTCUTS
+  useEffect(() => {
+  const handleKeyDown = (e) => {
+    // Ctrl + S
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
+      e.preventDefault();
+      e.stopPropagation();
+
+      setSelectionMode((prev) => {
+        const next = !prev;
+        if (!next) setSelectedRooms([]);
+        return next;
+      });
+
+      return;
+    }
+
+    if (e.ctrlKey && e.key.toLowerCase() === "a") {
+      e.preventDefault();
+      handleSelectAll();
+    }
+
+    if (!selectionMode) return;
+
+    if (e.key === "Tab") {
+      e.preventDefault();
+
+      const selectable = rooms.filter((r) => r.status !== "disabled");
+      if (selectable.length === 0) return;
+
+      const currentIndex = selectable.findIndex((r) =>
+        selectedRooms.includes(r.room)
+      );
+
+      const nextIndex =
+        currentIndex === -1 || currentIndex === selectable.length - 1
+          ? 0
+          : currentIndex + 1;
+
+      setSelectedRooms([selectable[nextIndex].room]);
+    }
+  };
+
+  window.addEventListener("keydown", handleKeyDown, true); // ✅ capture phase
+
+  return () => {
+    window.removeEventListener("keydown", handleKeyDown, true);
+  };
+}, [rooms, selectedRooms, selectionMode]);
   
   return (
     <div className="min-h-screen bg-[#ececec]">
@@ -332,27 +317,8 @@ useEffect(() => {
                 </div>
 
                 <div className="flex flex-wrap gap-4 text-[18px] md:text-[20px]">
-                  {isSelectionMode && (
-                      <button
-                        onClick={handleSelectAll}
-                        className="text-blue-600 font-medium hover:underline"
-                      >
-                        {isAllSelected ? "Unselect All" : "Select All"}
-                      </button>
-                    )}
-                  {isSelectionMode && hasSelection && (
-                      <button
-                        onClick={handleConfirmAction}
-                        className={`hover:text-blue-600 transition ${
-                          actionMode ? "text-blue-600 font-semibold" : ""
-                        }`}
-                      >
-                        OK
-                      </button>
-                    )}
-
                   <button
-                      onClick={() => handleActionClick("edit")}
+                      onClick={() => handleBulkAction("edit")}
                       className={`hover:text-blue-600 transition ${
                         actionMode === "edit" ? "text-blue-600 font-semibold" : ""
                       }`}
@@ -361,16 +327,7 @@ useEffect(() => {
                     </button>
 
                     <button
-                      onClick={() => handleActionClick("allocate")}
-                      className={`hover:text-blue-600 transition ${
-                        actionMode === "allocate" ? "text-blue-600 font-semibold" : ""
-                      }`}
-                    >
-                      Allocate
-                    </button>
-
-                    <button
-                      onClick={() => handleActionClick("deallocate")}
+                      onClick={() => handleBulkAction("deallocate")}
                       className={`hover:text-blue-600 transition ${
                         actionMode === "deallocate" ? "text-blue-600 font-semibold" : ""
                       }`}
@@ -382,7 +339,7 @@ useEffect(() => {
 
                     {/* Main Action Button (JUST SELECT MODE) */}
                     <button
-                      onClick={() => handleActionClick(roomAction.toLowerCase())}
+                      onClick={() => handleBulkAction(roomAction.toLowerCase())}
                       className={`hover:text-blue-600 transition ${
                         actionMode === roomAction.toLowerCase()
                           ? "text-blue-600 font-semibold"
@@ -421,7 +378,7 @@ useEffect(() => {
                             setDisableOpen(false);
 
                             // only select mode + selection
-                            handleActionClick("disable");
+                            handleBulkAction("disable");
                           }}
                           className="w-full text-left px-4 py-2 hover:bg-gray-100 text-red-600"
                         >
@@ -437,7 +394,7 @@ useEffect(() => {
                             setDisableOpen(false);
 
                             // only select mode + selection
-                            handleActionClick("enable");
+                            handleBulkAction("enable");
                           }}
                           className="w-full text-left px-4 py-2 hover:bg-gray-100 text-green-600"
                         >
@@ -458,25 +415,25 @@ useEffect(() => {
         <div className="px-4 sm:px-6 md:px-10 py-6">
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
             {rooms.map((r) => (
-              <RoomCard
-                key={r.room}
-                room={r.room}
-                status={r.status}
-                capacity={r.capacity}
-                occupants={r.occupants}
-                selectionMode={isSelectionMode}
-                selected={selectedRooms.includes(r.room)}
-                onSelect={toggleRoomSelection}
-                onClickRoom={() => {
-                  if (actionMode === "allocate") {
-                    setAllocateRoom(r.room);
-                    setAllocateStudentsOpen(true);
-                  } else {
-                    toggleRoomSelection(r.room);
-                  }
-                }}
-              />
-            ))}
+          <RoomCard
+            key={r.room}
+            room={r.room}
+            status={r.status}
+            capacity={r.capacity}
+            occupants={r.occupants}
+            selected={selectedRooms.includes(r.room)}
+            onSelect={(roomId) => {
+                if (!selectionMode) return;
+
+                setSelectedRooms((prev) =>
+                  prev.includes(roomId)
+                    ? prev.filter((id) => id !== roomId)
+                    : [...prev, roomId]
+                );
+              }}
+            onClickRoom={() => handleRoomClick(r.room, r.status)}
+          />
+        ))}
           </div>
 
           {/* Legend */}
@@ -570,27 +527,24 @@ useEffect(() => {
         isOpen={editModalOpen}
         onClose={() => setEditModalOpen(false)}
         selectedCount={selectedRooms.length}
+        rooms={rooms.filter((r) => selectedRooms.includes(r.room))}
         onSave={(data) => {
           console.log("Edited:", data);
-
-          // 👉 apply changes to rooms here
           setEditModalOpen(false);
           setSelectedRooms([]);
-          setActionMode(null);
         }}
       />
 
       {/* Allocate */}
-      <AllocateStudents
+       <AllocateStudents
         isOpen={allocateStudentsOpen}
         onClose={() => setAllocateStudentsOpen(false)}
-        rooms={rooms.filter(r => r.room === allocateRoom)}
+        rooms={rooms.filter((r) => r.room === allocateRoom)}
         selectedRooms={[allocateRoom]}
         onNext={(data) => {
           console.log("Allocate:", data);
           setAllocateStudentsOpen(false);
           setAllocateRoom(null);
-          setActionMode(null);
         }}
       />
 
@@ -598,10 +552,13 @@ useEffect(() => {
       <DeallocateStudents
         isOpen={deallocateStudentsOpen}
         onClose={() => setDeallocateStudentsOpen(false)}
-        students={students}
+        students={students.filter((s) =>
+          selectedRooms.includes(s.room)
+        )}
         onConfirm={(selectedIds) => {
           console.log("Deallocate:", selectedIds);
           setDeallocateStudentsOpen(false);
+          setSelectedRooms([]);
         }}
       />
     </div>

@@ -39,8 +39,6 @@ export default function RoomCard({
   };
 
   const handleClick = () => {
-    if (isDisabled) return;
-
     if (onClickRoom) {
       onClickRoom(room);
       return;
@@ -53,14 +51,20 @@ export default function RoomCard({
 
   return (
     <div
-      onClick={handleClick}
-      className={`
-        relative rounded-xl border p-4 transition-all
-        ${cardTheme[status]}
-        ${!isDisabled ? "cursor-pointer hover:shadow-md" : "opacity-90"}
-        ${selected ? "ring-2 ring-blue-500" : ""}
-      `}
-    >
+        tabIndex={0}
+        onClick={handleClick}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            handleClick();
+          }
+        }}
+        className={`
+          relative rounded-xl border p-4 transition-all
+          ${cardTheme[status]}
+          ${!isDisabled ? "cursor-pointer hover:shadow-md" : "cursor-pointer opacity-90"}
+          ${selected ? "ring-2 ring-blue-500" : ""}
+        `}
+      >
       {/* Selection checkbox */}
       {selectionMode && !isDisabled && (
         <input
@@ -70,6 +74,7 @@ export default function RoomCard({
           className="absolute top-4 left-4 w-4 h-4 accent-blue-600"
         />
       )}
+
 
       {/* Header */}
       <div className="flex justify-between items-start">
@@ -137,7 +142,7 @@ export default function RoomCard({
 
       {/* Footer */}
       <div className="mt-4 pt-3 border-t text-center text-sm text-gray-500">
-        {isDisabled ? "Click to enable room" : "Click to manage"}
+        {isDisabled ? "Click to enable room" : "Click to Allocate"}
       </div>
     </div>
   );
