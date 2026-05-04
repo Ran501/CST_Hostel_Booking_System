@@ -16,23 +16,32 @@ export const useCampusMap = () => {
   // Fetch active status
   useEffect(() => {
     const fetchActiveStatus = async () => {
-      const res = await fetch('/api/admin/hostel');
-      const data = await res.json();
+      try {
+        const res = await fetch('/api/admin/hostel');
+        const data = await res.json().catch(() => null);
 
-      const obj = {};
-      data.hostels.forEach((h) => {
-        obj[h.id] = h.isActive;
-      });
+        if (!data || !data.hostels) {
+          console.warn('No hostel data received from API');
+          return;
+        }
 
-      setActiveMap(obj);
+        const obj = {};
+        data.hostels.forEach((h) => {
+          obj[h.id] = h.isActive;
+        });
 
-      Object.entries(markersRef.current).forEach(([name, marker]) => {
-        const hostel = HOSTELS.find((h) => h.name === name);
-        if (!hostel) return;
+        setActiveMap(obj);
 
-        const isActive = obj[hostel.id] ?? true;
-        marker.getElement().style.display = isActive ? 'block' : 'none';
-      });
+        Object.entries(markersRef.current).forEach(([name, marker]) => {
+          const hostel = HOSTELS.find((h) => h.name === name);
+          if (!hostel) return;
+
+          const isActive = obj[hostel.id] ?? true;
+          marker.getElement().style.display = isActive ? 'block' : 'none';
+        });
+      } catch (error) {
+        console.error('Error fetching active status:', error);
+      }
     };
 
     fetchActiveStatus();

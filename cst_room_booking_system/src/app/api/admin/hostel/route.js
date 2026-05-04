@@ -4,7 +4,7 @@ import { hostelService } from "../../../../modules/hostel/hostel.service";
 export async function GET() {
   try {
     const hostels = await hostelService.getHostels();
-    return Response.json(hostels);
+    return Response.json({ hostels });
   } catch (error) {
     return Response.json(
       { error: error.message },

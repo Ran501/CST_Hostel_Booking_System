@@ -28,24 +28,16 @@ export default function HomeContent() {
         setUserEmail(parsed.email || "");
         setUserGender(parsed.gender || "");
       } else {
-        // Set a default demo user
-        const defaultUser = {
-          phoneNumber: "17123456",
-          name: "Demo User",
-          email: "demo@rub.edu.bt",
-          gender: "male",
-          role: "user",
-          timestamp: Date.now(),
-        };
-        localStorage.setItem("session", JSON.stringify(defaultUser));
-        setUserName(defaultUser.name);
-        setUserEmail(defaultUser.email);
-        setUserGender(defaultUser.gender);
+        // Redirect to login if no session
+        router.push("/login");
       }
     } catch (error) {
       console.error("Error loading user session:", error);
+      // Clear invalid session and redirect to login
+      localStorage.removeItem("session");
+      router.push("/login");
     }
-  }, []);
+  }, [router]);
 
   const normalizedGender = userGender?.toString?.().trim().toLowerCase();
   const avatarSrc =
