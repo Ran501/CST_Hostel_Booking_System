@@ -36,7 +36,7 @@ export default function HostelLandingPage() {
           {hostels.map((hostel) => (
             <Link
               key={hostel.id}
-              href={`/room/${hostel.id}/floor/1`}
+              href={`/rooms/${hostel.id}/floor/1`}
               className={`group block p-5 sm:p-6 rounded-xl border-2 shadow-md transition-all duration-300 hover:shadow-xl hover:-translate-y-1 ${hostel.bgColor} ${hostel.borderColor} ${hostel.hoverBg}`}
             >
               <div className="flex items-start justify-between mb-3">

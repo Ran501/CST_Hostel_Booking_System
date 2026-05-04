@@ -44,7 +44,7 @@ export default function HfFloorPage({ params }) {
   function handleConfirmBooking() {
     if (selectedRoom === null) return;
     
-    alert(`Room ${HF_NAME}-${selectedRoom} booking confirmed! (UI Only - No Backend)`);
+    alert(`Room ${HF_NAME}-${selectedRoom} Booking confirmed! `);
     setSelectedRoom(null);
   }
 

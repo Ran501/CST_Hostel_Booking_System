@@ -13,6 +13,8 @@ const hostels = [
   { id: 6, name: "HC", fullName: "RUB Hostel HC", floors: 3, available: true },
   { id: 7, name: "HD", fullName: "RUB Hostel HD", floors: 3, available: true },
   { id: 8, name: "HF", fullName: "RUB Hostel HF", floors: 3, available: true },
+  { id: 9, name: "Lhawang", fullName: "RUB Hostel Lhawang", floors: 5, available: true },
+  {id: 10, name: "HE", fullName: "RUB Hostel HE", floors: 2, available: true },
 ];
 
 export default function HomePage() {
@@ -53,7 +55,7 @@ export default function HomePage() {
             RUB Hostel Booking
           </h1>
           <p className="text-lg text-slate-600 max-w-2xl mx-auto">
-            Find your perfect room across 8 hostels. View availability, check room layouts, and book your stay.
+            Find your perfect room across 9 hostels. View availability, check room layouts, and book your stay.
           </p>
         </div>
 
@@ -129,11 +131,11 @@ export default function HomePage() {
         {/* Quick Stats */}
         <div className="mt-16 grid grid-cols-2 sm:grid-cols-4 gap-4 text-center">
           <div className="bg-white/60 rounded-lg p-4 backdrop-blur-sm">
-            <div className="text-2xl font-bold text-blue-600">8</div>
+            <div className="text-2xl font-bold text-blue-600">9</div>
             <div className="text-sm text-slate-600">Hostels</div>
           </div>
           <div className="bg-white/60 rounded-lg p-4 backdrop-blur-sm">
-            <div className="text-2xl font-bold text-blue-600">27</div>
+            <div className="text-2xl font-bold text-blue-600">32</div>
             <div className="text-sm text-slate-600">Total Floors</div>
           </div>
           <div className="bg-white/60 rounded-lg p-4 backdrop-blur-sm">

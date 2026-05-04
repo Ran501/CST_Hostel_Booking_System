@@ -155,7 +155,7 @@ export default function HdFloorPage({ params }) {
             >
               <FloorSidebar
                 currentFloor={floorNum}
-                baseHref="/room/7/floor"
+                baseHref="/rooms/7/floor"
                 floors={[1, 2, 3]}
               />
             </div>
@@ -208,7 +208,7 @@ export default function HdFloorPage({ params }) {
             <div className="hidden md:block w-48 lg:w-56 flex-shrink-0">
               <FloorSidebar
                 currentFloor={floorNum}
-                baseHref="/room/7/floor"
+                baseHref="/rooms/7/floor"
                 floors={[1, 2, 3]}
               />
             </div>
@@ -288,7 +288,7 @@ export default function HdFloorPage({ params }) {
                   <div className="flex flex-col items-center gap-2 xs:gap-3 sm:gap-3 md:gap-4">
                     {/* Top washroom */}
                     <div className="w-full flex justify-center">
-                      <SpecialBlock text="🚻  Restroom" type="washroom" />
+                      <SpecialBlock text="🚻  Washroom" type="washroom" />
                     </div>
 
                     {floorNum === 2 || floorNum === 3 ? (
@@ -332,7 +332,7 @@ export default function HdFloorPage({ params }) {
 
                         {/* Bottom washroom */}
                         <div className="w-full flex justify-center">
-                          <SpecialBlock text="🚻  Restroom" type="washroom" />
+                          <SpecialBlock text="🚻  Washroom" type="washroom" />
                         </div>
                       </>
                     ) : (
@@ -379,7 +379,7 @@ export default function HdFloorPage({ params }) {
 
                           {/* Bottom washroom for floor 1 */}
                           <div className="w-full flex justify-center">
-                            <SpecialBlock text="🚻  Restroom" type="washroom" />
+                            <SpecialBlock text="🚻  Washroom" type="washroom" />
                           </div>
                         </div>
                       </>
