@@ -106,8 +106,11 @@ const confirmDisable = () => {
     selectedRooms.length === selectableRoomIds.length;
 
    const handleSelectAll = () => {
+
+    setSelectionMode(true);
     if (isAllSelected) {
       setSelectedRooms([]);
+      setSelectionMode(false);
     } else {
       setSelectedRooms(selectableRoomIds);
     }
@@ -137,71 +140,94 @@ const confirmDisable = () => {
   }
 };
 
+const handleRoomClickWrapper = (roomId) => {
+  if (selectionMode) {
+    toggleRoomSelection(roomId);
+    return;
+  }
+
+  const roomData = rooms.find((r) => r.room === roomId);
+  if (roomData) handleRoomClick(roomId, roomData.status);
+};
+
    // ✅ NEW CLICK LOGIC
   const handleRoomClick = (roomId, status) => {
-    if (status === "disabled") {
-      // Enable room
-      setRooms((prev) =>
-        prev.map((r) =>
-          r.room === roomId ? { ...r, status: "empty" } : r
-        )
-      );
-    } else {
-      // Open allocate modal
-      setAllocateRoom(roomId);
-      setAllocateStudentsOpen(true);
-    }
-  };
+  if (selectionMode) return; // 🔒 safety guard
+
+  if (status === "disabled") {
+    setRooms((prev) =>
+      prev.map((r) =>
+        r.room === roomId ? { ...r, status: "empty" } : r
+      )
+    );
+  } else {
+    setAllocateRoom(roomId);
+    setAllocateStudentsOpen(true);
+  }
+};
 
    // ✅ KEYBOARD SHORTCUTS
   useEffect(() => {
-  const handleKeyDown = (e) => {
-    // Ctrl + S
-    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === "s") {
-      e.preventDefault();
-      e.stopPropagation();
+    const handleKeyDown = (e) => {
+      // Ctrl + A
+      if (e.ctrlKey && e.key.toLowerCase() === "a") {
+        e.preventDefault();
+        setSelectionMode(true);
+        handleSelectAll();
+      }
+
+      if (e.ctrlKey && e.key.toLowerCase() === "l") {
+        e.preventDefault();
 
       setSelectionMode((prev) => {
         const next = !prev;
         if (!next) setSelectedRooms([]);
         return next;
       });
-
       return;
-    }
+      }
 
-    if (e.ctrlKey && e.key.toLowerCase() === "a") {
-      e.preventDefault();
-      handleSelectAll();
-    }
+      if (e.ctrlKey && e.key.toLowerCase() === "e") {
+        e.preventDefault();
 
-    if (!selectionMode) return;
+        setRooms((prev) =>
+          prev.map((r) =>
+            r.status === "disabled"
+              ? { ...r, status: "empty" }
+              : r
+          )
+        );
 
-    if (e.key === "Tab") {
-      e.preventDefault();
+        // optional: clear selection after bulk enable
+        setSelectedRooms([]);
+        setSelectionMode(false);
+      }
 
-      const selectable = rooms.filter((r) => r.status !== "disabled");
-      if (selectable.length === 0) return;
+      if (!selectionMode) return;
 
-      const currentIndex = selectable.findIndex((r) =>
-        selectedRooms.includes(r.room)
-      );
+      // Tab navigation
+      if (e.key === "Tab") {
+        e.preventDefault();
 
-      const nextIndex =
-        currentIndex === -1 || currentIndex === selectable.length - 1
-          ? 0
-          : currentIndex + 1;
+        const selectable = rooms.filter((r) => r.status !== "disabled");
+        if (selectable.length === 0) return;
 
-      setSelectedRooms([selectable[nextIndex].room]);
-    }
-  };
+        const currentIndex = selectable.findIndex((r) =>
+          selectedRooms.includes(r.room)
+        );
 
-  window.addEventListener("keydown", handleKeyDown, true); // ✅ capture phase
+  const nextIndex =
+            currentIndex === -1 || currentIndex === selectable.length - 1
+              ? 0
+              : currentIndex + 1;
 
-  return () => {
-    window.removeEventListener("keydown", handleKeyDown, true);
-  };
-}, [rooms, selectedRooms, selectionMode]);
+          setSelectedRooms([selectable[nextIndex].room]);
+        }
+      };
+
+    window.addEventListener("keydown", handleKeyDown);
+    return () => window.removeEventListener("keydown", handleKeyDown);
+  }, [rooms, selectedRooms, selectionMode]);
   
   return (
     <div className="min-h-screen bg-[#ececec]">
@@ -335,75 +361,15 @@ const confirmDisable = () => {
                       Deallocate
                     </button>
 
-                  <div className="relative flex items-center gap-1">
-
-                    {/* Main Action Button (JUST SELECT MODE) */}
+                  {/* 🔴 DISABLE BUTTON ONLY */}
                     <button
-                      onClick={() => handleBulkAction(roomAction.toLowerCase())}
+                      onClick={() => handleBulkAction("disable")}
                       className={`hover:text-blue-600 transition ${
-                        actionMode === roomAction.toLowerCase()
-                          ? "text-blue-600 font-semibold"
-                          : ""
+                        actionMode === "deallocate" ? "text-blue-600 font-semibold" : ""
                       }`}
                     >
-                      {roomAction}
+                      Disable
                     </button>
-
-                    {/* Chevron toggle */}
-                    <button
-                      onClick={(e) => {
-                        e.stopPropagation();
-                        setDisableOpen((prev) => !prev);
-                      }}
-                      className="hover:text-blue-600 transition"
-                    >
-                      <ChevronDown
-                        size={16}
-                        className={`transition-transform duration-200 ${
-                          disableOpen ? "rotate-180" : ""
-                        }`}
-                      />
-                    </button>
-
-                    {/* Dropdown */}
-                    {disableOpen && (
-                      <div className="absolute right-0 top-full mt-2 w-36 bg-white border rounded-lg shadow-lg z-50 overflow-hidden">
-
-                        {/* 🔴 DISABLE (ONLY SELECT MODE) */}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-
-                            setRoomAction("Disable");
-                            setDisableOpen(false);
-
-                            // only select mode + selection
-                            handleBulkAction("disable");
-                          }}
-                          className="w-full text-left px-4 py-2 hover:bg-gray-100 text-red-600"
-                        >
-                          Disable
-                        </button>
-
-                        {/* 🟢 ENABLE (ONLY SELECT MODE) */}
-                        <button
-                          onClick={(e) => {
-                            e.stopPropagation();
-
-                            setRoomAction("Enable");
-                            setDisableOpen(false);
-
-                            // only select mode + selection
-                            handleBulkAction("enable");
-                          }}
-                          className="w-full text-left px-4 py-2 hover:bg-gray-100 text-green-600"
-                        >
-                          Enable
-                        </button>
-
-                      </div>
-                    )}
-                  </div>
                 </div>
               </div>
 
@@ -413,28 +379,25 @@ const confirmDisable = () => {
 
         {/* Scrollable Content */}
         <div className="px-4 sm:px-6 md:px-10 py-6">
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5">
+          <div
+              className={`grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 md:gap-5 ${
+                selectionMode ? "cursor-default" : "cursor-pointer"
+              }`}
+            >
             {rooms.map((r) => (
-          <RoomCard
-            key={r.room}
-            room={r.room}
-            status={r.status}
-            capacity={r.capacity}
-            occupants={r.occupants}
-            selected={selectedRooms.includes(r.room)}
-            onSelect={(roomId) => {
-                if (!selectionMode) return;
-
-                setSelectedRooms((prev) =>
-                  prev.includes(roomId)
-                    ? prev.filter((id) => id !== roomId)
-                    : [...prev, roomId]
-                );
-              }}
-            onClickRoom={() => handleRoomClick(r.room, r.status)}
-          />
-        ))}
-          </div>
+            <RoomCard
+              key={r.room}
+              room={r.room}
+              status={r.status}
+              capacity={r.capacity}
+              occupants={r.occupants}
+              selectionMode={selectionMode}
+              selected={selectedRooms.includes(r.room)}
+              onSelect={toggleRoomSelection}
+              onClickRoom={() => handleRoomClickWrapper(r.room)}
+            />
+          ))}
+          </div> 
 
           {/* Legend */}
           <div className="mt-6 inline-flex flex-wrap gap-4 bg-[#f3f3f3] px-3 py-3 border rounded-sm text-[18px] text-gray-600">

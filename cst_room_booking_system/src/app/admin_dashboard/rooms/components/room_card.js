@@ -39,15 +39,15 @@ export default function RoomCard({
   };
 
   const handleClick = () => {
-    if (onClickRoom) {
-      onClickRoom(room);
-      return;
-    }
+  if (selectionMode) {
+    onSelect(room); // click = select in selection mode
+    return;
+  }
 
-    if (selectionMode) {
-      onSelect(room);
-    }
-  };
+  if (onClickRoom) {
+    onClickRoom(room);
+  }
+};
 
   return (
     <div
@@ -70,8 +70,11 @@ export default function RoomCard({
         <input
           type="checkbox"
           checked={selected}
-          readOnly
-          className="absolute top-4 left-4 w-4 h-4 accent-blue-600"
+          onChange={(e) => {
+            e.stopPropagation();
+            onSelect(room);
+          }}
+          className="absolute top-4 left-4 w-4 h-4 accent-blue-600 z-10"
         />
       )}
 
