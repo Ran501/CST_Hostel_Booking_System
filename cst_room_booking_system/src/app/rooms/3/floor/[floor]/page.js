@@ -17,6 +17,7 @@ import {
 // Add this custom hook for responsive layout
 function useResponsiveLayout() {
   const [windowWidth, setWindowWidth] = useState(0);
+    
 
   useEffect(() => {
     const handleResize = () => setWindowWidth(window.innerWidth);
@@ -194,11 +195,12 @@ export default function NkFloorPage({
   // Simple redirect logic
   useEffect(() => {
     if (!isValid) router.replace("/rooms/3/floor/1");
-  }, [isValid, router]);
+  }, [isValid]);
 
   // 2. Fetch Rooms
   useEffect(() => {
     async function fetchRooms() {
+      console.log("FETCHING...");
       try {
         setLoading(true);
         const res = await fetch(`/api/rooms?floor=${floorNum}&building=NK`);
@@ -217,7 +219,12 @@ export default function NkFloorPage({
     
   const getRoomInfo = (roomNo) => {
     const fullRoomId = `${NK_NAME}-${roomNo}`;
-    return roomsData.find((r) => String(r.roomNumber) === fullRoomId);
+    const found = roomsData.find((r) => String(r.roomNumber) === fullRoomId);
+    
+    // Add this:
+    if (!found) console.log("NO MATCH:", fullRoomId, "vs DB:", roomsData.map(r => r.roomNumber));
+    
+    return found;
   };
 
   // Simple booking action - no API calls
@@ -240,9 +247,10 @@ export default function NkFloorPage({
   // Simple Room Card component - no API calls
   function RoomCard({ room, top, left }) {
     const roomInfo = getRoomInfo(room);
+    console.log(roomInfo)
     const fullRoomId = `${NK_NAME}-${room}`;
       // 1. Fallback for when data is loading
-      if (!roomInfo || loading) {
+      if (!roomInfo) {
       return (
         <div
           className="absolute flex items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 animate-pulse"
@@ -254,12 +262,12 @@ export default function NkFloorPage({
             height: "65px",
           }}
         >
-          <span className="text-[10px] text-slate-400">...</span>
+          <span className="text-[10px] text-slate-400">Loading...</span>
         </div>
       );
     }
 
-    const dbValue = roomInfo.isActive ?? roomInfo.is_active;
+    const dbValue =  roomInfo.status;
     const isRoomActive =
       dbValue !== false && String(dbValue).toUpperCase() !== "FALSE";
     const occupied = roomInfo.occupied || 0;

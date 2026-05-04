@@ -69,13 +69,56 @@ export default function RkaFloorPage({ params }) {
     [floorNum]
   );
 
-  // Simple booking action - no API calls
-  function handleConfirmBooking() {
-    if (selectedRoom === null) return;
-    
-    // Simple confirmation dialog logic - no API calls
-    alert(`Room ${RKA_NAME}-${selectedRoom} booking confirmed! (UI Only - No Backend)`);
-    setSelectedRoom(null);
+  async function handleConfirmBooking() {
+    if (selectedRoom === null || !currentUser) return;
+
+    const fullRoomId = `${RKA_NAME}-${selectedRoom}`;
+
+    try {
+      setIsBooking(true);
+      const res = await fetch("/api/booking", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          roomNumber: fullRoomId,
+          userId: 2230129,
+          email: "karmawangchuk@gmail.com",
+          userName: "Karma Wangchhuk",
+          checkIn: new Date().toISOString(),
+          checkOut: new Date(
+            new Date().setMonth(new Date().getMonth() + 6),
+          ).toISOString(),
+        }),
+      });
+
+      const result = await res.json();
+      if (result.success) {
+        setToast(
+          `Room ${fullRoomId} reserved successfully! Room details sent to your email.`,
+        );
+
+        // --- UPDATE SESSION AFTER SUCCESS ---
+        const updatedUser = { ...currentUser, hasBooked: true };
+        setCurrentUser(updatedUser);
+        localStorage.setItem("session", JSON.stringify(updatedUser));
+
+        setRoomsData((prev) =>
+          prev.map((r) =>
+            r.roomNumber === fullRoomId
+              ? { ...r, occupied: (r.occupied || 0) + 1 }
+              : r,
+          ),
+        );
+      } else {
+        setToast("Error: " + (result.error || "Could not book"));
+      }
+    } catch (err) {
+      setToast("Connection failed.");
+    } finally {
+      setIsBooking(false);
+      setSelectedRoom(null);
+      setTimeout(() => setToast(null), 3000);
+    }
   }
 
   // Simple Room Block component - no API calls
