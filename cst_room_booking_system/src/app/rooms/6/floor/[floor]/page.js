@@ -282,7 +282,7 @@ export default function HcFloorPage({ params }) {
                     {floorNum === 1 ? (
                       <>
                         <div className="w-full flex justify-center">
-                          <SpecialBlock text="🚻  Restroom" type="washroom" />
+                          <SpecialBlock text="🚻  Washroom" type="washroom" />
                         </div>
 
                         {rightRooms.slice(0, 3).map((r) => (
@@ -324,13 +324,13 @@ export default function HcFloorPage({ params }) {
                         ))}
 
                         <div className="w-full flex justify-center">
-                          <SpecialBlock text="🚻  Restroom" type="washroom" />
+                          <SpecialBlock text="🚻  Washroom" type="washroom" />
                         </div>
                       </>
                     ) : (
                       <>
                         <div className="w-full flex justify-center">
-                          <SpecialBlock text="🚻  Restroom" type="washroom" />
+                          <SpecialBlock text="🚻  Washroom" type="washroom" />
                         </div>
 
                         {rightRooms.slice(0, 3).map((r) => (
@@ -368,7 +368,7 @@ export default function HcFloorPage({ params }) {
                         ))}
 
                         <div className="w-full flex justify-center">
-                          <SpecialBlock text="🚻  Restroom" type="washroom" />
+                          <SpecialBlock text="🚻  Washroom" type="washroom" />
                         </div>
                       </>
                     )}

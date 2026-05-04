@@ -9,6 +9,7 @@ export default function HostelPage() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
   const [selectedHostel, setSelectedHostel] = useState(null);
+  
 
   // ✅ FETCH REAL DATA
   useEffect(() => {
@@ -17,7 +18,13 @@ export default function HostelPage() {
         const res = await fetch("/api/admin/hostel");
         const data = await res.json();
 
-        setHostels(data);
+        setHostels(
+          Array.isArray(data)
+            ? data
+            : Array.isArray(data.hostels)
+            ? data.hostels
+            : []
+        );
       } catch (err) {
         setError("Failed to load hostels");
       } finally {

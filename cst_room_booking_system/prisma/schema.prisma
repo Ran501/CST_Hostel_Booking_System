@@ -11,16 +11,19 @@ model User {
   id            String    @id @default(uuid())
   email         String    @unique
   studentNumber String    @unique
-  password      String
+  password      String?   // optional - blank initially
   name          String
   role          String    @default("user")
   year          Int
   gender        String
   phoneNumber   String    @unique
-  department    String    
-  createdAt     DateTime  @default(now())
-  updatedAt     DateTime  @updatedAt
+  department    String    // student's department
+  isActive      Boolean   @default(false)  // account activation status
+  hasSetPassword Boolean  @default(false) // whether user has set their own password
+  otpHash       String?   // hashed OTP for activation
+  otpExpiresAt  DateTime? // OTP expiry time
   bookings      Booking[]
+
 
   @@index([email])
   @@index([year])

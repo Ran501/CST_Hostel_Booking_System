@@ -3,30 +3,81 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { isValidPhoneNumber } from "../lib/validation";
-import { useRouter } from "next/navigation"; 
+import { useRouter, useSearchParams } from "next/navigation";
+import toast from "react-hot-toast"; 
 
-export default function LoginModal({ open, onClose, onSuccess }) {
-  const [phoneNumber, setPhoneNumber] = useState("");
+export default function LoginModal({ open = true, onClose, onSuccess }) {
+  const [studentNumber, setStudentNumber] = useState("");
+  const [password, setPassword] = useState("");
+  const [showPasswordField, setShowPasswordField] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const router = useRouter();  
+  const router = useRouter();
+  const searchParams = useSearchParams();
+  const activated = searchParams.get("activated");
+  const passwordSet = searchParams.get("passwordSet");
+
+  const handleActivateAccount = () => {
+    router.push("/activate");
+  };  
 
   // Reset form when modal opens
   useEffect(() => {
     if (open) {
+      setPassword("");
       setError(null);
-      setPhoneNumber("");
+      setStudentNumber("");
+      setShowPasswordField(false);
     }
   }, [open]);
 
-  const disabled = useMemo(() => loading || phoneNumber.trim().length === 0, [loading, phoneNumber]);
+  // Show activation success message and show password field if account is activated
+  useEffect(() => {
+    if (activated === "true") {
+      toast.success("Account activated successfully! You can now login.");
+      setShowPasswordField(true);
+    }
+    if (passwordSet === "true") {
+      toast.success("Password set successfully! Please login with your new password.");
+    }
+  }, [activated, passwordSet]);
 
+  // Check if user is activated when student number is entered
+  useEffect(() => {
+    const checkActivationStatus = async () => {
+      if (studentNumber.trim().length > 0) {
+        try {
+          const res = await fetch(`/api/auth/check-password-status?studentNumber=${studentNumber.trim()}`);
+          const data = await res.json().catch(() => null);
+          if (data?.isActive) {
+            setShowPasswordField(true);
+          } else {
+            setShowPasswordField(false);
+          }
+        } catch {
+          setShowPasswordField(false);
+        }
+      }
+    };
+
+    const debounceTimer = setTimeout(checkActivationStatus, 500);
+    return () => clearTimeout(debounceTimer);
+  }, [studentNumber]);
+
+  const disabled = useMemo(() => {
+  if (showPasswordField) {
+    return loading || studentNumber.trim().length === 0 || password.trim().length === 0;
+  }
+  return loading || studentNumber.trim().length === 0;
+}, [loading, studentNumber, password, showPasswordField]);
   const handleCancel = () => {
     // Clear session
     localStorage.removeItem("session");
 
-    // Close modal or whatever onClose does
-    onClose();
+    // If onClose is provided (modal mode), call it
+    if (onClose) {
+      onClose();
+    }
 
     // Redirect to logistics page
     window.location.href = "https://afm.rub.edu.bt/logistics/";
@@ -38,10 +89,10 @@ export default function LoginModal({ open, onClose, onSuccess }) {
     setError(null);
 
     try {
-      const phone = phoneNumber.trim();
+      const studentNum = studentNumber.trim();
       
-      if (!isValidPhoneNumber(phone)) {
-        setError("Invalid phone number");
+      if (!studentNum) {
+        setError("Student number is required");
         setLoading(false);
 
         setTimeout(() => {
@@ -51,15 +102,36 @@ export default function LoginModal({ open, onClose, onSuccess }) {
         return;
       }
 
+      const body = { studentNumber: studentNum };
+      if (showPasswordField) {
+        body.password = password.trim();
+      }
+
       const res = await fetch("/api/login", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ phoneNumber: phone }),
+        body: JSON.stringify(body),
       });
 
       const data = await res.json().catch(() => null);
+
+      if (data?.requiresPasswordSetup) {
+        // Redirect to password setup page
+        router.push(`/set-password?studentNumber=${studentNum}`);
+        setLoading(false);
+        return;
+      }
+
+      if (data?.requiresActivation) {
+        setError("Account not activated. Please activate your account first.");
+        setLoading(false);
+        setTimeout(() => {
+          setError(null);
+        }, 4000);
+        return;
+      }
 
       if (!res.ok || !data?.success) {
         setError(data?.error || "Login failed");
@@ -76,6 +148,7 @@ export default function LoginModal({ open, onClose, onSuccess }) {
 
       // Save session to localStorage
       const payload = JSON.stringify({
+        studentNumber: user.studentNumber,
         phoneNumber: user.phoneNumber,
         name: user.name,
         email: user.email,
@@ -88,7 +161,7 @@ export default function LoginModal({ open, onClose, onSuccess }) {
       // Notify AuthGate of successful login
       // This must happen BEFORE any redirect or state change
       if (onSuccess) {
-        onSuccess(user.phoneNumber?.toString?.() ?? String(user.phoneNumber));
+        onSuccess(user.studentNumber?.toString?.() ?? String(user.studentNumber));
       }
 
       // Admin redirect
@@ -96,9 +169,10 @@ export default function LoginModal({ open, onClose, onSuccess }) {
         router.push("/admin_dashboard");
         return;
       }
-      
-      // Don't call onClose here - let AuthGate handle the UI transition
-      // The modal will close when AuthGate updates its state
+
+      // Redirect regular users to homecontent
+      router.push("/homecontent");
+      return;
       
     } catch {
       setError("Unexpected error occurred");
@@ -179,30 +253,49 @@ export default function LoginModal({ open, onClose, onSuccess }) {
                     <h1 className="text-2xl font-bold text-white">CST LOGIN PORTAL</h1>
                     <div className="w-16 h-0.5 bg-gradient-to-r from-transparent via-white to-transparent mx-auto mt-3"></div>
                     <h2 className="text-white mt-5 font-bold text-lg">LOGIN</h2>
-                    <p className="text-white/70 mt-1 text-sm">using your student number / CID number</p>
+                    <p className="text-white/70 mt-1 text-sm">using your student number and password</p>
                   </div>
 
                   {/* Form */}
                   <form onSubmit={handleSubmit} className="space-y-5 px-8 py-6">
                     <div>
                       <label className="mb-2 block text-sm font-medium text-white/90">
-                        Phone Number
+                        Student Number
                       </label>
                       <div className="relative">
                         <input
-                          value={phoneNumber}
+                          value={studentNumber}
                           className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder-white/40 shadow-inner outline-none transition-all duration-200 focus:border-cstcolor/50 focus:bg-white/10 focus:shadow-lg"
-                          onChange={(e) => setPhoneNumber(e.target.value)}
-                          placeholder="Enter your phone number"
+                          onChange={(e) => setStudentNumber(e.target.value)}
+                          placeholder="Enter your student number"
                           autoFocus
                         />
                         {/* Subtle input glow */}
                         <div className="absolute inset-0 rounded-lg border border-transparent pointer-events-none transition-all duration-200 group-focus-within:border-cstcolor/30"></div>
                       </div>
                       <p className="mt-2 text-xs text-white/50">
-                        Example: <span className="font-medium text-white/80">17123456</span>
+                        Example: <span className="font-medium text-white/80">2023001</span>
                       </p>
                     </div>
+
+                    {showPasswordField && (
+                      <div>
+                        <label className="mb-2 block text-sm font-medium text-white/90">
+                          Password
+                        </label>
+                        <div className="relative">
+                          <input
+                            type="password"
+                            value={password}
+                            className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder-white/40 shadow-inner outline-none transition-all duration-200 focus:border-cstcolor/50 focus:bg-white/10 focus:shadow-lg"
+                            onChange={(e) => setPassword(e.target.value)}
+                            placeholder="Enter your password"
+                          />
+                          {/* Subtle input glow */}
+                          <div className="absolute inset-0 rounded-lg border border-transparent pointer-events-none transition-all duration-200 group-focus-within:border-cstcolor/30"></div>
+                        </div>
+                      </div>
+                    )}
 
                     {error && (
                       <div className="rounded-lg bg-red-500/10 border border-red-500/30 p-3">
@@ -241,7 +334,17 @@ export default function LoginModal({ open, onClose, onSuccess }) {
                       </button>
                     </div>
 
-                    {/* Decorative elements - very subtle */}
+                    {/* Activate Account Link */}
+                    <div className="text-center pt-2">
+                      <button
+                        type="button"
+                        onClick={handleActivateAccount}
+                        className="text-sm text-cstcolor3 hover:text-cstcolor2 transition-colors font-medium"
+                      >
+                        Activate Account
+                      </button>
+                    </div>
+                   {/* Decorative elements - very subtle */}
                     <div className="absolute -z-10 -top-10 -right-10 w-40 h-40 bg-cstcolor/5 rounded-full blur-3xl"></div>
                     <div className="absolute -z-10 -bottom-10 -left-10 w-32 h-32 bg-cstcolor2/5 rounded-full blur-3xl"></div>
                   </form>

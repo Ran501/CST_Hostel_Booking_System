@@ -258,7 +258,7 @@ export default function HaFloorPage({ params }) {
                         <RoomBlock room={r} />
                       </div>
                     ))}
-                    <SpecialBlock text="🚿 Restroom" type="washroom" />
+                    <SpecialBlock text="🚿 Washroom" type="washroom" />
                   </div>
                 </div>
               </section>

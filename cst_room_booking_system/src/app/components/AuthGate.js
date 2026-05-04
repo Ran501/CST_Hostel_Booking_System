@@ -30,8 +30,8 @@ export default function AuthGate({ children }) {
         }
 
         const parsed = JSON.parse(raw);
-        const phoneNumber = parsed?.phoneNumber?.toString().trim();
-        if (!phoneNumber) {
+        const studentNumber = parsed?.studentNumber?.toString().trim();
+        if (!studentNumber) {
           localStorage.removeItem("session");
           if (!cancelled) {
             setAuthenticated(false);
@@ -45,7 +45,7 @@ export default function AuthGate({ children }) {
           headers: {
             "Content-Type": "application/json",
           },
-          body: JSON.stringify({ phoneNumber }),
+          body: JSON.stringify({ studentNumber }),
         });
 
         const data = await res.json().catch(() => null);
@@ -61,6 +61,7 @@ export default function AuthGate({ children }) {
 
         const user = data.user;
         const refreshed = JSON.stringify({
+          studentNumber: user.studentNumber,
           phoneNumber: user.phoneNumber,
           name: user.name,
           email: user.email,
@@ -115,15 +116,15 @@ export default function AuthGate({ children }) {
     }
   }, [authenticated, mounted, pathname, router]);
 
-  const handleLoginSuccess = (phoneNumber) => {
+  const handleLoginSuccess = (studentNumber) => {
     // Re-check auth from localStorage
     try {
       const raw = localStorage.getItem("session");
       if (raw) {
         const parsed = JSON.parse(raw);
-        const storedPhone = parsed?.phoneNumber?.toString?.() ?? String(parsed?.phoneNumber ?? "");
-        const incomingPhone = phoneNumber?.toString?.() ?? String(phoneNumber ?? "");
-        if (storedPhone.trim() === incomingPhone.trim()) {
+        const storedStudentNumber = parsed?.studentNumber?.toString() ?? String(parsed?.studentNumber ?? "");
+        const incomingStudentNumber = studentNumber?.toString() ?? String(studentNumber ?? "");
+        if (storedStudentNumber.trim() === incomingStudentNumber.trim()) {
           setAuthenticated(true);
           setShowLogin(false);
 

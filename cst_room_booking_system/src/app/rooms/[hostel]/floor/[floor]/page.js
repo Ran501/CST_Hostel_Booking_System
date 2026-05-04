@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { use, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
-import FloorSidebar from "../../components/FloorSidebar";
-import RoomLegend from "../../components/RoomLegend";
-import ConfirmationDialog from "../../../confirmation";
-import { getHostelConfig } from "../../hostelConfig";
+import FloorSidebar from "../../../components/FloorSidebar";
+import RoomLegend from "../../../components/RoomLegend";
+import ConfirmationDialog from "../../../../confirmation";
+// import { getHostelConfig } from "../../data/hostels";
 
 function floorLabel(n) {
   return ["First", "Second", "Third", "Fourth"][n - 1] || String(n);

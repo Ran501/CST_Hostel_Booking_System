@@ -2,9 +2,11 @@
 
 export default function RoomCard({
   room,
+  floor,
   status,
   capacity,
-  occupants,
+  occupants = [],
+  disabledReason = "",
   selectionMode,
   selected,
   onSelect,
@@ -12,102 +14,138 @@ export default function RoomCard({
 }) {
   const percentage = Math.round((occupants.length / capacity) * 100);
 
-  const statusColors = {
+  const isDisabled = status === "disabled";
+
+  // 🎨 Background themes (matches image)
+  const cardTheme = {
+    full: "bg-red-200 border-red-100",
+    partial: "bg-amber-100 border-amber-100",
+    empty: "bg-green-200 border-green-100",
+    disabled: "bg-gray-200 border-gray-300",
+  };
+
+  const badgeTheme = {
     full: "bg-red-500 text-white",
-    partial: "bg-orange-400 text-white",
-    empty: "bg-green-500 text-white",
-    disabled: "bg-gray-500 text-white",
+    partial: "bg-orange-500 text-white",
+    empty: "bg-green-600 text-white",
+    disabled: "border border-gray-400 text-gray-600 bg-white",
   };
 
-  // ✅ unified click handler
+  const progressColor = {
+    full: "bg-red-500",
+    partial: "bg-orange-500",
+    empty: "bg-green-500",
+    disabled: "bg-gray-400",
+  };
+
   const handleClick = () => {
-    // ❌ ignore disabled rooms (optional but recommended)
-    if (status === "disabled") return;
+  if (selectionMode) {
+    onSelect(room); // click = select in selection mode
+    return;
+  }
 
-    // 🟢 allocate mode or custom mode click
-    if (onClickRoom) {
-      onClickRoom(room);
-      return;
-    }
-
-    // 🟡 selection mode fallback
-    if (selectionMode) {
-      onSelect(room);
-    }
-  };
+  if (onClickRoom) {
+    onClickRoom(room);
+  }
+};
 
   return (
     <div
-      onClick={handleClick}
-      className={`relative border rounded-md p-3 min-h-[175px] transition cursor-pointer
-        hover:shadow-md
-        ${
-          selected
-            ? "border-blue-500 bg-blue-50 shadow-md"
-            : "bg-[#f5f5f5] border-gray-200"
-        }
-      `}
-    >
-      {/* Checkbox (only in selection mode) */}
-      {selectionMode && (
+        tabIndex={0}
+        onClick={handleClick}
+        onKeyDown={(e) => {
+          if (e.key === "Enter") {
+            handleClick();
+          }
+        }}
+        className={`
+          relative rounded-xl border p-4 transition-all
+          ${cardTheme[status]}
+          ${!isDisabled ? "cursor-pointer hover:shadow-md" : "cursor-pointer opacity-90"}
+          ${selected ? "ring-2 ring-blue-500" : ""}
+        `}
+      >
+      {/* Selection checkbox */}
+      {selectionMode && !isDisabled && (
         <input
           type="checkbox"
           checked={selected}
-          readOnly
-          className="absolute top-3 left-3 w-4 h-4 accent-blue-600"
+          onChange={(e) => {
+            e.stopPropagation();
+            onSelect(room);
+          }}
+          className="absolute top-4 left-4 w-4 h-4 accent-blue-600 z-10"
         />
       )}
 
-      {/* Header */}
-      <div className="flex justify-between text-[18px] font-medium text-[#1e1e1e]">
-        <span className="ml-6">{room}</span>
 
+      {/* Header */}
+      <div className="flex justify-between items-start">
+        <div className={`${selectionMode ? "ml-6" : ""}`}>
+          <h2 className="text-lg font-semibold text-gray-900">{room}</h2>
+          <p className="text-sm text-gray-500">{floor}</p>
+        </div>
+
+        {/* Status Badge */}
         <span
-          className={`px-2 py-0.5 rounded-full text-sm ${statusColors[status]}`}
+          className={`px-3 py-1 text-xs rounded-full font-medium ${badgeTheme[status]}`}
         >
           {status === "full"
             ? "Full"
             : status === "partial"
-            ? "Partially Full"
+            ? `${occupants.length}/${capacity}`
             : status === "empty"
             ? "Empty"
             : "Disabled"}
         </span>
       </div>
 
-      {/* Capacity */}
-      <div className="mt-3 flex justify-between text-[16px] text-[#1e1e1e]">
-        <span>Capacity</span>
-        <span>{capacity}</span>
-      </div>
-
-      {/* Progress bar */}
-      <div className="mt-3 w-full">
-        <div className="w-full h-4 bg-gray-200 rounded-full overflow-hidden">
-          <div
-            className={`h-4 ${statusColors[status].split(" ")[0]}`}
-            style={{ width: `${percentage}%` }}
-          />
+      {/* Progress Bar */}
+      {!isDisabled && (
+        <div className="mt-4">
+          <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+            <div
+              className={`h-2 ${progressColor[status]}`}
+              style={{ width: `${percentage}%` }}
+            />
+          </div>
         </div>
+      )}
 
-        <div className="mt-1 text-sm text-gray-700 text-center">
-          {occupants.length}/{capacity}
+      {/* Disabled Box */}
+      {isDisabled && (
+        <div className="mt-4 border border-dashed border-gray-400 rounded-lg p-4 text-center">
+          <p className="text-xs text-gray-500 mb-1">Reason for Disabling</p>
+          <p className="font-semibold text-gray-700 uppercase tracking-wide">
+            {disabledReason || "RESERVED"}
+          </p>
         </div>
-      </div>
+      )}
 
       {/* Occupants */}
-      <div className="mt-4 text-[15px] text-[#1e1e1e]">
-        {occupants.length > 0 ? (
-          <ul className="list-disc list-inside">
-            {occupants.map((name, idx) => (
-              <li key={idx}>{name}</li>
-            ))}
-          </ul>
-        ) : (
-          <span className="italic text-gray-500">
-            {status === "disabled" ? "Disabled (Luggage Room)" : "No occupants"}
-          </span>
-        )}
+      {!isDisabled && (
+        <div className="mt-4 text-sm text-gray-800">
+          <p className="text-gray-500 mb-1">Occupants</p>
+
+          {occupants.length > 0 ? (
+            <ul className="space-y-1">
+              {occupants.map((name, i) => (
+                <li key={i}>{name}</li>
+              ))}
+            </ul>
+          ) : (
+            <p className="italic text-gray-400">No occupants</p>
+          )}
+
+          <p className="mt-2 text-green-700 font-medium">
+            Available: {capacity - occupants.length} beds
+          </p>
+        </div>
+      )}
+
+      {/* Footer */}
+      <div className="mt-4 pt-3 border-t text-center text-sm text-gray-500">
+        {isDisabled ? "Click to enable room" : "Click to Allocate"}
       </div>
     </div>
   );
