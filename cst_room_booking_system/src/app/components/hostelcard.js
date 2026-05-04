@@ -47,7 +47,7 @@ export const HostelCard = ({ hostel, onClose, onBook }) => {
     if (onBook) {
       onBook();
     } else {
-      router.push(`/room/${hostel.id}/floor/1`);
+      router.push(`/rooms/${hostel.id}/floor/1`);
     }
     
     // Clear any existing timeout

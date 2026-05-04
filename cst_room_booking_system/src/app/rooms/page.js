@@ -12,6 +12,8 @@ const hostels = [
   { id: 6, name: "HC", fullName: "Hostel HC (Cedar)", floors: 3, color: "from-indigo-500 to-indigo-600", bgColor: "bg-indigo-50", borderColor: "border-indigo-200", hoverBg: "hover:bg-indigo-100" },
   { id: 7, name: "HD", fullName: "Hostel HD (Deodar)", floors: 3, color: "from-orange-500 to-orange-600", bgColor: "bg-orange-50", borderColor: "border-orange-200", hoverBg: "hover:bg-orange-100" },
   { id: 8, name: "HF", fullName: "Hostel HF (Ficus)", floors: 3, color: "from-teal-500 to-teal-600", bgColor: "bg-teal-50", borderColor: "border-teal-200", hoverBg: "hover:bg-teal-100" },
+  { id: 9, name: "HE", fullName: "Hostel HE (Original ID 10)", floors: 2, color: "from-red-500 to-red-600", bgColor: "bg-red-50", borderColor: "border-red-200", hoverBg: "hover:bg-red-100" },
+  { id: 10, name: "Lhawang", fullName: "Hostel Lhawang (Original ID 9)", floors: 5, color: "from-emerald-500 to-emerald-600", bgColor: "bg-emerald-50", borderColor: "border-emerald-200", hoverBg: "hover:bg-emerald-100" },
 ];
 
 export default function HostelLandingPage() {
