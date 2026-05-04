@@ -826,7 +826,12 @@ export const UserScalarFieldEnum = {
   role: 'role',
   year: 'year',
   gender: 'gender',
-  phoneNumber: 'phoneNumber'
+  phoneNumber: 'phoneNumber',
+  department: 'department',
+  isActive: 'isActive',
+  hasSetPassword: 'hasSetPassword',
+  otpHash: 'otpHash',
+  otpExpiresAt: 'otpExpiresAt'
 } as const
 
 export type UserScalarFieldEnum = (typeof UserScalarFieldEnum)[keyof typeof UserScalarFieldEnum]
@@ -860,7 +865,7 @@ export type RoomScalarFieldEnum = (typeof RoomScalarFieldEnum)[keyof typeof Room
 
 export const BookingScalarFieldEnum = {
   id: 'id',
-  userPhone: 'userPhone',
+  studentNumber: 'studentNumber',
   roomId: 'roomId',
   checkIn: 'checkIn',
   checkOut: 'checkOut',
@@ -896,6 +901,14 @@ export const QueryMode = {
 export type QueryMode = (typeof QueryMode)[keyof typeof QueryMode]
 
 
+export const NullsOrder = {
+  first: 'first',
+  last: 'last'
+} as const
+
+export type NullsOrder = (typeof NullsOrder)[keyof typeof NullsOrder]
+
+
 
 /**
  * Field references
@@ -927,6 +940,13 @@ export type IntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'In
  * Reference to a field of type 'Int[]'
  */
 export type ListIntFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Int[]'>
+    
+
+
+/**
+ * Reference to a field of type 'Boolean'
+ */
+export type BooleanFieldRefInput<$PrismaModel> = FieldRefInputType<$PrismaModel, 'Boolean'>
     
 
 

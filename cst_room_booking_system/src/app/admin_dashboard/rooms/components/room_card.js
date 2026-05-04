@@ -8,6 +8,7 @@ export default function RoomCard({
   selectionMode,
   selected,
   onSelect,
+  onClickRoom,
 }) {
   const percentage = Math.round((occupants.length / capacity) * 100);
 
@@ -18,7 +19,18 @@ export default function RoomCard({
     disabled: "bg-gray-500 text-white",
   };
 
+  // ✅ unified click handler
   const handleClick = () => {
+    // ❌ ignore disabled rooms (optional but recommended)
+    if (status === "disabled") return;
+
+    // 🟢 allocate mode or custom mode click
+    if (onClickRoom) {
+      onClickRoom(room);
+      return;
+    }
+
+    // 🟡 selection mode fallback
     if (selectionMode) {
       onSelect(room);
     }

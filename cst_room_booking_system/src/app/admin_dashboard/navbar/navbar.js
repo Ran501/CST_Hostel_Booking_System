@@ -41,7 +41,7 @@ export default function Navbar() {
 
   const isActive = (item) => {
     if (item === "Dashboard") return pathname === "/admin_dashboard";
-    if (item === "Guest") return pathname.startsWith("/admin_dashboard/students");
+    if (item === "Students") return pathname.startsWith("/admin_dashboard/students");
     if (item === "Rooms") return pathname.startsWith("/admin_dashboard/rooms");
     if (item === "Hostel") return pathname.startsWith("/admin_dashboard/hostel");
     return false;
@@ -51,7 +51,7 @@ export default function Navbar() {
     switch (page) {
       case "Dashboard":
         return router.push("/admin_dashboard");
-      case "Guest":
+      case "Students":
         return router.push("/admin_dashboard/students");
       case "Rooms":
         return router.push("/admin_dashboard/rooms");
@@ -126,7 +126,7 @@ export default function Navbar() {
         <div className="flex items-center gap-3">
           <Image src="/cstlogo.png" alt="CST Logo" width={40} height={40} priority />
           <span className="font-bold text-lg text-gray-800">
-            AFM Room Booking System
+            CST Room Booking System
           </span>
         </div>
 
@@ -180,13 +180,13 @@ export default function Navbar() {
                     )}
                   </div>
 
-                  <button
+                  {/* <button
                     className="w-full px-4 py-2 text-left hover:bg-gray-100"
                     onClick={() => setAdminModalOpen(true)}
                   >
                     <Settings className="inline w-4 h-4 mr-2" />
                     Manage Admin
-                  </button>
+                  </button> */}
 
                   <button
                     className="w-full px-4 py-2 text-left text-red-600 hover:bg-red-100"

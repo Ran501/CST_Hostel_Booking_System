@@ -74,10 +74,23 @@ export default function RoomManagement() {
   const [open, setOpen] = useState(true);
   const [allocateStudentsOpen, setAllocateStudentsOpen] = useState(false);
   const [deallocateStudentsOpen, setDeallocateStudentsOpen] = useState(false);
+  const [allocateRoom, setAllocateRoom] = useState(null);
+  const isSelectionMode =
+  actionMode === "edit" ||
+  actionMode === "deallocate" ||
+  actionMode === "disable" ||
+  actionMode === "enable";
+
+const isAllocateMode = actionMode === "allocate";
 
 
  const handleActionClick = (mode) => {
   setSelectedRooms([]);
+
+  if (mode === "allocate") {
+    setActionMode((prev) => (prev === "allocate" ? null : "allocate"));
+    return;
+  }
 
   setActionMode((prev) => (prev === mode ? null : mode));
 };
@@ -85,22 +98,41 @@ export default function RoomManagement() {
   const [selectedRooms, setSelectedRooms] = useState([]);
   const hasSelection = selectedRooms.length > 0;
 
- const toggleRoomSelection = (roomId) => {
-  setSelectedRooms((prev) => {
-    const safePrev = Array.isArray(prev) ? prev : [];
+  const allRoomIds = rooms.map((r) => r.room);
 
-    return safePrev.includes(roomId)
-      ? safePrev.filter((id) => id !== roomId)
-      : [...safePrev, roomId];
-  });
+const selectableRoomIds = rooms
+  .filter(room => room.status !== "disabled")
+  .map(room => room.room);
+
+const isAllSelected =
+  selectedRooms.length > 0 &&
+  selectedRooms.length === selectableRoomIds.length;
+
+const handleSelectAll = () => {
+  if (isAllSelected) {
+    setSelectedRooms([]);
+  } else {
+    setSelectedRooms(selectableRoomIds);
+  }
 };
+
+ const toggleRoomSelection = (roomId) => {
+  if (isAllocateMode) return; // ❗ block selection system
+
+  setSelectedRooms((prev) =>
+    prev.includes(roomId)
+      ? prev.filter((id) => id !== roomId)
+      : [...prev, roomId]
+  );
+};
+
 const enableRooms = () => {
   setRooms((prev) =>
     prev.map((room) =>
       selectedRooms.includes(room.id)
         ? { ...room, isActive: true }
         : room
-    )
+    ) 
   );
 
   setSelectedRooms([]);
@@ -142,9 +174,9 @@ const handleConfirmAction = () => {
       setEditModalOpen(true);
       break;
 
-    case "allocate":
-      setAllocateStudentsOpen(true);
-      break;
+    // case "allocate":
+    //   setAllocateStudentsOpen(true);
+    //   break;
 
     case "deallocate":
       setDeallocateStudentsOpen(true);
@@ -300,7 +332,15 @@ useEffect(() => {
                 </div>
 
                 <div className="flex flex-wrap gap-4 text-[18px] md:text-[20px]">
-                  {hasSelection && (
+                  {isSelectionMode && (
+                      <button
+                        onClick={handleSelectAll}
+                        className="text-blue-600 font-medium hover:underline"
+                      >
+                        {isAllSelected ? "Unselect All" : "Select All"}
+                      </button>
+                    )}
+                  {isSelectionMode && hasSelection && (
                       <button
                         onClick={handleConfirmAction}
                         className={`hover:text-blue-600 transition ${
@@ -424,9 +464,17 @@ useEffect(() => {
                 status={r.status}
                 capacity={r.capacity}
                 occupants={r.occupants}
-                selectionMode={actionMode}
+                selectionMode={isSelectionMode}
                 selected={selectedRooms.includes(r.room)}
                 onSelect={toggleRoomSelection}
+                onClickRoom={() => {
+                  if (actionMode === "allocate") {
+                    setAllocateRoom(r.room);
+                    setAllocateStudentsOpen(true);
+                  } else {
+                    toggleRoomSelection(r.room);
+                  }
+                }}
               />
             ))}
           </div>
@@ -536,10 +584,13 @@ useEffect(() => {
       <AllocateStudents
         isOpen={allocateStudentsOpen}
         onClose={() => setAllocateStudentsOpen(false)}
-        rooms={rooms}
+        rooms={rooms.filter(r => r.room === allocateRoom)}
+        selectedRooms={[allocateRoom]}
         onNext={(data) => {
           console.log("Allocate:", data);
           setAllocateStudentsOpen(false);
+          setAllocateRoom(null);
+          setActionMode(null);
         }}
       />
 

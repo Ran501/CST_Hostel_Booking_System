@@ -1,4 +1,3 @@
-// src/app/components/hooks/usecampusMap.js
 import { useCallback, useRef, useState, useEffect } from 'react';
 import maplibregl from 'maplibre-gl';
 import { getDeviceMapSettings } from '../utils/map-utils';
@@ -7,48 +6,47 @@ import { HOSTELS } from '../constants';
 export const useCampusMap = () => {
   const mapRef = useRef(null);
   const markersRef = useRef({});
+
   const [selectedHostel, setSelectedHostel] = useState(null);
   const [activeMap, setActiveMap] = useState({});
-  const [isMobile, setIsMobile] = useState(false);
 
-  // Detect mobile device
-  useEffect(() => {
-    const checkMobile = () => {
-      setIsMobile(window.innerWidth < 768);
-    };
-    
-    checkMobile();
-    window.addEventListener('resize', checkMobile);
-    
-    return () => window.removeEventListener('resize', checkMobile);
-  }, []);
-
-  const normalize = (name) => 
+  const normalize = (name) =>
     name.replace(' HOSTEL', '').toUpperCase();
 
+  // Fetch active status
   useEffect(() => {
     const fetchActiveStatus = async () => {
-      const res = await fetch('/api/admin/hostel');
-      const data = await res.json();
+      try {
+        const res = await fetch('/api/admin/hostel');
+        const data = await res.json().catch(() => null);
 
-      const obj = {};
-      data.hostels.forEach((h) => {
-        obj[h.id] = h.isActive;
-      });
+        if (!data || !data.hostels) {
+          console.warn('No hostel data received from API');
+          return;
+        }
 
-      setActiveMap(obj);
+        const obj = {};
+        data.hostels.forEach((h) => {
+          obj[h.id] = h.isActive;
+        });
 
-      // Update markers immediately
-      Object.entries(markersRef.current).forEach(([name, marker]) => {
-        const hostel = HOSTELS.find(h => h.name === name);
-        if (!hostel) return;
-        const isActive = obj[hostel.id] ?? true;
-        marker.getElement().style.display = isActive ? 'block' : 'none';
-      });
+        setActiveMap(obj);
+
+        Object.entries(markersRef.current).forEach(([name, marker]) => {
+          const hostel = HOSTELS.find((h) => h.name === name);
+          if (!hostel) return;
+
+          const isActive = obj[hostel.id] ?? true;
+          marker.getElement().style.display = isActive ? 'block' : 'none';
+        });
+      } catch (error) {
+        console.error('Error fetching active status:', error);
+      }
     };
 
     fetchActiveStatus();
     const interval = setInterval(fetchActiveStatus, 10000);
+
     return () => clearInterval(interval);
   }, []);
 
@@ -59,9 +57,12 @@ export const useCampusMap = () => {
     });
   }, [activeMap]);
 
+  // Reset map view
   const resetMapView = useCallback(() => {
     if (!mapRef.current) return;
+
     const settings = getDeviceMapSettings();
+
     mapRef.current.flyTo({
       center: settings.center,
       zoom: settings.zoom,
@@ -69,40 +70,49 @@ export const useCampusMap = () => {
     });
   }, []);
 
+  // 🔥 FIXED FLY FUNCTION
   const flyToPlace = useCallback((place) => {
-    if (!mapRef.current) return;
+    if (!mapRef.current) {
+      console.log('Map not ready');
+      return;
+    }
 
-    // Get responsive coordinates for the hostel
-    const coordinates = getHostelCoordinates(place, isMobile);
-    
-    // Create a new place object with the correct coordinates for this device
-    const placeWithCorrectCoords = {
-      ...place,
-      lng: coordinates.lng,
-      lat: coordinates.lat
-    };
+    setSelectedHostel(place);
 
-    setSelectedHostel(placeWithCorrectCoords);
-    
-    const mobileCheck = isMobile || (typeof window !== 'undefined' && window.innerWidth < 640);
-    
-    // Fix: Use proper PointLike type [number, number]
-    const offset = mobileCheck ? [0, -180] : [0, 0];
+    const isMobile =
+      typeof window !== 'undefined' && window.innerWidth < 640;
 
-    mapRef.current.flyTo({
-      center: { lng: coordinates.lng, lat: coordinates.lat },
-      zoom: 19,
-      duration: 2000,
-      offset
-    });
+    let lng = place.lng;
+  let lat = place.lat;
 
-    // Reset all markers first
+  if (place.name === 'LHAWANG HOSTEL') {
+    if (isMobile) {
+      // 📱 phone version coordinate (adjust this)
+      lng = place.mobileLng ?? place.lng;
+      lat = place.mobileLat ?? place.lat;
+    } else {
+      // 💻 laptop version coordinate (adjust this)
+      lng = place.desktopLng ?? place.lng;
+      lat = place.desktopLat ?? place.lat;
+    }
+  }
+
+  const offset = isMobile ? [0, -120] : [0, 0];
+
+  mapRef.current.flyTo({
+    center: [lng, lat],
+    zoom: 18,
+    duration: 2000,
+    offset
+  });
+
+    // Reset all markers
     Object.keys(markersRef.current).forEach((key) => {
       const marker = markersRef.current[key];
       const markerEl = marker.getElement();
+
       if (markerEl) {
-        const svg = markerEl.querySelector('svg');
-        const path = svg?.querySelector('path');
+        const path = markerEl.querySelector('svg path');
         if (path) {
           path.setAttribute('fill', '#ef4444');
         }
@@ -110,32 +120,37 @@ export const useCampusMap = () => {
       }
     });
 
-    // Highlight the selected marker
+    // Highlight selected marker AFTER animation
     setTimeout(() => {
-      const selectedMarker = markersRef.current[place.id];
+      // 🚨 FIX 2: use NAME instead of ID (important)
+      const selectedMarker = markersRef.current[place.name];
+
       if (selectedMarker) {
         const markerEl = selectedMarker.getElement();
+
         if (markerEl) {
-          const svg = markerEl.querySelector('svg');
-          const path = svg?.querySelector('path');
+          const path = markerEl.querySelector('svg path');
           if (path) {
             path.setAttribute('fill', '#135463');
           }
-          markerEl.style.filter = 'drop-shadow(0 0 12px rgba(37, 99, 235, 0.9)) drop-shadow(0 0 6px rgba(37, 99, 235, 0.6))';
+
+          markerEl.style.filter =
+            'drop-shadow(0 0 12px rgba(37, 99, 235, 0.9)) drop-shadow(0 0 6px rgba(37, 99, 235, 0.6))';
         }
       }
-    });
-  }, [isMobile]);
+    }, 2000); // 🚨 FIX 3: proper delay
+  }, []);
 
+  // Close card
   const handleCloseHostelCard = useCallback(() => {
     setSelectedHostel(null);
-    // Reset all markers when closing card
+
     Object.keys(markersRef.current).forEach((key) => {
       const marker = markersRef.current[key];
       const markerEl = marker.getElement();
+
       if (markerEl) {
-        const svg = markerEl.querySelector('svg');
-        const path = svg?.querySelector('path');
+        const path = markerEl.querySelector('svg path');
         if (path) {
           path.setAttribute('fill', '#ef4444');
         }
@@ -153,7 +168,6 @@ export const useCampusMap = () => {
     flyToPlace,
     handleCloseHostelCard,
     hostels: HOSTELS,
-    activeMap,
-    isMobile,
+    activeMap
   };
 };

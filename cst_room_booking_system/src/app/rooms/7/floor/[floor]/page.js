@@ -32,6 +32,31 @@ export default function HdFloorPage({ params }) {
   // --- STATE ---
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  // To hold backend data
+  const [roomsData, setRoomsData] = useState([]);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+              async function fetchRooms() {
+                try {
+                  setLoading(true);
+                  // Replace with your actual API endpoint
+                  const res = await fetch(`/api/rooms?floor=${floorNum}&building=HD`);
+                  const data = await res.json();
+                  if (data.success) setRoomsData(data.rooms || []);
+                } catch (err) {
+                  console.error("Fetch error:", err);
+                } finally {
+                  setLoading(false);
+                }
+              }
+              if (isValid) fetchRooms();
+            }, [floorNum, isValid]);
+          
+            const getRoomInfo = (roomNo) => {
+              const fullRoomId = `${HD_NAME}-${roomNo}`;
+              return roomsData.find((r) => String(r.roomNumber) === fullRoomId);
+            };
 
   useEffect(() => {
     if (!isValid) {
@@ -62,6 +87,36 @@ export default function HdFloorPage({ params }) {
   // --- SIMPLE ROOM BLOCK COMPONENT ---
   const RoomBlock = ({ room }) => {
     const isSelected = selectedRoom === room;
+    const roomInfo = getRoomInfo(room);
+    if (!roomInfo) {
+        return (
+          <div className="w-full h-full rounded-xl border border-slate-200 bg-slate-50 animate-pulse flex items-center justify-center">
+            <span className="text-[10px] text-slate-400">Loading...</span>
+          </div>
+        );
+      }
+  
+  // 2. Extract database values
+      const dbValue = roomInfo.isActive ?? roomInfo.is_active;
+      const isRoomActive = dbValue !== false && String(dbValue).toUpperCase().trim() !== "FALSE";
+      const occupied = roomInfo.occupied || 0;
+      const capacity = roomInfo.capacity || 3;
+  
+      // 3. Calculate states
+      const isFully = occupied >= capacity;
+      const isPartial = occupied > 0 && occupied < capacity;
+  
+      // 4. Assign dynamic CSS colors
+      const colors = !isRoomActive
+        ? "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed opacity-60"
+        : isFully
+          ? "border-red-200 bg-red-50 text-red-700 cursor-not-allowed ring-1 ring-red-300/70"
+          : isSelected
+            ? "border-emerald-200 bg-emerald-50 text-emerald-700 ring-2 ring-emerald-300/70"
+            : isPartial
+              ? "border-amber-200 bg-amber-50 text-amber-700 hover:border-amber-300/80 hover:bg-amber-50/80 hover:-translate-y-0.5 hover:shadow-md"
+              : "border-slate-200 bg-white text-slate-800 hover:border-slate-300 hover:bg-slate-50 hover:-translate-y-0.5 hover:shadow-md";
+
 
     return (
       <button
@@ -77,8 +132,14 @@ export default function HdFloorPage({ params }) {
           <span className="text-sm xs:text-base sm:text-base font-semibold tracking-wide">
             {room}
           </span>
-          <span className="text-[9px] xs:text-[10px] font-bold uppercase whitespace-nowrap text-green-600">
-            Available
+          <span className="text-[9px] xs:text-[10px] sm:text-[11px] text-slate-700 whitespace-nowrap">
+            {!isRoomActive
+              ? roomInfo.disabledReason || "Inactive"
+              : isFully
+                ? "Fully Booked"
+                : isPartial
+                  ? `${occupied}/${capacity} Occupied`
+                  : `0/${capacity} Available`}
           </span>
         </div>
         <div

@@ -1,37 +1,45 @@
 generator client {
-  provider = "prisma-client"
+  provider = "prisma-client-js"
   output   = "../src/generated/prisma"
 }
 
 datasource db {
-  provider  = "postgresql"
+  provider = "postgresql"
 }
 
 model User {
   id            String    @id @default(uuid())
   email         String    @unique
   studentNumber String    @unique
-  password      String
+  password      String?   // optional - blank initially
   name          String
   role          String    @default("user")
-  year          Int       // student's current year (1st, 2nd, etc.)
+  year          Int
   gender        String
   phoneNumber   String    @unique
+  department    String    // student's department
+  isActive      Boolean   @default(false)  // account activation status
+  hasSetPassword Boolean  @default(false) // whether user has set their own password
+  otpHash       String?   // hashed OTP for activation
+  otpExpiresAt  DateTime? // OTP expiry time
   bookings      Booking[]
+
 
   @@index([email])
   @@index([year])
+  @@index([department])
+  @@index([createdAt])
 }
 
 model Hostel {
-  id              String    @id @default(uuid())
-  hostelName      String
-  numberOfFloor   Int
-  gender          String    // which genders allowed (e.g., "male", "female", "any")
-  status          String    @default("active") // active, inactive, maintenance
-  year            Int       // which student year this hostel is primarily for (optional)
-  capacity        Int       // total capacity across all rooms
-  rooms           Room[]
+  id               String            @id @default(uuid())
+  hostelName       String
+  numberOfFloor    Int
+  gender           String
+  status           String            @default("active")
+  year             Int
+  capacity         Int
+  rooms            Room[]
   floorAllocations FloorAllocation[]
 
   @@index([status])
@@ -42,42 +50,41 @@ model Room {
   id         String    @id @default(uuid())
   roomNumber String
   floor      Int
-  capacity   Int       @default(3) // each room up to 3 students
-  status     String    @default("available") // available, full, maintenance
-  year       Int       // which student year this room is for (can override floor allocation)
+  capacity   Int       @default(3)
+  status     String    @default("available")
+  year       Int
   hostel_id  String
   hostel     Hostel    @relation(fields: [hostel_id], references: [id], onDelete: Cascade)
   bookings   Booking[]
 
-  @@unique([hostel_id, roomNumber]) // no duplicate room numbers within same hostel
+  @@unique([hostel_id, roomNumber])
   @@index([hostel_id])
   @@index([floor])
   @@index([status])
 }
 
 model Booking {
-  id        String   @id @default(uuid())
-  studentNumber String   // references User.phoneNumber
-  roomId    String
-  checkIn   DateTime
-  checkOut  DateTime
-  createdAt DateTime @default(now())
-  room      Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
-  user      User     @relation(fields: [studentNumber], references: [studentNumber], onDelete: Cascade)
+  id            String   @id @default(uuid())
+  studentNumber String
+  roomId        String
+  checkIn       DateTime
+  checkOut      DateTime
+  createdAt     DateTime @default(now())
+  room          Room     @relation(fields: [roomId], references: [id], onDelete: Cascade)
+  user          User     @relation(fields: [studentNumber], references: [studentNumber], onDelete: Cascade)
 
   @@index([studentNumber])
   @@index([roomId])
-  @@index([checkIn, checkOut]) // for date-range queries
+  @@index([checkIn, checkOut])
 }
 
-// New model: allocate specific floors to student years (e.g., Floor 1 → 1st year, Floor 2 → 2nd year)
 model FloorAllocation {
-  id          String   @id @default(uuid())
+  id          String @id @default(uuid())
   hostelId    String
   floor       Int
-  studentYear Int      // e.g., 1, 2, 3, 4
-  hostel      Hostel   @relation(fields: [hostelId], references: [id], onDelete: Cascade)
+  studentYear Int
+  hostel      Hostel @relation(fields: [hostelId], references: [id], onDelete: Cascade)
 
-  @@unique([hostelId, floor])        // each floor in a hostel can have only one allocation
+  @@unique([hostelId, floor])
   @@index([studentYear])
 }

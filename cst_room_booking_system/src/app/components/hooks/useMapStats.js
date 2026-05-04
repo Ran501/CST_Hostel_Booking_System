@@ -8,14 +8,14 @@ export const useMapStats = (hostels) => {
     occupancyRate: 0,
     loading: true,
   });
-  const [phoneNumber, setPhoneNumber] = useState("");
+  const [studentNumber, setStudentNumber] = useState("");
 
   useEffect(() => {
-    const storedUser = localStorage.getItem("session"); // Use your actual key name
+    const storedUser = localStorage.getItem("session");
     if (storedUser) {
       try {
         const parsedUser = JSON.parse(storedUser);
-        setPhoneNumber(parsedUser.phone || parsedUser.phoneNumber);
+        setStudentNumber(parsedUser.studentNumber || "");
       } catch (e) {
         console.error("Failed to parse user from local storage");
       }
@@ -25,9 +25,7 @@ export const useMapStats = (hostels) => {
   const fetchStats = useCallback(async () => {
     try {
       setStats((prev) => ({ ...prev, loading: true }));
-      // Example: Sending a phone number in the URL
-      //const phoneNumber = "77665463";
-      const res = await fetch(`/api/stats?phone=${phoneNumber}`, {
+      const res = await fetch(`/api/stats?studentNumber=${studentNumber}`, {
         cache: "no-store",
       });
 
@@ -62,7 +60,7 @@ export const useMapStats = (hostels) => {
       console.error("Error fetching stats:", error);
       setStats((prev) => ({ ...prev, loading: false }));
     }
-  }, [hostels, phoneNumber]);
+  }, [hostels, studentNumber]);
 
   useEffect(() => {
     fetchStats();
