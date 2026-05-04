@@ -349,7 +349,7 @@ export default function HdFloorPage({ params }) {
                   <div className="flex flex-col items-center gap-2 xs:gap-3 sm:gap-3 md:gap-4">
                     {/* Top washroom */}
                     <div className="w-full flex justify-center">
-                      <SpecialBlock text="🚻  Restroom" type="washroom" />
+                      <SpecialBlock text="🚻  Washroom" type="washroom" />
                     </div>
 
                     {floorNum === 2 || floorNum === 3 ? (
@@ -393,7 +393,7 @@ export default function HdFloorPage({ params }) {
 
                         {/* Bottom washroom */}
                         <div className="w-full flex justify-center">
-                          <SpecialBlock text="🚻  Restroom" type="washroom" />
+                          <SpecialBlock text="🚻  Washroom" type="washroom" />
                         </div>
                       </>
                     ) : (
@@ -440,7 +440,7 @@ export default function HdFloorPage({ params }) {
 
                           {/* Bottom washroom for floor 1 */}
                           <div className="w-full flex justify-center">
-                            <SpecialBlock text="🚻  Restroom" type="washroom" />
+                            <SpecialBlock text="🚻  Washroom" type="washroom" />
                           </div>
                         </div>
                       </>
