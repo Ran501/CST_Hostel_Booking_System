@@ -24,6 +24,8 @@ model User {
   otpExpiresAt  DateTime? // OTP expiry time
   bookings      Booking[]
 
+  createdAt   DateTime @default(now())
+
 
   @@index([email])
   @@index([year])
