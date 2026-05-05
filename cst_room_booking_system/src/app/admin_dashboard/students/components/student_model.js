@@ -140,6 +140,9 @@ const handleBulkDeactivate = () => {
         matchesYear = student.status === 'graduated';
       } else if (selectedYear !== "All") {
         matchesYear = student.year === selectedYear;
+         const selectedYearNum = parseInt(selectedYear);
+      const studentYearNum = parseInt(student.year);
+      matchesYear = studentYearNum === selectedYearNum;
       }
       
       const matchesSearch = searchTerm === "" || 
