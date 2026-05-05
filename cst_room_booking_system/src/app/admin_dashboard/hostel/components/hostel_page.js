@@ -151,7 +151,7 @@ export default function HostelPage() {
                 gender: newGender,
               });
             }}
-            className="w-full px-4 py-2 rounded-lg border border-gray-300 text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
+            className="w-full px-4 py-2 rounded-lg border border-blue-300 text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
           >
             <option value="">Select gender</option>
             <option value="male">Male</option>
@@ -172,12 +172,17 @@ export default function HostelPage() {
                 isActive: !selectedHostel.isActive,
               });
             }}
-            className={`w-14 h-7 rounded-full transition ${
-              selectedHostel.isActive
-                ? "bg-green-500"
-                : "bg-red-500"
+            className={`relative w-14 h-7 flex items-center rounded-full p-1 transition-colors duration-300 ${
+              selectedHostel.isActive ? "bg-green-500" : "bg-gray-300"
             }`}
-          />
+          >
+            {/* Toggle Knob */}
+            <div
+              className={`w-5 h-5 bg-white rounded-full shadow-md transform transition-transform duration-300 ${
+                selectedHostel.isActive ? "translate-x-7" : "translate-x-0"
+              }`}
+            />
+          </button>
         </div>
 
       </div>
