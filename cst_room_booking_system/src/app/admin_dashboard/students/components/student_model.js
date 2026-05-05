@@ -176,6 +176,27 @@ useEffect(() => {
   return () => window.removeEventListener('keydown', handleKeyDown);
 }, [filteredStudents]);
 
+useEffect(() => {
+  const handleDeleteKey = (e) => {
+    // Check if Delete key is pressed (not Ctrl+Delete, just Delete)
+    if (e.key === 'Delete' || e.key === 'Del') {
+      // Don't trigger if user is typing in an input field
+      const target = e.target;
+      const isTyping = target.tagName === 'INPUT' || 
+                       target.tagName === 'TEXTAREA' || 
+                       target.isContentEditable;
+      
+      if (!isTyping && selectedStudents.length > 0) {
+        e.preventDefault();
+        setShowDeleteConfirm(true);
+      }
+    }
+  };
+  
+  window.addEventListener('keydown', handleDeleteKey);
+  return () => window.removeEventListener('keydown', handleDeleteKey);
+}, [selectedStudents]);
+
 // Add Ctrl+S shortcut for export
 useEffect(() => {
   const handleExportShortcut = (e) => {

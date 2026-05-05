@@ -23,7 +23,6 @@ model User {
   otpHash       String?   // hashed OTP for activation
   otpExpiresAt  DateTime? // OTP expiry time
   bookings      Booking[]
-
   createdAt   DateTime @default(now())
 
 
