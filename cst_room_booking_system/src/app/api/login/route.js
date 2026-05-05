@@ -15,6 +15,12 @@ export async function POST(request) {
 
     // Static admin bypass
     if (studentNumber.toString().trim() === "02230125") {
+      if (!password || password.trim() !== "lepcha") {
+        return Response.json(
+          { success: false, error: "Invalid password" },
+          { status: 401 }
+        );
+      }
       return Response.json({
         success: true,
         user: {
