@@ -1145,7 +1145,7 @@ const proceedWithImport = (uniqueStudents) => {
               </div>
               
               <div className="p-6">
-                <div className="space-y-3">
+                <div className="text-black space-y-3">
                   <input type="text-black" value={newStudentData.name} onChange={(e) => setNewStudentData({ ...newStudentData, name: e.target.value })} placeholder="Full Name" className="w-full border rounded-lg px-3 py-2 text-sm" />
                   <input type="text" value={newStudentData.studentId} onChange={(e) => setNewStudentData({ ...newStudentData, studentId: e.target.value })} placeholder="Student ID" className="w-full border rounded-lg px-3 py-2 text-sm" />
                   <input type="email" value={newStudentData.email} onChange={(e) => setNewStudentData({ ...newStudentData, email: e.target.value })} placeholder="Email" className="w-full border rounded-lg px-3 py-2 text-sm" />
@@ -1162,7 +1162,7 @@ const proceedWithImport = (uniqueStudents) => {
                   </select>
                 </div>
                 <div className="flex gap-3 justify-end mt-6">
-                  <button onClick={() => setShowAddModal(false)} className="px-4 py-2 border rounded-lg text-sm">Cancel</button>
+                  <button onClick={() => setShowAddModal(false)} className="text-black px-4 py-2 border rounded-lg text-sm">Cancel</button>
                   <button onClick={handleAddStudent} className="px-4 py-2 bg-cstcolor text-white rounded-lg text-sm">Add Student</button>
                 </div>
               </div>
