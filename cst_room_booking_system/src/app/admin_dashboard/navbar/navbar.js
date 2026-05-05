@@ -207,37 +207,41 @@ export default function Navbar() {
 
           <button
             onClick={() => setOpen(!open)}
-            className="md:hidden"
+            className="md:hidden cursor-pointer p-2 rounded-lg hover:bg-gray-100 transition-colors"
           >
-            {open ? <X /> : <Menu />}
+            {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
           </button>
         </div>
       </div>
 
       <div
-        className={`fixed top-0 right-0 h-full w-64 bg-white shadow-lg transition-transform md:hidden ${
+        className={`fixed top-0 right-0 h-full w-64 z-50 bg-white shadow-lg transition-transform md:hidden ${
           open ? "translate-x-0" : "translate-x-full"
         }`}
       >
-        <div className="flex justify-between p-4 border-b">
+        <div className="text-black flex justify-between p-4 border-b">
           <span>Menu</span>
           <X onClick={() => setOpen(false)} />
         </div>
 
-        <div className="p-4 flex flex-col gap-4">
-          {navItems.map((item) => (
-            <span
-              key={item}
-              onClick={() => {
-                handleNavClick(item);
-                setOpen(false);
-              }}
-              className="cursor-pointer"
-            >
-              {item}
-            </span>
-          ))}
-        </div>
+        <div className="p-4 flex flex-col gap-2">
+    {navItems.map((item) => (
+      <button
+        key={item}
+        onClick={() => {
+          handleNavClick(item);
+          setOpen(false); // Close menu after navigation
+        }}
+        className={`cursor-pointer text-left py-3 px-3 rounded-lg transition-colors w-full ${
+          isActive(item)
+            ? "bg-blue-50 text-blue-600 font-semibold"
+            : "text-gray-700 hover:bg-gray-100"
+        }`}
+      >
+        {item}
+      </button>
+    ))}
+  </div>
       </div>
 
       {open && (
