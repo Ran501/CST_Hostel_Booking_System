@@ -1,82 +1,169 @@
 // src/modules/student/student.repository.js
 import { prisma } from "../../app/lib/prisma";
 
+/**
+ * Build a reusable Prisma `where` clause from filter params.
+ */
+function buildWhere({ search = "", department = "", year = "" }) {
+  const where = {};
+
+  if (department) where.department = department;
+  if (year) where.year = Number(year);
+
+  if (search) {
+    where.OR = [
+      { name: { contains: search, mode: "insensitive" } },
+      { email: { contains: search, mode: "insensitive" } },
+      { studentNumber: { contains: search, mode: "insensitive" } },
+      { phoneNumber: { contains: search, mode: "insensitive" } },
+    ];
+  }
+
+  return where;
+}
+
 export const studentRepository = {
+  // ── Cursor-based pagination ────────────────────────────────────────────
   /**
-   * Cursor-based pagination: returns `limit` users after the given cursor.
-   * @param {object} params
-   * @param {string|null} params.cursor  - last seen `id` from previous page (null for first page)
-   * @param {number}      params.limit   - number of records per page (default 50)
-   * @param {string}      params.search  - search by name / email / studentNumber
-   * @param {string}      params.department - filter by department ("" = all)
-   * @param {string|number} params.year  - filter by year ("" = all)
+   * Returns `limit + 1` rows so the caller can detect whether another page
+   * exists. The extra row is stripped before returning to the client.
    */
-  async findAll({ cursor = null, limit = 50, search = "", department = "", year = "" }) {
-    const take = Math.min(Number(limit) || 50, 100); // cap at 100
+  async findMany({ cursor = null, limit = 50, search, department, year }) {
+    const take = Number(limit) + 1; // fetch one extra to detect next page
+    const where = buildWhere({ search, department, year });
 
-    const where = {
-      role: "user",
-      ...(search && {
-        OR: [
-          { name: { contains: search, mode: "insensitive" } },
-          { email: { contains: search, mode: "insensitive" } },
-          { studentNumber: { contains: search, mode: "insensitive" } },
-        ],
-      }),
-      ...(department && { department }),
-      ...(year !== "" && year !== "All" && { year: Number(year) }),
-    };
-
-    const queryArgs = {
+    const query = {
       where,
-      take: take + 1, // fetch one extra to determine if there's a next page
-      orderBy: { id: "desc" },
+      take,
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        studentNumber: true,
+        role: true,
+        year: true,
+        gender: true,
+        phoneNumber: true,
+        department: true,
+        createdAt: true,
+        // never expose password
+      },
     };
 
     if (cursor) {
-      queryArgs.cursor = { id: cursor };
-      queryArgs.skip = 1; // skip the cursor itself
+      query.cursor = { id: cursor };
+      query.skip = 1; // skip the cursor row itself
     }
 
-    const students = await prisma.user.findMany(queryArgs);
-
-    const hasNextPage = students.length > take;
-    const data = hasNextPage ? students.slice(0, take) : students;
-    const nextCursor = hasNextPage ? data[data.length - 1].id : null;
-
-    const total = await prisma.user.count({ where });
-
-    return { data, nextCursor, hasNextPage, total };
+    return prisma.user.findMany(query);
   },
 
+  // ── Export (no pagination) ─────────────────────────────────────────────
+  async findAll({ search, department, year }) {
+    return prisma.user.findMany({
+      where: buildWhere({ search, department, year }),
+      orderBy: { createdAt: "desc" },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        studentNumber: true,
+        role: true,
+        year: true,
+        gender: true,
+        phoneNumber: true,
+        department: true,
+        createdAt: true,
+      },
+    });
+  },
+
+  // ── Single lookup ──────────────────────────────────────────────────────
+  async findById(id) {
+    return prisma.user.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        studentNumber: true,
+        role: true,
+        year: true,
+        gender: true,
+        phoneNumber: true,
+        department: true,
+        createdAt: true,
+      },
+    });
+  },
+
+  async findByEmail(email) {
+    return prisma.user.findUnique({ where: { email } });
+  },
+
+  async findByStudentNumber(studentNumber) {
+    return prisma.user.findUnique({ where: { studentNumber } });
+  },
+
+  // ── Create ─────────────────────────────────────────────────────────────
   async create(data) {
-    return prisma.user.create({ data });
+    return prisma.user.create({
+      data,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        studentNumber: true,
+        role: true,
+        year: true,
+        gender: true,
+        phoneNumber: true,
+        department: true,
+        createdAt: true,
+      },
+    });
   },
 
+  /**
+   * Bulk upsert: insert new students; skip (or update) on conflict.
+   * Uses createMany with skipDuplicates for simplicity. Switch to
+   * individual upserts if you need per-row update-on-conflict semantics.
+   */
+  async createMany(records) {
+    return prisma.user.createMany({
+      data: records,
+      skipDuplicates: true,
+    });
+  },
+
+  // ── Update ─────────────────────────────────────────────────────────────
   async update(id, data) {
-    return prisma.user.update({ where: { id }, data });
+    return prisma.user.update({
+      where: { id },
+      data,
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        studentNumber: true,
+        role: true,
+        year: true,
+        gender: true,
+        phoneNumber: true,
+        department: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
   },
 
-  async deleteOne(id) {
+  // ── Delete ─────────────────────────────────────────────────────────────
+  async delete(id) {
     return prisma.user.delete({ where: { id } });
   },
 
   async deleteMany(ids) {
     return prisma.user.deleteMany({ where: { id: { in: ids } } });
-  },
-
-  async createMany(data) {
-    return prisma.user.createMany({ data, skipDuplicates: true });
-  },
-
-  async findAllForExport({ department = "", year = "" } = {}) {
-    return prisma.user.findMany({
-      where: {
-        role: "user",
-        ...(department && { department }),
-        ...(year !== "" && year !== "All" && { year: Number(year) }),
-      },
-      orderBy: [{ department: "asc" }, { name: "asc" }],
-    });
   },
 };

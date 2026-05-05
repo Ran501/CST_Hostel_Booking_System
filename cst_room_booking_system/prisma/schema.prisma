@@ -24,11 +24,12 @@ model User {
   otpExpiresAt  DateTime? // OTP expiry time
   bookings      Booking[]
 
+  createdAt   DateTime @default(now())
+
 
   @@index([email])
   @@index([year])
   @@index([department])
-  @@index([createdAt])
 }
 
 model Hostel {
@@ -39,8 +40,8 @@ model Hostel {
   status           String            @default("active")
   year             Int
   capacity         Int
-  rooms            Room[]
   floorAllocations FloorAllocation[]
+  rooms            Room[]
 
   @@index([status])
   @@index([year])
@@ -54,8 +55,8 @@ model Room {
   status     String    @default("available")
   year       Int
   hostel_id  String
-  hostel     Hostel    @relation(fields: [hostel_id], references: [id], onDelete: Cascade)
   bookings   Booking[]
+  hostel     Hostel    @relation(fields: [hostel_id], references: [id], onDelete: Cascade)
 
   @@unique([hostel_id, roomNumber])
   @@index([hostel_id])
