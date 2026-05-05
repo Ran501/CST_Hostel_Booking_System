@@ -58,7 +58,14 @@ export const useMapStats = (hostels) => {
       });
     } catch (error) {
       console.error("Error fetching stats:", error);
-      setStats((prev) => ({ ...prev, loading: false }));
+      // Fallback to calculated stats if API fails
+      const calculatedStats = calculateStats(hostels);
+      setStats({
+        totalAvailableRooms: calculatedStats.totalAvailableRooms,
+        bookedRoom: "None", // Since API failed, assume no booking info
+        occupancyRate: calculatedStats.occupancyRate,
+        loading: false,
+      });
     }
   }, [hostels, studentNumber]);
 

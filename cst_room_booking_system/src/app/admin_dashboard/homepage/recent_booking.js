@@ -27,16 +27,16 @@ export default function RecentBookings() {
 
   // 🔥 Dummy Data
   const bookings = [
-    { id: 1, studentNumber: "2021001", name: "Alice Johnson", email: "alice@example.com", room: "HF-101", gender: "Female" },
-    { id: 2, studentNumber: "2021002", name: "Bob Smith", email: "bob@example.com", room: "HF-102", gender: "Male" },
-    { id: 3, studentNumber: "2021003", name: "Charlie Lee", email: "charlie@example.com", room: "HF-103", gender: "Male" },
-    { id: 4, studentNumber: "2021004", name: "Emma Watson", email: "emma@example.com", room: "HF-104", gender: "Female" },
-    { id: 5, studentNumber: "2021005", name: "David Kim", email: "david@example.com", room: "HF-105", gender: "Male" },
-    { id: 6, studentNumber: "2021006", name: "Sophia Brown", email: "sophia@example.com", room: "HF-106", gender: "Female" },
-    { id: 7, studentNumber: "2021007", name: "Liam White", email: "liam@example.com", room: "HF-107", gender: "Male" },
-    { id: 8, studentNumber: "2021008", name: "Olivia Green", email: "olivia@example.com", room: "HF-108", gender: "Female" },
-    { id: 9, studentNumber: "2021009", name: "Noah Black", email: "noah@example.com", room: "HF-109", gender: "Male" },
-    { id: 10, studentNumber: "2021010", name: "Ava Wilson", email: "ava@example.com", room: "HF-110", gender: "Female" },
+    { id: 1, studentNumber: "2021001", name: "Tshewang Dorji", email: "tshewang.dorji@cst.edu.bt", room: "RKA-101", gender: "Male" },
+    { id: 2, studentNumber: "2021002", name: "Pema Choden", email: "pema.choden@cst.edu.bt", room: "HF-102", gender: "Female" },
+    { id: 3, studentNumber: "2021003", name: "Kinley Wangchuk", email: "kinley.wangchuk@cst.edu.bt", room: "HA-103", gender: "Male" },
+    { id: 4, studentNumber: "2021004", name: "Yangchen Lhamo", email: "yangchen.lhamo@cst.edu.bt", room: "HF-108", gender: "Female" },
+    { id: 5, studentNumber: "2021005", name: "Chimi Dema", email: "chimi.dema@cst.edu.bt", room: "HF-105", gender: "Female" },
+    { id: 6, studentNumber: "2021006", name: "Karma Yangzom", email: "karma.yangzom@cst.edu.bt", room: "HF-106", gender: "Female" },
+    { id: 7, studentNumber: "2021007", name: "Lhendup Tshering", email: "lhendup.tshering@cst.edu.bt", room: "NK-107", gender: "Male" },
+    { id: 8, studentNumber: "2021008", name: "Rinchen Dorji", email: "rinchen.dorji@cst.edu.bt", room: "HE-108", gender: "Male" },
+    { id: 9, studentNumber: "2021009", name: "Sonam Tobgay", email: "sonam.tobgay@cst.edu.bt", room: "HB-109", gender: "Male" },
+    { id: 10, studentNumber: "2021010", name: "Tshering Yangden", email: "tshering.yangden@cst.edu.bt", room: "HF-110", gender: "Female" },
   ];
 
   return (

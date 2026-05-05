@@ -16,21 +16,24 @@ import {
 
 // Add this custom hook for responsive layout
 function useResponsiveLayout() {
-  const [windowWidth, setWindowWidth] = useState(0);
-    
+  const [isClient, setIsClient] = useState(false);
+  const [windowWidth, setWindowWidth] = useState(typeof window !== 'undefined' ? window.innerWidth : 1024);
 
   useEffect(() => {
+    setIsClient(true);
     const handleResize = () => setWindowWidth(window.innerWidth);
-    handleResize(); // Set initial value
     window.addEventListener("resize", handleResize);
     return () => window.removeEventListener("resize", handleResize);
   }, []);
 
+  // Use sensible defaults on server, actual width on client
+  const width = isClient ? windowWidth : 1024;
+
   return {
-    isMobile: windowWidth < 640,
-    isMid: windowWidth >= 640 && windowWidth < 1024,
-    isDesktop: windowWidth >= 1024,
-    windowWidth,
+    isMobile: width < 640,
+    isMid: width >= 640 && width < 1024,
+    isDesktop: width >= 1024,
+    windowWidth: width,
   };
 }
 
@@ -228,12 +231,25 @@ export default function NkFloorPage({
     
   const getRoomInfo = (roomNo) => {
     const fullRoomId = `${NK_NAME}-${roomNo}`;
-    const found = roomsData.find((r) => String(r.roomNumber) === fullRoomId);
+    const found = roomsData.find((r) => {
+      // Try multiple formats for robustness
+      return String(r.roomNumber) === fullRoomId || 
+             String(r.roomNumber) === String(roomNo) ||
+             String(r.room_number) === fullRoomId ||
+             String(r.room_number) === String(roomNo);
+    });
     
-    // Add this:
-    if (!found) console.log("NO MATCH:", fullRoomId, "vs DB:", roomsData.map(r => r.roomNumber));
+    // If not found, return a fallback object to avoid "..." display
+    if (!found && roomsData.length > 0) {
+      console.warn(`Room ${fullRoomId} not found in roomsData`, roomsData);
+    }
     
-    return found;
+    return found || { 
+      roomNumber: fullRoomId, 
+      isActive: true, 
+      occupied: 0, 
+      capacity: 3 
+    };
   };
 
   // Simple booking action - no API calls
@@ -297,8 +313,9 @@ export default function NkFloorPage({
     const roomInfo = getRoomInfo(room);
     console.log(roomInfo)
     const fullRoomId = `${NK_NAME}-${room}`;
-      // 1. Fallback for when data is loading
-      if (!roomInfo) {
+    
+    // Show room number even while loading
+    if (!roomInfo) {
       return (
         <div
           className="absolute flex items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 animate-pulse"
@@ -310,7 +327,7 @@ export default function NkFloorPage({
             height: "65px",
           }}
         >
-          <span className="text-[10px] text-slate-400">Loading...</span>
+          <span className="text-xs font-semibold text-slate-400">{room}</span>
         </div>
       );
     }
