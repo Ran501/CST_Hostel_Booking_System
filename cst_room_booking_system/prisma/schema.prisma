@@ -28,7 +28,6 @@ model User {
   @@index([email])
   @@index([year])
   @@index([department])
-  @@index([createdAt])
 }
 
 model Hostel {
