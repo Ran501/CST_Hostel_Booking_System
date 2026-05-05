@@ -171,8 +171,17 @@ export default function NkFloorPage({
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [toast, setToast] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [currentUser, setCurrentUser] = useState(null);
   const [mobileCarouselPage, setMobileCarouselPage] = useState(1);
+
+  // Simple States
+  const [currentUser, setCurrentUser] = useState({
+  phoneNumber: "17654321",
+  email: "test@example.com",
+  name: "Test User",
+  role: "student",
+  gender: "male",
+  hasBooked: false,
+});
 
 
   // Kitchen numbering per floor: (floor-1)*2 + 1 and +2
@@ -228,13 +237,52 @@ export default function NkFloorPage({
   };
 
   // Simple booking action - no API calls
-  function handleConfirmBooking() {
-    if (selectedRoom === null) return;
-    
-    // Simple confirmation dialog logic - no API calls
-    alert(`Room ${NK_NAME}-${selectedRoom} Booking confirmed! `);
+  async function handleConfirmBooking() {
+  if (selectedRoom === null || !currentUser) return;
+
+  const fullRoomId = `${NK_NAME}-${selectedRoom}`;
+
+  try {
+    setIsBooking(true);
+    const res = await fetch("/api/booking", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        roomNumber: fullRoomId,
+        userId: currentUser.phoneNumber,
+        email: currentUser.email,
+        userName: currentUser.name,
+        checkIn: new Date().toISOString(),
+        checkOut: new Date(
+          new Date().setMonth(new Date().getMonth() + 6),
+        ).toISOString(),
+      }),
+    });
+
+    const result = await res.json();
+    if (result.success) {
+      setToast(`Room ${fullRoomId} reserved successfully! Room details sent to your email.`);
+      const updatedUser = { ...currentUser, hasBooked: true };
+      setCurrentUser(updatedUser);
+      localStorage.setItem("session", JSON.stringify(updatedUser));
+      setRoomsData((prev) =>
+        prev.map((r) =>
+          r.roomNumber === fullRoomId
+            ? { ...r, occupied: (r.occupied || 0) + 1 }
+            : r,
+        ),
+      );
+    } else {
+      setToast("Error: " + (result.error || "Could not book"));
+    }
+  } catch (err) {
+    setToast("Connection failed.");
+  } finally {
+    setIsBooking(false);
     setSelectedRoom(null);
+    setTimeout(() => setToast(null), 3000);
   }
+}
 
   
 

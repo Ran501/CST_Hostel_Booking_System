@@ -27,13 +27,29 @@ export default function RkbFloorPage({ params }) {
     const isValid = Number.isFinite(rawFloor) && isValidFloor(rawFloor);
     const floorNum = isValid ? rawFloor : 1;
   
-    // Simple States
+    const [isBooking, setIsBooking] = useState(false);
+    const [toast, setToast] = useState(null);
+    const [currentUser, setCurrentUser] = useState(null);       // FIX 1: null not undefined
+    const [sessionLoaded, setSessionLoaded] = useState(false);  // FIX 2: track session load
     const [selectedRoom, setSelectedRoom] = useState(null);
     const [sidebarOpen, setSidebarOpen] = useState(false);
-  
-    // To hold backend data
     const [roomsData, setRoomsData] = useState([]);
     const [loading, setLoading] = useState(true);
+
+    // Load session from localStorage
+    useEffect(() => {
+      const session = localStorage.getItem("session");
+      if (session) {
+        try {
+          const parsed = JSON.parse(session);
+          setCurrentUser(parsed);
+        } catch {
+          console.error("Invalid session data");
+        }
+      }
+      setSessionLoaded(true); // FIX 3: mark session as loaded regardless
+    }, []);
+
   
     useEffect(() => {
       async function fetchRooms() {
@@ -69,13 +85,87 @@ export default function RkbFloorPage({ params }) {
       [floorNum]
     );
   
+    function showToast(msg) {
+    setToast(msg);
+    setTimeout(() => setToast(null), 4000);
+  }
+  
     // Simple booking action - no API calls
-    function handleConfirmBooking() {
+  async function handleConfirmBooking() {
+      // FIX 4: proper guards with user feedback
       if (selectedRoom === null) return;
-      
-      // Simple confirmation dialog logic - no API calls
-      alert(`Room ${RKB_NAME}-${selectedRoom} booking confirmed! (UI Only - No Backend)`);
-      setSelectedRoom(null);
+  
+      if (!sessionLoaded) {
+        showToast("Session is still loading, please wait.");
+        return;
+      }
+  
+      if (!currentUser) {
+        showToast("You must be logged in to book a room.");
+        router.push("/login");
+        return;
+      }
+  
+      // FIX 5: check which field your session actually uses
+      const studentNumber = currentUser.studentNumber;
+  
+      if (!studentNumber) {
+        showToast("Student number not found in session. Please log in again.");
+        return;
+      }
+  
+      const fullRoomId = `${RKB_NAME}-${selectedRoom}`;
+  
+      try {
+        setIsBooking(true);
+  
+        const res = await fetch("/api/booking", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            roomNumber: fullRoomId,
+            studentNumber: String(studentNumber),
+            checkIn: new Date().toISOString(),
+            checkOut: new Date(
+              new Date().setMonth(new Date().getMonth() + 6)
+            ).toISOString(),
+          }),
+        });
+  
+        // FIX 6: handle non-JSON responses gracefully
+        let result;
+        try {
+          result = await res.json();
+        } catch {
+          showToast("Server returned an unexpected response.");
+          return;
+        }
+  
+        if (result.success) {
+          showToast(`Room ${fullRoomId} reserved successfully! Details sent to your email.`);
+  
+          const updatedUser = { ...currentUser, hasBooked: true };
+          setCurrentUser(updatedUser);
+          localStorage.setItem("session", JSON.stringify(updatedUser));
+  
+          // Update room occupancy locally
+          setRoomsData((prev) =>
+            prev.map((r) =>
+              r.roomNumber === fullRoomId
+                ? { ...r, occupied: (r.occupied || 0) + 1 }
+                : r
+            )
+          );
+        } else {
+          showToast("Error: " + (result.error || "Could not complete booking."));
+        }
+      } catch (err) {
+        console.error("Booking error:", err);
+        showToast("Connection failed. Please try again.");
+      } finally {
+        setIsBooking(false);
+        setSelectedRoom(null);
+      }
     }
   
     // Simple Room Block component - no API calls

@@ -27,19 +27,34 @@ export default function RkaFloorPage({ params }) {
   const isValid = Number.isFinite(rawFloor) && isValidFloor(rawFloor);
   const floorNum = isValid ? rawFloor : 1;
 
-  // Simple States
+  const [isBooking, setIsBooking] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);       // FIX 1: null not undefined
+  const [sessionLoaded, setSessionLoaded] = useState(false);  // FIX 2: track session load
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-
-  // To hold backend data
   const [roomsData, setRoomsData] = useState([]);
   const [loading, setLoading] = useState(true);
 
+  // Load session from localStorage
+  useEffect(() => {
+    const session = localStorage.getItem("session");
+    if (session) {
+      try {
+        const parsed = JSON.parse(session);
+        setCurrentUser(parsed);
+      } catch {
+        console.error("Invalid session data");
+      }
+    }
+    setSessionLoaded(true); // FIX 3: mark session as loaded regardless
+  }, []);
+
+  // Fetch rooms
   useEffect(() => {
     async function fetchRooms() {
       try {
         setLoading(true);
-        // Replace with your actual API endpoint
         const res = await fetch(`/api/rooms?floor=${floorNum}&building=RKA`);
         const data = await res.json();
         if (data.success) setRoomsData(data.rooms || []);
@@ -60,71 +75,94 @@ export default function RkaFloorPage({ params }) {
   const totalRooms = 12;
   const totalBeds = totalRooms * 2;
 
-  const leftRooms = useMemo(
-    () => leftColumnRoomsForFloor(floorNum),
-    [floorNum]
-  );
-  const rightRooms = useMemo(
-    () => rightColumnRoomsForFloor(floorNum),
-    [floorNum]
-  );
+  const leftRooms = useMemo(() => leftColumnRoomsForFloor(floorNum), [floorNum]);
+  const rightRooms = useMemo(() => rightColumnRoomsForFloor(floorNum), [floorNum]);
+
+  function showToast(msg) {
+    setToast(msg);
+    setTimeout(() => setToast(null), 4000);
+  }
 
   async function handleConfirmBooking() {
-    if (selectedRoom === null || !currentUser) return;
+    // FIX 4: proper guards with user feedback
+    if (selectedRoom === null) return;
+
+    if (!sessionLoaded) {
+      showToast("Session is still loading, please wait.");
+      return;
+    }
+
+    if (!currentUser) {
+      showToast("You must be logged in to book a room.");
+      router.push("/login");
+      return;
+    }
+
+    // FIX 5: check which field your session actually uses
+    const studentNumber = currentUser.studentNumber ?? currentUser.phoneNumber ?? currentUser.stdNo;
+
+    if (!studentNumber) {
+      showToast("Student number not found in session. Please log in again.");
+      return;
+    }
 
     const fullRoomId = `${RKA_NAME}-${selectedRoom}`;
 
     try {
       setIsBooking(true);
+
       const res = await fetch("/api/booking", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           roomNumber: fullRoomId,
-          userId: 2230129,
-          email: "karmawangchuk@gmail.com",
-          userName: "Karma Wangchhuk",
+          studentNumber: String(studentNumber),
           checkIn: new Date().toISOString(),
           checkOut: new Date(
-            new Date().setMonth(new Date().getMonth() + 6),
+            new Date().setMonth(new Date().getMonth() + 6)
           ).toISOString(),
         }),
       });
 
-      const result = await res.json();
-      if (result.success) {
-        setToast(
-          `Room ${fullRoomId} reserved successfully! Room details sent to your email.`,
-        );
+      // FIX 6: handle non-JSON responses gracefully
+      let result;
+      try {
+        result = await res.json();
+      } catch {
+        showToast("Server returned an unexpected response.");
+        return;
+      }
 
-        // --- UPDATE SESSION AFTER SUCCESS ---
+      if (result.success) {
+        showToast(`Room ${fullRoomId} reserved successfully! Details sent to your email.`);
+
         const updatedUser = { ...currentUser, hasBooked: true };
         setCurrentUser(updatedUser);
         localStorage.setItem("session", JSON.stringify(updatedUser));
 
+        // Update room occupancy locally
         setRoomsData((prev) =>
           prev.map((r) =>
             r.roomNumber === fullRoomId
               ? { ...r, occupied: (r.occupied || 0) + 1 }
-              : r,
-          ),
+              : r
+          )
         );
       } else {
-        setToast("Error: " + (result.error || "Could not book"));
+        showToast("Error: " + (result.error || "Could not complete booking."));
       }
     } catch (err) {
-      setToast("Connection failed.");
+      console.error("Booking error:", err);
+      showToast("Connection failed. Please try again.");
     } finally {
       setIsBooking(false);
       setSelectedRoom(null);
-      setTimeout(() => setToast(null), 3000);
     }
   }
 
-  // Simple Room Block component - no API calls
   const RoomBlock = ({ room }) => {
     const roomInfo = getRoomInfo(room);
-    // 1. Fallback for when data is loading
+
     if (!roomInfo) {
       return (
         <div className="w-full h-full rounded-xl border border-slate-200 bg-slate-50 animate-pulse flex items-center justify-center">
@@ -132,18 +170,16 @@ export default function RkaFloorPage({ params }) {
         </div>
       );
     }
-    // 2. Extract database values
+
     const dbValue = roomInfo.isActive ?? roomInfo.is_active;
     const isRoomActive = dbValue !== false && String(dbValue).toUpperCase().trim() !== "FALSE";
     const occupied = roomInfo.occupied || 0;
     const capacity = roomInfo.capacity || 3;
 
-    // 3. Calculate states
     const isFully = occupied >= capacity;
     const isPartial = occupied > 0 && occupied < capacity;
     const isSelected = selectedRoom === room;
 
-    // 4. Assign dynamic CSS colors
     const colors = !isRoomActive
       ? "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed opacity-60"
       : isFully
@@ -174,9 +210,7 @@ export default function RkaFloorPage({ params }) {
                   : `0/${capacity} Available`}
           </span>
         </div>
-        <div
-          className="pointer-events-none absolute inset-0 rounded-xl ring-0 transition group-hover:ring-1 group-hover:ring-slate-300/60"
-        />
+        <div className="pointer-events-none absolute inset-0 rounded-xl ring-0 transition group-hover:ring-1 group-hover:ring-slate-300/60" />
       </button>
     );
   };
@@ -184,49 +218,33 @@ export default function RkaFloorPage({ params }) {
   return (
     <main className="min-h-screen bg-zinc-100 py-4 sm:py-6 md:py-8 text-slate-900 overflow-x-hidden">
       <div className="mx-auto w-full max-w-full px-3 xs:px-4 sm:px-6 lg:max-w-7xl lg:px-8">
+
+        {/* FIX 7: Toast notification - was never rendered before */}
+        {toast && (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-800 text-white px-5 py-3 rounded-xl shadow-xl text-sm text-center max-w-sm w-[90%]">
+            {toast}
+          </div>
+        )}
+
+        {/* Mobile header */}
         <div className="md:hidden flex items-center justify-between mb-4">
           <div className="flex items-center text-slate-500">
-            <Link
-              href="/"
-              className="inline-flex items-center hover:text-slate-700"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-6 w-6"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M19 12H5m7-7l-7 7 7 7"
-                />
+            <Link href="/" className="inline-flex items-center hover:text-slate-700">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 12H5m7-7l-7 7 7 7" />
               </svg>
             </Link>
           </div>
-
           <h1 className="text-center text-base xs:text-lg font-semibold tracking-wide flex-1">
             {RKA_NAME} {floorLabel(floorNum)} floor
           </h1>
-
           <div className="flex items-center gap-2">
-            
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
               className="cursor-pointer px-3 py-1 bg-white border border-slate-200 rounded-full shadow-sm flex items-center gap-0.5 text-xs"
-              aria-label="Toggle floor menu"
             >
               <span className="font-small text-cstcolor font-bold">Floor</span>
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className={`h-3 w-3 text-slate-700 transition-transform ${sidebarOpen ? "rotate-180" : ""}`}
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
+              <svg xmlns="http://www.w3.org/2000/svg" className={`h-3 w-3 text-slate-700 transition-transform ${sidebarOpen ? "rotate-180" : ""}`} fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
                 <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
               </svg>
             </button>
@@ -235,19 +253,9 @@ export default function RkaFloorPage({ params }) {
 
         {/* Mobile sidebar overlay */}
         {sidebarOpen && (
-          <div
-            className="md:hidden fixed inset-0 z-50 bg-black/50"
-            onClick={() => setSidebarOpen(false)}
-          >
-            <div
-              className="absolute left-0 top-0 h-full w-56 bg-white shadow-xl p-4"
-              onClick={(e) => e.stopPropagation()}
-            >
-              <FloorSidebar
-                currentFloor={floorNum}
-                baseHref="/rooms/1/floor"
-                floors={[1, 2, 3, 4]}
-              />
+          <div className="md:hidden fixed inset-0 z-50 bg-black/50" onClick={() => setSidebarOpen(false)}>
+            <div className="absolute left-0 top-0 h-full w-56 bg-white shadow-xl p-4" onClick={(e) => e.stopPropagation()}>
+              <FloorSidebar currentFloor={floorNum} baseHref="/rooms/1/floor" floors={[1, 2, 3, 4]} />
             </div>
           </div>
         )}
@@ -255,38 +263,19 @@ export default function RkaFloorPage({ params }) {
         {/* Desktop header */}
         <div className="hidden md:flex items-center mb-4 sm:mb-5 lg:mb-6">
           <div className="flex items-center text-slate-500">
-            <Link
-              href="/"
-              className="inline-flex items-center hover:text-slate-700"
-            >
-              <svg
-                xmlns="http://www.w3.org/2000/svg"
-                className="h-6 w-6"
-                fill="none"
-                viewBox="0 0 24 24"
-                stroke="currentColor"
-                strokeWidth={2}
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  d="M19 12H5m7-7l-7 7 7 7"
-                />
+            <Link href="/" className="inline-flex items-center hover:text-slate-700">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 12H5m7-7l-7 7 7 7" />
               </svg>
             </Link>
           </div>
-
           <div className="text-center flex-1">
             <h1 className="text-lg sm:text-xl lg:text-2xl font-semibold tracking-wide">
               {RKA_NAME} {floorLabel(floorNum)} floor
             </h1>
             <div className="text-sm text-slate-600 flex justify-center gap-4 sm:gap-6 mt-1">
-              <span className="hidden sm:inline">
-                <span className="font-medium">Total Rooms:</span> {totalRooms}
-              </span>
-              <span className="hidden sm:inline">
-                <span className="font-medium">Total Beds:</span> {totalBeds}
-              </span>
+              <span className="hidden sm:inline"><span className="font-medium">Total Rooms:</span> {totalRooms}</span>
+              <span className="hidden sm:inline"><span className="font-medium">Total Beds:</span> {totalBeds}</span>
             </div>
           </div>
         </div>
@@ -294,25 +283,19 @@ export default function RkaFloorPage({ params }) {
         <div className="w-full">
           <div className="flex flex-col md:flex-row gap-4 lg:gap-6">
             <div className="hidden md:block w-48 lg:w-56 flex-shrink-0">
-              <FloorSidebar
-                currentFloor={floorNum}
-                baseHref="/rooms/1/floor"
-                floors={[1, 2, 3, 4]}
-              />
+              <FloorSidebar currentFloor={floorNum} baseHref="/rooms/1/floor" floors={[1, 2, 3, 4]} />
             </div>
 
             <div className="flex-1 min-w-0">
               <section className="relative rounded-xl sm:rounded-2xl border border-slate-200 bg-white/80 p-3 sm:p-4 md:p-6 shadow-lg lg:shadow-xl backdrop-blur overflow-hidden w-full">
                 <div className="absolute left-1/2 top-3 sm:top-4 md:top-6 -translate-x-1/2 w-[240px] xs:w-[280px] sm:w-[320px] md:w-[360px] lg:w-80">
-                  <div className="grid w-full grid-cols-2 rounded-lg 
-                      border-2 border-dashed border-blue-400 
-                      bg-blue-50 text-blue-700 shadow">
+                  <div className="grid w-full grid-cols-2 rounded-lg border-2 border-dashed border-blue-400 bg-blue-50 text-blue-700 shadow">
                     <div className="flex items-center justify-center gap-1 p-1.5 sm:p-2">
-                      <span className="text-sm">🚿</span>{" "}
+                      <span className="text-sm">🚿</span>
                       <span className="text-[12px] xs:text-xs">Bathroom</span>
                     </div>
                     <div className="border-l border-slate-200 flex items-center justify-center gap-1 p-1.5 sm:p-2">
-                      <span className="text-sm">🚽</span>{" "}
+                      <span className="text-sm">🚽</span>
                       <span className="text-[12px] xs:text-xs">Toilet</span>
                     </div>
                   </div>
@@ -321,10 +304,7 @@ export default function RkaFloorPage({ params }) {
                 <div className="grid grid-cols-[1fr_auto_1fr] gap-2 xs:gap-3 sm:gap-4 md:gap-5 lg:gap-6 pt-16 xs:pt-18 sm:pt-20 md:pt-24">
                   <div className="flex flex-col items-center gap-2 xs:gap-3 md:gap-4">
                     {leftRooms.map((r) => (
-                      <div
-                        key={r}
-                        className="w-[70px] xs:w-[80px] sm:w-[90px] md:w-[100px] lg:w-[110px] h-[50px] xs:h-[56px] md:h-[64px]"
-                      >
+                      <div key={r} className="w-[70px] xs:w-[80px] sm:w-[90px] md:w-[100px] lg:w-[110px] h-[50px] xs:h-[56px] md:h-[64px]">
                         <RoomBlock room={r} />
                       </div>
                     ))}
@@ -335,28 +315,27 @@ export default function RkaFloorPage({ params }) {
                   </div>
                   <div className="flex flex-col items-center gap-2 xs:gap-3 md:gap-4">
                     {rightRooms.map((r) => (
-                      <div
-                        key={r}
-                        className="w-[70px] xs:w-[80px] sm:w-[90px] md:w-[100px] lg:w-[110px] h-[50px] xs:h-[56px] md:h-[64px]"
-                      >
+                      <div key={r} className="w-[70px] xs:w-[80px] sm:w-[90px] md:w-[100px] lg:w-[110px] h-[50px] xs:h-[56px] md:h-[64px]">
                         <RoomBlock room={r} />
                       </div>
                     ))}
                   </div>
                 </div>
               </section>
-            <div className="mt-4 sm:mt-5 lg:mt-6">
-              <RoomLegend />
-            </div> 
+
+              <div className="mt-4 sm:mt-5 lg:mt-6">
+                <RoomLegend />
+              </div>
             </div>
           </div>
         </div>
 
+        {/* FIX 8: pass isBooking to isLoading */}
         {selectedRoom !== null && (
           <ConfirmationDialog
             message={`Do you want to book one bed from Room ${RKA_NAME}-${selectedRoom}?`}
-            isLoading={false}
-            onCancel={() => setSelectedRoom(null)}
+            isLoading={isBooking}
+            onCancel={() => !isBooking && setSelectedRoom(null)}
             onConfirm={handleConfirmBooking}
           />
         )}

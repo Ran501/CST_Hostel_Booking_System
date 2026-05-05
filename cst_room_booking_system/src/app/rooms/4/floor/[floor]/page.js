@@ -32,8 +32,20 @@ export default function HaFloorPage({ params }) {
   // Simple States
   const [selectedRoom, setSelectedRoom] = useState(null);
   // To hold backend data
-    const [roomsData, setRoomsData] = useState([]);
-    const [loading, setLoading] = useState(true);
+  const [roomsData, setRoomsData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  // Simple States
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [isBooking, setIsBooking] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [currentUser, setCurrentUser] = useState({
+    phoneNumber: "17654321",
+    email: "test@example.com",
+    name: "Test User",
+    role: "student",
+    gender: "male",
+    hasBooked: false,
+  });
 
   useEffect(() => {
         async function fetchRooms() {
@@ -68,14 +80,52 @@ export default function HaFloorPage({ params }) {
     return true;
   };
 
-  // --- BOOKING LOGIC ---
-  function handleConfirmBooking() {
-    if (selectedRoom === null) return;
-    
-    // Simple confirmation dialog logic - no API calls
-    alert(`Room ${HA_NAME}-${selectedRoom} booking confirmed! (UI Only - No Backend)`);
+  async function handleConfirmBooking() {
+  if (selectedRoom === null || !currentUser) return;
+
+  const fullRoomId = `${HA_NAME}-${selectedRoom}`;
+
+  try {
+    setIsBooking(true);
+    const res = await fetch("/api/booking", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        roomNumber: fullRoomId,
+        userId: currentUser.phoneNumber,
+        email: currentUser.email,
+        userName: currentUser.name,
+        checkIn: new Date().toISOString(),
+        checkOut: new Date(
+          new Date().setMonth(new Date().getMonth() + 6),
+        ).toISOString(),
+      }),
+    });
+
+    const result = await res.json();
+    if (result.success) {
+      setToast(`Room ${fullRoomId} reserved successfully! Room details sent to your email.`);
+      const updatedUser = { ...currentUser, hasBooked: true };
+      setCurrentUser(updatedUser);
+      localStorage.setItem("session", JSON.stringify(updatedUser));
+      setRoomsData((prev) =>
+        prev.map((r) =>
+          r.roomNumber === fullRoomId
+            ? { ...r, occupied: (r.occupied || 0) + 1 }
+            : r,
+        ),
+      );
+    } else {
+      setToast("Error: " + (result.error || "Could not book"));
+    }
+  } catch (err) {
+    setToast("Connection failed.");
+  } finally {
+    setIsBooking(false);
     setSelectedRoom(null);
+    setTimeout(() => setToast(null), 3000);
   }
+} 
 
   // --- SPATIAL DATA ---
   const leftRooms = useMemo(
@@ -258,7 +308,7 @@ export default function HaFloorPage({ params }) {
                         <RoomBlock room={r} />
                       </div>
                     ))}
-                    <SpecialBlock text="🚿 Washroom" type="washroom" />
+                    <SpecialBlock text="🚿 Restroom" type="washroom" />
                   </div>
                 </div>
               </section>
