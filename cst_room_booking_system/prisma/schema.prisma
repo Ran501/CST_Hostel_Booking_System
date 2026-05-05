@@ -8,22 +8,21 @@ datasource db {
 }
 
 model User {
-  id            String    @id @default(uuid())
-  email         String    @unique
-  studentNumber String    @unique
-  password      String?   // optional - blank initially
-  name          String
-  role          String    @default("user")
-  year          Int
-  gender        String
-  phoneNumber   String    @unique
-  department    String    // student's department
-  isActive      Boolean   @default(false)  // account activation status
-  hasSetPassword Boolean  @default(false) // whether user has set their own password
-  otpHash       String?   // hashed OTP for activation
-  otpExpiresAt  DateTime? // OTP expiry time
-  bookings      Booking[]
-
+  id             String    @id @default(uuid())
+  email          String    @unique
+  studentNumber  String    @unique
+  password       String?
+  name           String
+  role           String    @default("user")
+  year           Int
+  gender         String
+  phoneNumber    String    @unique
+  department     String
+  hasSetPassword Boolean   @default(false)
+  isActive       Boolean   @default(false)
+  otpExpiresAt   DateTime?
+  otpHash        String?
+  bookings       Booking[]
 
   @@index([email])
   @@index([year])
@@ -38,8 +37,8 @@ model Hostel {
   status           String            @default("active")
   year             Int
   capacity         Int
-  rooms            Room[]
   floorAllocations FloorAllocation[]
+  rooms            Room[]
 
   @@index([status])
   @@index([year])
@@ -53,8 +52,8 @@ model Room {
   status     String    @default("available")
   year       Int
   hostel_id  String
-  hostel     Hostel    @relation(fields: [hostel_id], references: [id], onDelete: Cascade)
   bookings   Booking[]
+  hostel     Hostel    @relation(fields: [hostel_id], references: [id], onDelete: Cascade)
 
   @@unique([hostel_id, roomNumber])
   @@index([hostel_id])

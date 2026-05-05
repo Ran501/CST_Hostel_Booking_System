@@ -1,42 +1,43 @@
 "use client";
 
 import Link from "next/link";
-import { use, useEffect, useMemo, useState } from "react";
-import { useRouter } from "next/navigation";
-import FloorSidebar from "../../../components/FloorSidebar";
+import { use, useState } from "react";
 import RoomLegend from "../../../components/RoomLegend";
+import FloorSidebar from "../../../components/FloorSidebar";
 import ConfirmationDialog from "../../../../confirmation";
 import {
-  LHAWANG_NAME,
-  LHAWANG_FLOOR_META,
-  LHAWANG_KITCHEN_LABELS,
-  floor1LeftRoom,
-  floor1RightRoom,
-  floor2LeftColumn,
-  floor2RightSection,
-  floor3LeftColumn,
-  floor3RightSection,
-  floor4LeftColumn,
-  floor4RightSection,
-  floor5LeftRoom,
-  floor5RightRoom,
-} from "../../../data/lhawang";
+  HE_NAME,
+  HE_FLOORS,
+  HE_FLOOR_META,
+  floor1TopRow,
+  floor1BottomRow,
+  floor2TopRowGroupA,
+  floor2TopRowGroupB,
+  floor2TopRowGroupC,
+  floor2BottomRowGroupA,
+  floor2BottomRowGroupB,
+  floor2BottomRowGroupC,
+} from "../../../data/he";
 
-const FLOORS = [1, 2, 3, 4, 5];
-
-const STATUS = {
-  AVAILABLE: "available",
-  BOOKED: "booked",
-  SELECTED: "selected",
-};
-
+// ─────────────────────────────────────────────────────────────────────────────
+// Helpers
+// ─────────────────────────────────────────────────────────────────────────────
 function floorLabel(n) {
-  return ["First", "Second", "Third", "Fourth", "Fifth"][n - 1] ?? String(n);
+  return ["First", "Second"][n - 1] ?? String(n);
 }
 
 function isValidFloor(n) {
-  return Number.isFinite(n) && n >= 1 && n <= 5;
+  return Number.isFinite(n) && n >= 1 && n <= 2;
 }
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Room Status
+// ─────────────────────────────────────────────────────────────────────────────
+const STATUS = {
+  AVAILABLE: "available",
+  BOOKED:    "booked",
+  SELECTED:  "selected",
+};
 
 const STATUS_STYLES = {
   [STATUS.AVAILABLE]: {
@@ -66,7 +67,8 @@ const STATUS_STYLES = {
 // Shared Primitive Components
 // ─────────────────────────────────────────────────────────────────────────────
 
-function SmallRoom({ room, status, onClick }) {
+/** Standard room tile — portrait orientation matching the floor plan */
+function RoomBlock({ room, status, onClick }) {
   const s = STATUS_STYLES[status] ?? STATUS_STYLES[STATUS.AVAILABLE];
   const clickable = status !== STATUS.BOOKED;
   return (
@@ -74,291 +76,331 @@ function SmallRoom({ room, status, onClick }) {
       disabled={!clickable}
       onClick={clickable ? onClick : undefined}
       className={`
-        relative flex flex-col items-center justify-center w-full h-full
+        relative flex flex-col items-center justify-center
         rounded-lg border-2 shadow-sm transition-all duration-200
+        w-full h-full
         ${s.border} ${s.bg} ${s.ring}
         ${clickable
           ? "cursor-pointer hover:-translate-y-0.5 hover:shadow-md"
           : "cursor-not-allowed opacity-60"}
       `}
     >
-      <span className="text-sm xs:text-base sm:text-lg font-semibold tracking-wider text-slate-700">
+      <span className="text-[11px] xs:text-sm sm:text-base font-semibold tracking-wider text-slate-700">
         {room}
       </span>
-      <span className={`text-[9px] xs:text-[10px] sm:text-[11px] font-medium mt-0.5 ${s.text}`}>
+      <span className={`text-[8px] xs:text-[9px] sm:text-[10px] font-medium mt-0.5 ${s.text}`}>
         {s.label}
       </span>
     </button>
   );
 }
 
-function LargeRoom({ room, status, onClick }) {
-  const s = STATUS_STYLES[status] ?? STATUS_STYLES[STATUS.AVAILABLE];
-  const clickable = status !== STATUS.BOOKED;
-  return (
-    <button
-      disabled={!clickable}
-      onClick={clickable ? onClick : undefined}
-      className={`
-        relative flex flex-col items-center justify-center w-full h-full
-        rounded-xl border-2 shadow-sm transition-all duration-200
-        ${s.border} ${s.bg} ${s.ring}
-        ${clickable
-          ? "cursor-pointer hover:-translate-y-0.5 hover:shadow-md"
-          : "cursor-not-allowed opacity-60"}
-      `}
-    >
-      <span className="text-2xl sm:text-3xl md:text-4xl font-semibold tracking-wider text-slate-700">
-        {room}
-      </span>
-      <span className={`text-xs sm:text-sm font-medium mt-1 ${s.text}`}>
-        {s.label}
-      </span>
-    </button>
-  );
-}
+/** Non-bookable utility block (Washroom, MESS, etc.) */
+function UtilityBlock({ label, className = "" }) {
+  const isWashroom = label.toLowerCase().includes("washroom");
+  const baseClasses = "flex items-center justify-center rounded-lg border-2";
+  const typeClasses = isWashroom
+    ? "border-dashed border-blue-400 bg-blue-50 text-blue-700"
+    : "border-slate-200 bg-slate-50 text-slate-500";
 
-function KitchenBlock({ label }) {
   return (
-    <div className="flex items-center justify-center w-full h-full rounded-lg border-2 border-dashed border-slate-300 bg-slate-50">
-      <span className="text-xs xs:text-sm sm:text-base text-slate-400 font-medium px-2 text-center">
+    <div className={`${baseClasses} ${typeClasses} ${className}`}>
+      <span className="text-xs sm:text-sm font-medium px-2 text-center">
         {label}
       </span>
     </div>
   );
 }
 
-function StairsIndicator() {
+/** Stair indicator */
+function StairLabel({ direction = "up", label = "Stair" }) {
   return (
     <div className="flex flex-col items-center gap-0.5 select-none">
-      <svg
-        xmlns="http://www.w3.org/2000/svg"
-        className="h-5 w-5 sm:h-6 sm:w-6 text-slate-500"
-        fill="none" viewBox="0 0 24 24"
-        stroke="currentColor" strokeWidth={2}
-      >
-        <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
-      </svg>
+      {direction === "up" && (
+        <svg
+          xmlns="http://www.w3.org/2000/svg"
+          className="h-4 w-4 sm:h-5 sm:w-5 text-slate-500"
+          fill="none" viewBox="0 0 24 24"
+          stroke="currentColor" strokeWidth={2}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
+        </svg>
+      )}
       <span className="text-[10px] xs:text-xs sm:text-sm text-slate-500 font-medium">
-        Stairs
+        {label}
       </span>
     </div>
   );
 }
-
-function RightArrow() {
-  return (
-    <svg
-      xmlns="http://www.w3.org/2000/svg"
-      className="h-5 w-5 sm:h-6 sm:w-6 text-slate-600 flex-shrink-0"
-      fill="none" viewBox="0 0 24 24"
-      stroke="currentColor" strokeWidth={2}
-    >
-      <path strokeLinecap="round" strokeLinejoin="round" d="M9 5l7 7-7 7" />
-    </svg>
-  );
-}
-/** FLOOR 1 — two large rooms: 102 | Stairs | 101 */
+// FLOOR 1 Plan
 function Floor1Plan({ getStatus, onRoomClick }) {
-  const leftRoom  = floor1LeftRoom();   // 102
-  const rightRoom = floor1RightRoom();  // 101
-  const RH = "h-[200px] xs:h-[240px] sm:h-[290px] md:h-[350px]";
+  const topRow    = floor1TopRow();    // [101..106]
+  const bottomRow = floor1BottomRow(); // [112..107]
+
+  // Room tile dimensions — portrait blocks
+  const RH = "h-[70px] xs:h-[80px] sm:h-[90px] md:h-[100px]";
+  const RW = "w-[46px] xs:w-[54px] sm:w-[62px] md:w-[72px]";
 
   return (
-    <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 sm:gap-6 md:gap-10">
-      <div className={RH}>
-        <LargeRoom room={leftRoom} status={getStatus(leftRoom)} onClick={() => onRoomClick(leftRoom)} />
+    <div className="flex flex-col gap-4 sm:gap-5 md:gap-6">
+
+      {/* Desktop: Horizontal layout */}
+      <div className="hidden sm:flex flex-col sm:flex-row gap-3 sm:gap-4">
+        {/* MESS Area */}
+        <div className="flex-shrink-0 w-[160px] md:w-[220px] lg:w-[260px]">
+          <UtilityBlock
+            label="MESS Area"
+            className="w-full h-[240px] sm:h-[240px] md:h-[300px] text-base sm:text-lg font-semibold border-slate-300"
+          />
+        </div>
+
+        {/* Room section */}
+        <div className="flex-1 flex flex-col gap-3 sm:gap-4">
+          {/* Washroom */}
+          <div className="w-full max-w-[380px] sm:max-w-none self-end">
+            <UtilityBlock label="Washroom" className="h-[36px] sm:h-[40px] md:h-[44px] w-full" />
+          </div>
+
+          {/* Stair + Top row */}
+          <div className="flex items-start gap-1.5 sm:gap-2 md:gap-3">
+            <div className="pt-1">
+              <StairLabel label="Stair" />
+            </div>
+            <div className="flex flex-wrap gap-1.5 xs:gap-2 sm:gap-2.5 md:gap-3">
+              {topRow.map((r) => (
+                <div key={r} className={`${RW} ${RH}`}>
+                  <RoomBlock room={r} status={getStatus(r)} onClick={() => onRoomClick(r)} />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Gap between rows */}
+          <div className="h-2 sm:h-3" />
+
+          {/* Bottom row */}
+          <div className="flex flex-wrap gap-1.5 xs:gap-2 sm:gap-2.5 md:gap-3 pl-8 xs:pl-9 sm:pl-10">
+            {bottomRow.map((r) => (
+              <div key={r} className={`${RW} ${RH}`}>
+                <RoomBlock room={r} status={getStatus(r)} onClick={() => onRoomClick(r)} />
+              </div>
+            ))}
+          </div>
+
+          {/* Entrance */}
+          <div className="self-start -ml-4 pl-0">
+            <StairLabel direction="up" label="Entrance" />
+          </div>
+        </div>
       </div>
-      <StairsIndicator />
-      <div className={RH}>
-        <LargeRoom room={rightRoom} status={getStatus(rightRoom)} onClick={() => onRoomClick(rightRoom)} />
+
+      {/* Mobile: Vertical layout */}
+      <div className="sm:hidden flex flex-col gap-3">
+        {/* MESS Area */}
+        <UtilityBlock label="MESS Area" className="w-full h-[70px] text-sm font-semibold border-slate-300" />
+        
+        {/* Two vertical columns */}
+        <div className="flex gap-3">
+          {/* Left column - 6 rooms */}
+          <div className="flex-1 flex flex-col gap-2">
+            <div className="text-center text-xs font-medium text-slate-600 mb-1">Left Side</div>
+            {topRow.map((r) => (
+              <div key={r} className={`${RW} ${RH}`}>
+                <RoomBlock room={r} status={getStatus(r)} onClick={() => onRoomClick(r)} />
+              </div>
+            ))}
+          </div>
+
+          {/* Right column - 6 rooms */}
+          <div className="flex-1 flex flex-col gap-2">
+            <div className="text-center text-xs font-medium text-slate-600 mb-1">Right Side</div>
+            {bottomRow.map((r) => (
+              <div key={r} className={`${RW} ${RH}`}>
+                <RoomBlock room={r} status={getStatus(r)} onClick={() => onRoomClick(r)} />
+              </div>
+            ))}
+          </div>
+        </div>
       </div>
     </div>
   );
 }
-
-/** FLOOR 2 — Kitchen 1 + rooms 203/202/201 left | 204→205, 206, Stairs+204b right */
+// FLOOR 2 Plan
 function Floor2Plan({ getStatus, onRoomClick }) {
-  const leftRooms = floor2LeftColumn();                                  // [203, 202, 201]
-  const { connectedPair, standaloneRoom, stairsRoom } = floor2RightSection();
-  const kitchenLabel = LHAWANG_KITCHEN_LABELS[2];
-  const TH = "h-[44px] xs:h-[50px] sm:h-[56px] md:h-[62px]";
+  const topA    = floor2TopRowGroupA();    // [224..228]
+  const topB    = floor2TopRowGroupB();    // [229..233]
+  const topC    = floor2TopRowGroupC();    // [201..206]
+  const botA    = floor2BottomRowGroupA(); // [222..218]
+  const botB    = floor2BottomRowGroupB(); // [217..213]
+  const botC    = floor2BottomRowGroupC(); // [212..207]
 
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-[1fr_1.5fr] gap-4 sm:gap-6 md:gap-8 items-start">
+  const RH = "h-[64px] xs:h-[74px] sm:h-[84px] md:h-[96px]";
+  const RW = "w-[40px] xs:w-[48px] sm:w-[56px] md:w-[66px]";
 
-      {/* Left column */}
-      <div className="flex flex-col gap-3">
-        <div className={TH}><KitchenBlock label={kitchenLabel} /></div>
-        {leftRooms.map((r) => (
-          <div key={r} className={TH}>
-            <SmallRoom room={r} status={getStatus(r)} onClick={() => onRoomClick(r)} />
-          </div>
-        ))}
-      </div>
-
-      {/* Right section */}
-      <div className="flex flex-col gap-3">
-        {/* Connected pair: 204 → 205 */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          <div className={`flex-1 ${TH}`}>
-            <SmallRoom room={connectedPair[0]} status={getStatus(connectedPair[0])} onClick={() => onRoomClick(connectedPair[0])} />
-          </div>
-          <RightArrow />
-          <div className={`flex-1 ${TH}`}>
-            <SmallRoom room={connectedPair[1]} status={getStatus(connectedPair[1])} onClick={() => onRoomClick(connectedPair[1])} />
-          </div>
+  /** Renders a horizontal group of room tiles */
+  const RoomGroup = ({ rooms }) => (
+    <div className="flex gap-1 xs:gap-1.5 sm:gap-2">
+      {rooms.map((r) => (
+        <div key={r} className={`${RW} ${RH}`}>
+          <RoomBlock room={r} status={getStatus(r)} onClick={() => onRoomClick(r)} />
         </div>
-
-        {/* Invisible spacer to match image positioning */}
-        <div className={`${TH} invisible`} aria-hidden="true" />
-
-        {/* 206 — right-aligned */}
-        <div className={`w-[48%] self-end ${TH}`}>
-          <SmallRoom room={standaloneRoom} status={getStatus(standaloneRoom)} onClick={() => onRoomClick(standaloneRoom)} />
-        </div>
-
-        {/* Stairs + 204b */}
-        <div className="flex items-center gap-3 sm:gap-4 pt-1">
-          <StairsIndicator />
-          <div className={`flex-1 ${TH}`}>
-            <SmallRoom room={connectedPair[0]} status={getStatus(stairsRoom)} onClick={() => onRoomClick(stairsRoom)} />
-          </div>
-        </div>
-      </div>
+      ))}
     </div>
   );
-}
-
-/** FLOOR 3 — Kitchen 2 + rooms 304–301 left | Enter, 305→306, 307, 308, Stairs+309 right */
-function Floor3Plan({ getStatus, onRoomClick }) {
-  const leftRooms = floor3LeftColumn();                                              // [304, 303, 302, 301]
-  const { connectedPair, stackedRooms, stairsRoom } = floor3RightSection();
-  const kitchenLabel = LHAWANG_KITCHEN_LABELS[3];
-  const TH = "h-[44px] xs:h-[50px] sm:h-[56px] md:h-[62px]";
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-[1fr_1.5fr] gap-4 sm:gap-6 md:gap-8 items-start">
+    <div className="flex flex-col gap-4 sm:gap-5 overflow-x-auto pb-1">
 
-      {/* Left column */}
-      <div className="flex flex-col gap-3">
-        <div className={TH}><KitchenBlock label={kitchenLabel} /></div>
-        {leftRooms.map((r) => (
-          <div key={r} className={TH}>
-            <SmallRoom room={r} status={getStatus(r)} onClick={() => onRoomClick(r)} />
+      {/* Desktop: Horizontal layout */}
+      <div className="hidden sm:flex flex-col gap-4 sm:gap-5">
+        {/* ── TOP ROW ── */}
+        <div className="flex items-end gap-2 sm:gap-3 md:gap-4 min-w-max">
+
+          {/* Group A */}
+          <RoomGroup rooms={topA} />
+
+          {/* Gap */}
+          <div className="w-2 sm:w-3 md:w-4 flex-shrink-0" />
+
+          {/* Group B */}
+          <RoomGroup rooms={topB} />
+
+          {/* Stairs */}
+          <div className="flex-shrink-0 pb-1 px-1">
+            <StairLabel label="Stairs" direction="up" />
           </div>
-        ))}
-      </div>
 
-      {/* Right section */}
-      <div className="flex flex-col gap-3">
-        {/* Enter label */}
-        <p className="text-xs sm:text-sm font-semibold text-slate-500 text-right pr-1">
-          Enter
-        </p>
+          {/* Group C */}
+          <RoomGroup rooms={topC} />
 
-        {/* 305 → 306 */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          <div className={`flex-1 ${TH}`}>
-            <SmallRoom room={connectedPair[0]} status={getStatus(connectedPair[0])} onClick={() => onRoomClick(connectedPair[0])} />
-          </div>
-          <RightArrow />
-          <div className={`flex-1 ${TH}`}>
-            <SmallRoom room={connectedPair[1]} status={getStatus(connectedPair[1])} onClick={() => onRoomClick(connectedPair[1])} />
-          </div>
-        </div>
-
-        {/* 307, 308 — left-aligned */}
-        {stackedRooms.map((r) => (
-          <div key={r} className={`w-[48%] self-start ${TH}`}>
-            <SmallRoom room={r} status={getStatus(r)} onClick={() => onRoomClick(r)} />
-          </div>
-        ))}
-
-        {/* Stairs + 309 */}
-        <div className="flex items-center gap-3 sm:gap-4 pt-1">
-          <StairsIndicator />
-          <div className={`flex-1 ${TH}`}>
-            <SmallRoom room={stairsRoom} status={getStatus(stairsRoom)} onClick={() => onRoomClick(stairsRoom)} />
+          {/* Washroom — top right */}
+          <div className="flex-shrink-0 self-start">
+            <UtilityBlock
+              label="Washroom"
+              className="h-[36px] sm:h-[40px] md:h-[44px] w-[90px] sm:w-[110px] md:w-[130px]"
+            />
           </div>
         </div>
-      </div>
-    </div>
-  );
-}
 
-/** FLOOR 4 — Kitchen 3 + rooms 403–401 left | Enter, 405→out, 407, Stairs+408 right */
-function Floor4Plan({ getStatus, onRoomClick }) {
-  const leftRooms = floor4LeftColumn();                                               // [403, 402, 401]
-  const { entranceRoom, standaloneRoom, stairsRoom } = floor4RightSection();
-  const kitchenLabel = LHAWANG_KITCHEN_LABELS[4];
-  const TH = "h-[44px] xs:h-[50px] sm:h-[56px] md:h-[62px]";
+        {/* ── BOTTOM ROW ── */}
+        <div className="flex items-start gap-2 sm:gap-3 md:gap-4 min-w-max">
 
-  return (
-    <div className="grid grid-cols-1 sm:grid-cols-[1fr_1.5fr] gap-4 sm:gap-6 md:gap-8 items-start">
-
-      {/* Left column */}
-      <div className="flex flex-col gap-3">
-        <div className={TH}><KitchenBlock label={kitchenLabel} /></div>
-        {leftRooms.map((r) => (
-          <div key={r} className={TH}>
-            <SmallRoom room={r} status={getStatus(r)} onClick={() => onRoomClick(r)} />
+          {/* Group A */}
+          <div className="flex flex-col gap-1">
+            <RoomGroup rooms={botA} />
           </div>
-        ))}
-      </div>
 
-      {/* Right section */}
-      <div className="flex flex-col gap-3">
-        {/* Enter label */}
-        <p className="text-xs sm:text-sm font-semibold text-slate-500 text-right pr-1">
-          Enter
-        </p>
+          {/* Gap */}
+          <div className="w-2 sm:w-3 md:w-4 flex-shrink-0" />
 
-        {/* 405 → (outward entrance arrow, no room on right) */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          <div className={`flex-1 ${TH}`}>
-            <SmallRoom room={entranceRoom} status={getStatus(entranceRoom)} onClick={() => onRoomClick(entranceRoom)} />
+          {/* Group B + Balcony label */}
+          <div className="flex flex-col items-center gap-1">
+            <RoomGroup rooms={botB} />
+            <span className="text-[10px] xs:text-xs sm:text-sm text-slate-500 font-medium mt-1">
+              Balcony
+            </span>
           </div>
-          <RightArrow />
-          <div className="w-8 sm:w-10 flex-shrink-0" /> {/* empty — arrow points outward */}
-        </div>
 
-        {/* 407 — right-aligned */}
-        <div className={`w-[48%] self-end ${TH}`}>
-          <SmallRoom room={standaloneRoom} status={getStatus(standaloneRoom)} onClick={() => onRoomClick(standaloneRoom)} />
-        </div>
+          {/* Spacer aligned with Stairs above */}
+          <div className="flex-shrink-0 px-1 w-[40px] sm:w-[50px]" />
 
-        {/* Stairs + 408 */}
-        <div className="flex items-center gap-3 sm:gap-4 pt-1">
-          <StairsIndicator />
-          <div className={`flex-1 ${TH}`}>
-            <SmallRoom room={stairsRoom} status={getStatus(stairsRoom)} onClick={() => onRoomClick(stairsRoom)} />
+          {/* Group C + Balcony label */}
+          <div className="flex flex-col items-center gap-1">
+            <RoomGroup rooms={botC} />
+            <span className="text-[10px] xs:text-xs sm:text-sm text-slate-500 font-medium mt-1">
+              Balcony
+            </span>
           </div>
         </div>
       </div>
-    </div>
-  );
-}
 
-/** FLOOR 5 — two large rooms: 502 (left + stairs) | 501 (right + stairs) */
-function Floor5Plan({ getStatus, onRoomClick }) {
-  const leftRoom  = floor5LeftRoom();   // 502
-  const rightRoom = floor5RightRoom();  // 501
-  const RH = "h-[180px] xs:h-[220px] sm:h-[270px] md:h-[330px]";
+      {/* Mobile: Vertical layout */}
+      <div className="sm:hidden flex flex-col gap-4">
+        {/* Washroom at top */}
+        <div className="w-full">
+          <UtilityBlock
+            label="Washroom"
+            className="h-[36px] w-full text-sm border-blue-400 bg-blue-50 text-blue-700"
+          />
+        </div>
 
-  return (
-    <div className="grid grid-cols-2 gap-4 sm:gap-6 md:gap-10">
-      <div className="flex flex-col items-center gap-3">
-        <div className={`w-full ${RH}`}>
-          <LargeRoom room={leftRoom} status={getStatus(leftRoom)} onClick={() => onRoomClick(leftRoom)} />
+        {/* Stairs */}
+        <div className="flex justify-center">
+          <StairLabel label="Stairs" direction="up" />
         </div>
-        <StairsIndicator />
-      </div>
-      <div className="flex flex-col items-center gap-3">
-        <div className={`w-full ${RH}`}>
-          <LargeRoom room={rightRoom} status={getStatus(rightRoom)} onClick={() => onRoomClick(rightRoom)} />
+
+        {/* All rooms in vertical columns */}
+        <div className="grid grid-cols-2 gap-3">
+          {/* Left column - Top groups */}
+          <div className="flex flex-col gap-2">
+            <div className="text-center text-xs font-medium text-slate-600 mb-1">Top A</div>
+            <div className="flex flex-col gap-1">
+              {topA.map((r) => (
+                <div key={r} className={`${RW} ${RH}`}>
+                  <RoomBlock room={r} status={getStatus(r)} onClick={() => onRoomClick(r)} />
+                </div>
+              ))}
+            </div>
+            
+            <div className="text-center text-xs font-medium text-slate-600 mb-1 mt-2">Bottom A</div>
+            <div className="flex flex-col gap-1">
+              {botA.map((r) => (
+                <div key={r} className={`${RW} ${RH}`}>
+                  <RoomBlock room={r} status={getStatus(r)} onClick={() => onRoomClick(r)} />
+                </div>
+              ))}
+            </div>
+          </div>
+
+          {/* Right column - Top groups */}
+          <div className="flex flex-col gap-2">
+            <div className="text-center text-xs font-medium text-slate-600 mb-1">Top B</div>
+            <div className="flex flex-col gap-1">
+              {topB.map((r) => (
+                <div key={r} className={`${RW} ${RH}`}>
+                  <RoomBlock room={r} status={getStatus(r)} onClick={() => onRoomClick(r)} />
+                </div>
+              ))}
+            </div>
+            
+            <div className="text-center text-xs font-medium text-slate-600 mb-1 mt-2">Bottom B</div>
+            <div className="flex flex-col gap-1">
+              {botB.map((r) => (
+                <div key={r} className={`${RW} ${RH}`}>
+                  <RoomBlock room={r} status={getStatus(r)} onClick={() => onRoomClick(r)} />
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
-        <StairsIndicator />
+
+        {/* Third row - Top C and Bottom C */}
+        <div className="flex flex-col gap-2">
+          <div className="text-center text-xs font-medium text-slate-600 mb-1">Top C & Bottom C</div>
+          <div className="grid grid-cols-2 gap-2">
+            <div className="flex flex-col gap-1">
+              {topC.map((r) => (
+                <div key={r} className={`${RW} ${RH}`}>
+                  <RoomBlock room={r} status={getStatus(r)} onClick={() => onRoomClick(r)} />
+                </div>
+              ))}
+            </div>
+            <div className="flex flex-col gap-1">
+              {botC.map((r) => (
+                <div key={r} className={`${RW} ${RH}`}>
+                  <RoomBlock room={r} status={getStatus(r)} onClick={() => onRoomClick(r)} />
+                </div>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Balcony labels */}
+        <div className="flex justify-around text-xs text-slate-500 font-medium">
+          <span>Balcony A</span>
+          <span>Balcony B</span>
+          <span>Balcony C</span>
+        </div>
       </div>
     </div>
   );
@@ -367,17 +409,17 @@ function Floor5Plan({ getStatus, onRoomClick }) {
 // ─────────────────────────────────────────────────────────────────────────────
 // Main Page
 // ─────────────────────────────────────────────────────────────────────────────
-export default function LhawangFloorPage({ params }) {
+export default function HeFloorPage({ params }) {
   const { floor } = use(params);
   const rawFloor  = Number(floor);
   const floorNum  = isValidFloor(rawFloor) ? rawFloor : 1;
 
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [sidebarOpen,  setSidebarOpen]  = useState(false);
-  // Replace with real API data, e.g.: const [bookedRooms] = useState(new Set([201, 305]));
+  // Swap with real API data: e.g. const [bookedRooms] = useState(new Set([101, 205]));
   const [bookedRooms] = useState(new Set());
 
-  const meta = LHAWANG_FLOOR_META[floorNum] ?? LHAWANG_FLOOR_META[1];
+  const meta = HE_FLOOR_META[floorNum] ?? HE_FLOOR_META[1];
 
   function getStatus(room) {
     if (room === selectedRoom)  return STATUS.SELECTED;
@@ -391,7 +433,7 @@ export default function LhawangFloorPage({ params }) {
 
   function handleConfirmBooking() {
     if (selectedRoom === null) return;
-    alert(`Room ${LHAWANG_NAME}-${selectedRoom} booked! (UI only — connect your API)`);
+    alert(`Room ${HE_NAME}-${selectedRoom} booked! (UI only — connect your API)`);
     setSelectedRoom(null);
   }
 
@@ -400,14 +442,18 @@ export default function LhawangFloorPage({ params }) {
   const PLANS = {
     1: <Floor1Plan {...floorPlanProps} />,
     2: <Floor2Plan {...floorPlanProps} />,
-    3: <Floor3Plan {...floorPlanProps} />,
-    4: <Floor4Plan {...floorPlanProps} />,
-    5: <Floor5Plan {...floorPlanProps} />,
   };
 
   const BackArrow = () => (
-    <Link href="/" className="inline-flex items-center text-slate-500 hover:text-slate-700 transition-colors">
-      <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+    <Link
+      href="/"
+      className="inline-flex items-center text-slate-500 hover:text-slate-700 transition-colors"
+    >
+      <svg
+        xmlns="http://www.w3.org/2000/svg"
+        className="h-6 w-6" fill="none"
+        viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}
+      >
         <path strokeLinecap="round" strokeLinejoin="round" d="M19 12H5m7-7l-7 7 7 7" />
       </svg>
     </Link>
@@ -417,15 +463,19 @@ export default function LhawangFloorPage({ params }) {
     <main className="min-h-screen bg-zinc-100 py-4 sm:py-6 md:py-8 text-slate-900 overflow-x-hidden">
       <div className="mx-auto w-full max-w-full px-3 xs:px-4 sm:px-6 lg:max-w-7xl lg:px-8">
 
-        {/* ── Mobile header ── */}
+        {/* ══════════════════════════════════════════════
+            MOBILE HEADER
+        ══════════════════════════════════════════════ */}
         <div className="md:hidden flex items-center justify-between mb-4">
           <BackArrow />
+
           <h1 className="flex-1 text-center text-base xs:text-lg font-semibold tracking-wide">
-            {LHAWANG_NAME} {floorLabel(floorNum)} floor
+            {HE_NAME} {floorLabel(floorNum)} floor
           </h1>
+
           <button
             onClick={() => setSidebarOpen((o) => !o)}
-            className="pointer px-3 py-1 bg-white border border-slate-200 rounded-full shadow-sm flex items-center gap-0.5 text-xs"
+            className="cursor-pointer px-3 py-1 bg-white border border-slate-200 rounded-full shadow-sm flex items-center gap-0.5 text-xs"
             aria-label="Toggle floor menu"
           >
             <span className="font-bold text-slate-700">Floor</span>
@@ -439,7 +489,9 @@ export default function LhawangFloorPage({ params }) {
           </button>
         </div>
 
-        {/* ── Mobile sidebar drawer ── */}
+        {/* ══════════════════════════════════════════════
+            MOBILE SIDEBAR DRAWER
+        ══════════════════════════════════════════════ */}
         {sidebarOpen && (
           <div
             className="md:hidden fixed inset-0 z-50 bg-black/50"
@@ -452,18 +504,20 @@ export default function LhawangFloorPage({ params }) {
               <FloorSidebar
                 currentFloor={floorNum}
                 baseHref="/rooms/9/floor"
-                floors={FLOORS}
+                floors={HE_FLOORS}
               />
             </div>
           </div>
         )}
 
-        {/* ── Desktop header ── */}
+        {/* ══════════════════════════════════════════════
+            DESKTOP HEADER
+        ══════════════════════════════════════════════ */}
         <div className="hidden md:flex items-center mb-4 sm:mb-5 lg:mb-6">
           <BackArrow />
           <div className="text-center flex-1">
             <h1 className="text-lg sm:text-xl lg:text-2xl font-semibold tracking-wide">
-              {LHAWANG_NAME} {floorLabel(floorNum)} floor
+              {HE_NAME} {floorLabel(floorNum)} floor
             </h1>
             <div className="text-sm text-slate-600 flex justify-center gap-4 sm:gap-6 mt-1">
               <span>
@@ -476,7 +530,9 @@ export default function LhawangFloorPage({ params }) {
           </div>
         </div>
 
-        {/* ── Body: sidebar + floor plan ── */}
+        {/* ══════════════════════════════════════════════
+            BODY: SIDEBAR + FLOOR PLAN
+        ══════════════════════════════════════════════ */}
         <div className="flex flex-col md:flex-row gap-4 lg:gap-6">
 
           {/* Desktop sidebar */}
@@ -484,25 +540,24 @@ export default function LhawangFloorPage({ params }) {
             <FloorSidebar
               currentFloor={floorNum}
               baseHref="/rooms/9/floor"
-              floors={FLOORS}
+              floors={HE_FLOORS}
             />
           </div>
 
           {/* Floor plan + legend */}
           <div className="flex-1 min-w-0">
-            <section className="rounded-xl sm:rounded-2xl border border-slate-200 bg-white/80 p-4 sm:p-6 md:p-8 shadow-lg backdrop-blur w-full">
+            <section className="rounded-xl sm:rounded-2xl border border-slate-200 bg-white/80 p-4 sm:p-6 md:p-8 shadow-lg backdrop-blur w-full overflow-x-auto">
               {PLANS[floorNum]}
             </section>
+
             <div className="mt-4 sm:mt-5">
               <RoomLegend />
             </div>
           </div>
         </div>
-
-        {/* ── Confirmation dialog ── */}
         {selectedRoom !== null && (
           <ConfirmationDialog
-            message={`Do you want to book a bed from Room ${LHAWANG_NAME}-${selectedRoom}?`}
+            message={`Do you want to book a bed from Room ${HE_NAME}-${selectedRoom}?`}
             isLoading={false}
             onCancel={() => setSelectedRoom(null)}
             onConfirm={handleConfirmBooking}
