@@ -103,6 +103,7 @@ export const StatsCards = ({ stats }) => {
             ) : (
               <div className="text-sm sm:text-xl md:text-xl font-bold text-gray-900">
                 {stats.occupancyRate}%
+        
               </div>
             )}
           </div>
