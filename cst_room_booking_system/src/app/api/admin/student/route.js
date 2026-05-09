@@ -14,18 +14,18 @@ export async function GET(req) {
     if (searchParams.get("export") === "true") {
       const students = await studentService.exportStudents({
         department: searchParams.get("department") || "",
-        year: searchParams.get("year") || "",
-        search: searchParams.get("search") || "",
+        year:       searchParams.get("year")       || "",
+        search:     searchParams.get("search")     || "",
       });
       return Response.json({ data: students });
     }
 
     const data = await studentService.getStudents({
-      cursor: searchParams.get("cursor") || null,
-      limit: searchParams.get("limit") || 50,
-      search: searchParams.get("search") || "",
+      cursor:     searchParams.get("cursor")     || null,
+      limit:      searchParams.get("limit")      || 50,
+      search:     searchParams.get("search")     || "",
       department: searchParams.get("department") || "",
-      year: searchParams.get("year") || "",
+      year:       searchParams.get("year")       || "",
     });
 
     return Response.json(data);
@@ -35,9 +35,21 @@ export async function GET(req) {
   }
 }
 
-// ── POST: create one student OR bulk import ────────────────────────────────
+// ── POST: create one student | bulk JSON import | CSV import ──────────────
 export async function POST(req) {
   try {
+    const contentType = req.headers.get("content-type") || "";
+
+    // ── CSV import (sent as text/csv from the ImportModal) ────────────────
+    if (contentType.includes("text/csv")) {
+      const csvText = await req.text();
+      if (!csvText.trim()) return errorResponse("CSV body is empty");
+
+      const result = await studentService.importFromCsv(csvText);
+      return Response.json(result, { status: 201 });
+    }
+
+    // ── JSON: bulk array or single student ────────────────────────────────
     const body = await req.json();
 
     if (Array.isArray(body.students)) {
@@ -56,7 +68,7 @@ export async function POST(req) {
 // ── PUT: update one student ────────────────────────────────────────────────
 export async function PUT(req) {
   try {
-    const body = await req.json();
+    const body    = await req.json();
     const updated = await studentService.updateStudent(body);
     return Response.json(updated);
   } catch (err) {

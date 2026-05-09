@@ -7,20 +7,41 @@ import { prisma } from "../../app/lib/prisma";
 function buildWhere({ search = "", department = "", year = "" }) {
   const where = {};
 
-  if (department) where.department = department;
+  // Case-insensitive department filter — "civil engineering" matches "Civil Engineering"
+  if (department) {
+    where.department = { equals: department, mode: "insensitive" };
+  }
+
   if (year) where.year = Number(year);
 
   if (search) {
     where.OR = [
-      { name: { contains: search, mode: "insensitive" } },
-      { email: { contains: search, mode: "insensitive" } },
+      { name:          { contains: search, mode: "insensitive" } },
+      { email:         { contains: search, mode: "insensitive" } },
       { studentNumber: { contains: search, mode: "insensitive" } },
-      { phoneNumber: { contains: search, mode: "insensitive" } },
+      { phoneNumber:   { contains: search, mode: "insensitive" } },
+      { department:    { contains: search, mode: "insensitive" } },
+      { role:          { contains: search, mode: "insensitive" } },
     ];
   }
 
   return where;
 }
+
+/** Fields returned to the client on every query — password is always excluded. */
+const USER_SELECT = {
+  id:            true,
+  name:          true,
+  email:         true,
+  studentNumber: true,
+  role:          true,
+  year:          true,
+  gender:        true,
+  phoneNumber:   true,
+  department:    true,
+  isActive:      true,   // ← was missing everywhere; toggle now works
+  // createdAt: true,
+};
 
 export const studentRepository = {
   // ── Cursor-based pagination ────────────────────────────────────────────
@@ -29,31 +50,19 @@ export const studentRepository = {
    * exists. The extra row is stripped before returning to the client.
    */
   async findMany({ cursor = null, limit = 50, search, department, year }) {
-    const take = Number(limit) + 1; // fetch one extra to detect next page
+    const take  = Number(limit) + 1;
     const where = buildWhere({ search, department, year });
 
     const query = {
       where,
       take,
-      orderBy: { createdAt: "desc" },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        studentNumber: true,
-        role: true,
-        year: true,
-        gender: true,
-        phoneNumber: true,
-        department: true,
-        createdAt: true,
-        // never expose password
-      },
+      orderBy: { id: "desc" },
+      select:  USER_SELECT,
     };
 
     if (cursor) {
       query.cursor = { id: cursor };
-      query.skip = 1; // skip the cursor row itself
+      query.skip   = 1; // skip the cursor row itself
     }
 
     return prisma.user.findMany(query);
@@ -62,39 +71,17 @@ export const studentRepository = {
   // ── Export (no pagination) ─────────────────────────────────────────────
   async findAll({ search, department, year }) {
     return prisma.user.findMany({
-      where: buildWhere({ search, department, year }),
-      orderBy: { createdAt: "desc" },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        studentNumber: true,
-        role: true,
-        year: true,
-        gender: true,
-        phoneNumber: true,
-        department: true,
-        createdAt: true,
-      },
+      where:   buildWhere({ search, department, year }),
+      orderBy: { id: "desc" },
+      select:  USER_SELECT,
     });
   },
 
   // ── Single lookup ──────────────────────────────────────────────────────
   async findById(id) {
     return prisma.user.findUnique({
-      where: { id },
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        studentNumber: true,
-        role: true,
-        year: true,
-        gender: true,
-        phoneNumber: true,
-        department: true,
-        createdAt: true,
-      },
+      where:  { id },
+      select: USER_SELECT,
     });
   },
 
@@ -110,29 +97,17 @@ export const studentRepository = {
   async create(data) {
     return prisma.user.create({
       data,
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        studentNumber: true,
-        role: true,
-        year: true,
-        gender: true,
-        phoneNumber: true,
-        department: true,
-        createdAt: true,
-      },
+      select: USER_SELECT,
     });
   },
 
   /**
    * Bulk upsert: insert new students; skip (or update) on conflict.
-   * Uses createMany with skipDuplicates for simplicity. Switch to
-   * individual upserts if you need per-row update-on-conflict semantics.
+   * Uses createMany with skipDuplicates for simplicity.
    */
   async createMany(records) {
     return prisma.user.createMany({
-      data: records,
+      data:           records,
       skipDuplicates: true,
     });
   },
@@ -140,21 +115,9 @@ export const studentRepository = {
   // ── Update ─────────────────────────────────────────────────────────────
   async update(id, data) {
     return prisma.user.update({
-      where: { id },
+      where:  { id },
       data,
-      select: {
-        id: true,
-        name: true,
-        email: true,
-        studentNumber: true,
-        role: true,
-        year: true,
-        gender: true,
-        phoneNumber: true,
-        department: true,
-        createdAt: true,
-        updatedAt: true,
-      },
+      select: USER_SELECT,
     });
   },
 
