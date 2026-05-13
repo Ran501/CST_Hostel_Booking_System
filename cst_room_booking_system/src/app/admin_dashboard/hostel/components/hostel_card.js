@@ -1,28 +1,17 @@
 "use client";
 
-import { Building, Users, Bed } from "lucide-react";
+import { Building2, Users, Layers } from "lucide-react";
 
 export default function HostelCard({
-  name,
-  total = 0,
-  occupied = 0,
-  isActive,
+  hostelName,
   gender,
+  status,
+  roomCount   = 0,
+  capacity    = 0,
+  numberOfFloor = 0,
   onClick,
 }) {
-
-  // Format name
-  const getFormattedHostelName = (hostelName) => {
-    if (hostelName?.toLowerCase().includes("hostel")) {
-      return hostelName;
-    }
-    return `Hostel ${hostelName}`;
-  };
-
-  // Derived values (REAL)
-  const available = Math.max(0, total - occupied);
-  const occupancy =
-    total > 0 ? Math.round((occupied / total) * 100) : 0;
+  const isActive = status === "active";
 
   return (
     <div
@@ -32,27 +21,23 @@ export default function HostelCard({
       }`}
       style={{
         backgroundImage: `url(/rkahostel.jpeg)`,
-        backgroundSize: "cover",
+        backgroundSize:     "cover",
         backgroundPosition: "center",
       }}
     >
-      {/* 🔥 Overlay gradient */}
+      {/* Dark overlay */}
       <div className="absolute inset-0 bg-black/40 z-0" />
 
-      {/* 🔥 Top badges */}
+      {/* Top badges */}
       <div className="absolute top-2 right-2 z-20 flex gap-2">
-        {/* Status */}
-        {isActive ? (
-          <span className="bg-green-600 text-white text-xs px-2 py-1 rounded-full">
-            Active
-          </span>
-        ) : (
-          <span className="bg-red-600 text-white text-xs px-2 py-1 rounded-full">
-            Inactive
-          </span>
-        )}
+        <span
+          className={`text-white text-xs px-2 py-1 rounded-full ${
+            isActive ? "bg-green-600" : "bg-red-600"
+          }`}
+        >
+          {isActive ? "Active" : "Inactive"}
+        </span>
 
-        {/* Gender (optional) */}
         {gender && (
           <span className="bg-blue-600 text-white text-xs px-2 py-1 rounded-full capitalize">
             {gender}
@@ -60,28 +45,27 @@ export default function HostelCard({
         )}
       </div>
 
-      {/* 🔥 Bottom content */}
+      {/* Bottom content */}
       <div className="absolute bottom-0 left-0 right-0 p-4 text-white z-10">
-        <h3 className="text-lg font-semibold">
-          {getFormattedHostelName(name)}
-        </h3>
+        <h3 className="text-lg font-semibold leading-tight">{hostelName}</h3>
 
-        <p className="text-sm mt-1">
-          {occupied}/{total} rooms • {occupancy}%
+        <p className="text-sm mt-1 text-gray-200">
+          {roomCount} room{roomCount !== 1 ? "s" : ""} • {capacity} beds
         </p>
 
-        {/* 🔥 Extra info row */}
-        <div className="flex items-center gap-4 mt-2 text-xs text-gray-200">
+        {/* Stats row */}
+        <div className="flex items-center gap-4 mt-2 text-xs text-gray-300">
           <span className="flex items-center gap-1">
-            <Bed size={14} /> {total}
+            <Building2 size={13} />
+            {roomCount} rooms
           </span>
-
           <span className="flex items-center gap-1">
-            <Users size={14} /> {occupied}
+            <Layers size={13} />
+            {numberOfFloor} floor{numberOfFloor !== 1 ? "s" : ""}
           </span>
-
           <span className="flex items-center gap-1">
-            <Building size={14} /> {available} free
+            <Users size={13} />
+            {capacity} cap
           </span>
         </div>
       </div>

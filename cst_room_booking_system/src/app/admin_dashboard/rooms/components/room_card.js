@@ -11,12 +11,54 @@ export default function RoomCard({
   selected,
   onSelect,
   onClickRoom,
+  loading = false,
 }) {
-  const percentage = Math.round((occupants.length / capacity) * 100);
+
+  // ── Skeleton Loading State ─────────────────────────────────────
+  if (loading) {
+    return (
+      <div className="relative rounded-xl border p-4 bg-gray-100 border-gray-200 animate-pulse">
+
+        {/* Header */}
+        <div className="flex justify-between items-start">
+          <div className="space-y-2">
+            <div className="h-5 w-20 bg-gray-300 rounded-md" />
+            <div className="h-3.5 w-12 bg-gray-200 rounded-md" />
+          </div>
+
+          <div className="h-6 w-16 bg-gray-300 rounded-full" />
+        </div>
+
+        {/* Progress */}
+        <div className="mt-4 w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+          <div className="h-2 w-1/2 bg-gray-300 rounded-full" />
+        </div>
+
+        {/* Occupants */}
+        <div className="mt-4 space-y-2">
+          <div className="h-3.5 w-16 bg-gray-200 rounded-md" />
+          <div className="h-4 w-36 bg-gray-300 rounded-md" />
+          <div className="h-4 w-28 bg-gray-300 rounded-md" />
+          <div className="h-4 w-32 bg-gray-300 rounded-md" />
+          <div className="h-4 w-24 bg-gray-200 rounded-md mt-1" />
+        </div>
+
+        {/* Footer */}
+        <div className="mt-4 pt-3 border-t border-gray-200 flex justify-center">
+          <div className="h-3.5 w-24 bg-gray-200 rounded-md" />
+        </div>
+      </div>
+    );
+  }
+
+  // ── Real Card State ────────────────────────────────────────────
+  const percentage =
+    capacity > 0
+      ? Math.round((occupants.length / capacity) * 100)
+      : 0;
 
   const isDisabled = status === "disabled";
 
-  // 🎨 Background themes (matches image)
   const cardTheme = {
     full: "bg-red-200 border-red-100",
     partial: "bg-amber-100 border-amber-100",
@@ -39,32 +81,37 @@ export default function RoomCard({
   };
 
   const handleClick = () => {
-  if (selectionMode) {
-    onSelect(room); // click = select in selection mode
-    return;
-  }
+    if (selectionMode) {
+      onSelect();
+      return;
+    }
 
-  if (onClickRoom) {
-    onClickRoom(room);
-  }
-};
+    if (onClickRoom) {
+      onClickRoom();
+    }
+  };
 
   return (
     <div
-        tabIndex={0}
-        onClick={handleClick}
-        onKeyDown={(e) => {
-          if (e.key === "Enter") {
-            handleClick();
-          }
-        }}
-        className={`
-          relative rounded-xl border p-4 transition-all
-          ${cardTheme[status]}
-          ${!isDisabled ? "cursor-pointer hover:shadow-md" : "cursor-pointer opacity-90"}
-          ${selected ? "ring-2 ring-blue-500" : ""}
-        `}
-      >
+      tabIndex={0}
+      onClick={handleClick}
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          handleClick();
+        }
+      }}
+      className={`
+        relative rounded-xl border p-4 transition-all
+        ${cardTheme[status]}
+        ${
+          !isDisabled
+            ? "cursor-pointer hover:shadow-md"
+            : "cursor-pointer opacity-90"
+        }
+        ${selected ? "ring-2 ring-blue-500" : ""}
+      `}
+    >
+
       {/* Selection checkbox */}
       {selectionMode && !isDisabled && (
         <input
@@ -72,21 +119,25 @@ export default function RoomCard({
           checked={selected}
           onChange={(e) => {
             e.stopPropagation();
-            onSelect(room);
+            onSelect();
           }}
           className="absolute top-4 left-4 w-4 h-4 accent-blue-600 z-10"
         />
       )}
 
-
       {/* Header */}
       <div className="flex justify-between items-start">
-        <div className={`${selectionMode ? "ml-6" : ""}`}>
-          <h2 className="text-lg font-semibold text-gray-900">{room}</h2>
-          <p className="text-sm text-gray-500">{floor}</p>
+
+        <div className={selectionMode ? "ml-6" : ""}>
+          <h2 className="text-lg font-semibold text-gray-900">
+            {room}
+          </h2>
+
+          <p className="text-sm text-gray-500">
+            {floor}
+          </p>
         </div>
 
-        {/* Status Badge */}
         <span
           className={`px-3 py-1 text-xs rounded-full font-medium ${badgeTheme[status]}`}
         >
@@ -100,52 +151,71 @@ export default function RoomCard({
         </span>
       </div>
 
-      {/* Progress Bar */}
+      {/* Progress bar */}
       {!isDisabled && (
         <div className="mt-4">
           <div className="w-full h-2 bg-gray-200 rounded-full overflow-hidden">
+
             <div
               className={`h-2 ${progressColor[status]}`}
-              style={{ width: `${percentage}%` }}
+              style={{
+                width: `${percentage}%`,
+              }}
             />
+
           </div>
         </div>
       )}
 
-      {/* Disabled Box */}
+      {/* Disabled section */}
       {isDisabled && (
         <div className="mt-4 border border-dashed border-gray-400 rounded-lg p-4 text-center">
-          <p className="text-xs text-gray-500 mb-1">Reason for Disabling</p>
+
+          <p className="text-xs text-gray-500 mb-1">
+            Reason for Disabling
+          </p>
+
           <p className="font-semibold text-gray-700 uppercase tracking-wide">
             {disabledReason || "RESERVED"}
           </p>
+
         </div>
       )}
 
       {/* Occupants */}
       {!isDisabled && (
         <div className="mt-4 text-sm text-gray-800">
-          <p className="text-gray-500 mb-1">Occupants</p>
+
+          <p className="text-gray-500 mb-1">
+            Occupants
+          </p>
 
           {occupants.length > 0 ? (
             <ul className="space-y-1">
               {occupants.map((name, i) => (
-                <li key={i}>{name}</li>
+                <li key={i}>
+                  {name}
+                </li>
               ))}
             </ul>
           ) : (
-            <p className="italic text-gray-400">No occupants</p>
+            <p className="italic text-gray-400">
+              No occupants
+            </p>
           )}
 
           <p className="mt-2 text-green-700 font-medium">
             Available: {capacity - occupants.length} beds
           </p>
+
         </div>
       )}
 
       {/* Footer */}
       <div className="mt-4 pt-3 border-t text-center text-sm text-gray-500">
-        {isDisabled ? "Click to enable room" : "Click to Allocate"}
+        {isDisabled
+          ? "Click to enable room"
+          : "Click to Allocate"}
       </div>
     </div>
   );

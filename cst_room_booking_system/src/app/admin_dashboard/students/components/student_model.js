@@ -32,7 +32,7 @@ function AddStudentModal({ isOpen, onClose, onAdd }) {
   const [form, setForm] = useState({
     studentNumber: "", name: "", email: "", role: "student",
     department: "Information Technology", year: 1,
-    phoneNumber: "", gender: "male", isActive: true,
+    phoneNumber: "", gender: "male", isActive: false,
   });
   const [saving, setSaving] = useState(false);
 
