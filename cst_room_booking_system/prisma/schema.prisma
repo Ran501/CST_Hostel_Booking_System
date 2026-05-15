@@ -59,6 +59,7 @@ model Room {
 
   @@unique([hostel_id, roomNumber])
   @@index([hostel_id])
+  @@index([hostel_id, floor])
   @@index([floor])
   @@index([status])
 }
@@ -74,7 +75,9 @@ model Booking {
   user          User     @relation(fields: [studentNumber], references: [studentNumber], onDelete: Cascade)
 
   @@index([studentNumber])
+  @@index([studentNumber, checkOut])
   @@index([roomId])
+  @@index([roomId, checkOut])
   @@index([checkIn, checkOut])
 }
 

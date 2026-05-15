@@ -7,7 +7,7 @@ export default function RoomLegend() {
 
         {/* Available */}
         <div className="flex items-center gap-1 xs:gap-2">
-          <div className="h-3 w-3 rounded-full bg-green-500 border border-white shadow-sm" />
+          <div className="h-3 w-3 rounded-full bg-green-700 border border-white shadow-sm" />
           <span>Available</span>
         </div>
 
@@ -19,7 +19,7 @@ export default function RoomLegend() {
 
         {/* Fully Booked */}
         <div className="flex items-center gap-1 xs:gap-2">
-          <div className="h-3 w-3 rounded-full bg-red-500 border border-white shadow-sm" />
+          <div className="h-3 w-3 rounded-full bg-slate-400 border border-white shadow-sm" />
           <span>Fully Booked</span>
         </div>
 

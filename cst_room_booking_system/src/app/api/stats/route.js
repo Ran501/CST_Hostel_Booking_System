@@ -1,40 +1,93 @@
 import { prisma } from "../../lib/prisma";
 
+const STATS_CACHE_TTL_MS = 30_000;
+let roomStatsCache = {
+  expiresAt: 0,
+  data: null,
+};
+
+function isActiveRoom(room) {
+  const status = String(room.status ?? "").toLowerCase().trim();
+  const hostelStatus = String(room.hostel?.status ?? "").toLowerCase().trim();
+
+  return (
+    !["false", "disabled", "inactive", "maintenance"].includes(status) &&
+    !["false", "inactive", "maintenance"].includes(hostelStatus)
+  );
+}
+
+async function getRoomStats() {
+  const nowMs = Date.now();
+  if (roomStatsCache.data && roomStatsCache.expiresAt > nowMs) {
+    return roomStatsCache.data;
+  }
+
+  const now = new Date();
+  const rooms = await prisma.room.findMany({
+    select: {
+      id: true,
+      capacity: true,
+      status: true,
+      hostel: {
+        select: {
+          status: true,
+        },
+      },
+    },
+  });
+
+  const activeRooms = rooms.filter(isActiveRoom);
+  const activeRoomIds = activeRooms.map((room) => room.id);
+
+  const occupiedGroups = activeRoomIds.length
+    ? await prisma.booking.groupBy({
+        by: ["roomId"],
+        where: {
+          roomId: { in: activeRoomIds },
+          checkOut: { gte: now },
+        },
+        _count: {
+          _all: true,
+        },
+      })
+    : [];
+
+  const occupiedByRoom = new Map(
+    occupiedGroups.map((group) => [group.roomId, group._count._all]),
+  );
+
+  const totalRooms = activeRooms.length;
+  const fullyBookedRooms = activeRooms.filter((room) => {
+    const capacity = Number(room.capacity) || 0;
+    const occupied = occupiedByRoom.get(room.id) || 0;
+    return capacity > 0 && occupied >= capacity;
+  }).length;
+  const availableRooms = activeRooms.filter((room) => {
+    const capacity = Number(room.capacity) || 0;
+    const occupied = occupiedByRoom.get(room.id) || 0;
+    return capacity > 0 && occupied < capacity;
+  }).length;
+
+  const data = {
+    totalRooms,
+    totalAvailableRooms: availableRooms,
+    bookedRooms: fullyBookedRooms,
+    occupancyRate: totalRooms > 0 ? Math.round((fullyBookedRooms / totalRooms) * 100) : 0,
+  };
+
+  roomStatsCache = {
+    data,
+    expiresAt: nowMs + STATS_CACHE_TTL_MS,
+  };
+
+  return data;
+}
+
 export async function GET(request) {
   try {
     const { searchParams } = new URL(request.url);
     const studentNumber = searchParams.get("studentNumber");
-
-    // Get total rooms count
-    let totalRooms = 0;
-    try {
-      totalRooms = await prisma.room.count();
-    } catch (e) {
-      console.error("Error counting rooms:", e);
-    }
-
-    // Get available rooms count
-    let availableRooms = 0;
-    try {
-      availableRooms = await prisma.room.count({
-        where: { status: "available" },
-      });
-    } catch (e) {
-      console.error("Error counting available rooms:", e);
-    }
-
-    // Get booked rooms count
-    let bookedRooms = 0;
-    try {
-      bookedRooms = await prisma.room.count({
-        where: { status: "booked" },
-      });
-    } catch (e) {
-      console.error("Error counting booked rooms:", e);
-    }
-
-    // Calculate occupancy rate
-    const occupancyRate = totalRooms > 0 ? Math.round((bookedRooms / totalRooms) * 100) : 0;
+    const roomStats = await getRoomStats();
 
     // If student number provided, check user's booked room
     let bookedRoom = "None";
@@ -42,19 +95,23 @@ export async function GET(request) {
       try {
         const activeBooking = await prisma.booking.findFirst({
           where: {
-            user: { studentNumber: studentNumber },
-            status: "active"
+            studentNumber: String(studentNumber),
+            checkOut: { gte: new Date() },
           },
           include: {
-            room: true
+            room: {
+              select: {
+                roomNumber: true,
+              },
+            },
           },
           orderBy: {
-            createdAt: "desc"
-          }
+            createdAt: "desc",
+          },
         });
 
         if (activeBooking?.room) {
-          bookedRoom = `${activeBooking.room.hostelId} - Room ${activeBooking.room.roomNumber}`;
+          bookedRoom = activeBooking.room.roomNumber;
         }
       } catch (e) {
         console.error("Error finding user booking:", e);
@@ -64,11 +121,11 @@ export async function GET(request) {
     return Response.json({
       success: true,
       stats: {
-        totalAvailableRooms: availableRooms,
+        totalAvailableRooms: roomStats.totalAvailableRooms,
         bookedRoom: bookedRoom,
-        occupancyRate: occupancyRate,
-        totalRooms: totalRooms,
-        bookedRooms: bookedRooms,
+        occupancyRate: roomStats.occupancyRate,
+        totalRooms: roomStats.totalRooms,
+        bookedRooms: roomStats.bookedRooms,
       },
     });
   } catch (error) {

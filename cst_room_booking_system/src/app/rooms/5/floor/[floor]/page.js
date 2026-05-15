@@ -5,6 +5,7 @@ import { use, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import FloorSidebar from "../../../components/FloorSidebar";
 import RoomLegend from "../../../components/RoomLegend";
+import FloorBookingsView from "../../../components/FloorBookingsView";
 import ConfirmationDialog from "../../../../confirmation";
 import SpecialBlock from "../../../../room/components/SpecialBlock";
 
@@ -24,6 +25,25 @@ function isValidFloor(n) {
   return n >= 1 && n <= 3;
 }
 
+function getNumericRoomNumber(roomNumber) {
+  const match = String(roomNumber ?? "").match(/(\d+)$/);
+  return match ? Number(match[1]) : null;
+}
+
+function getStoredSession() {
+  if (typeof window === "undefined") return null;
+
+  const session = window.localStorage.getItem("session");
+  if (!session) return null;
+
+  try {
+    return JSON.parse(session);
+  } catch {
+    console.error("Invalid session data");
+    return null;
+  }
+}
+
 /* ================= PAGE ================= */
 
 export default function HbFloorPage({ params }) {
@@ -41,6 +61,11 @@ export default function HbFloorPage({ params }) {
   // To hold backend data
   const [roomsData, setRoomsData] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [isBooking, setIsBooking] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [toastType, setToastType] = useState("error");
+  const [currentUser, setCurrentUser] = useState(getStoredSession);
+  const sessionLoaded = true;
 
   useEffect(() => {
           async function fetchRooms() {
@@ -61,7 +86,10 @@ export default function HbFloorPage({ params }) {
       
         const getRoomInfo = (roomNo) => {
           const fullRoomId = `${HB_NAME}-${roomNo}`;
-          return roomsData.find((r) => String(r.roomNumber) === fullRoomId);
+          return roomsData.find((r) => {
+            const roomNumber = String(r.roomNumber);
+            return roomNumber === fullRoomId || getNumericRoomNumber(roomNumber) === roomNo;
+          });
         };
     
   // Simple redirect logic
@@ -84,13 +112,122 @@ export default function HbFloorPage({ params }) {
   const totalRooms = allRooms.length;
   const totalBeds = totalRooms * 2;
 
-  // Simple booking action - no API calls
-  function handleConfirmBooking() {
-    if (selectedRoom === null) return;
-    
-    // Simple confirmation dialog logic - no API calls
-    alert(`Room ${HB_NAME}-${selectedRoom} booking confirmed! (UI Only - No Backend)`);
+  function showToast(msg, type = "error") {
     setSelectedRoom(null);
+    setToastType(type);
+    setToast(msg);
+    setTimeout(() => setToast(null), 4000);
+  }
+
+  const validateFloorYear = async () => {
+    if (!currentUser?.year) {
+      showToast("Student year not found. Please log in again.");
+      return false;
+    }
+
+    try {
+      const res = await fetch(`/api/floor-allocation?building=HB&floor=${floorNum}`);
+      const data = await res.json();
+
+      if (data.success && data.allocatedYear && data.allocatedYear != currentUser.year) {
+        showToast(`Access Denied: This floor is reserved for Year ${data.allocatedYear} students.`);
+        return false;
+      }
+
+      return true;
+    } catch (err) {
+      console.error("Floor validation error:", err);
+      return true;
+    }
+  };
+
+  const validateGender = (roomNo) => {
+    const roomInfo = getRoomInfo(roomNo);
+
+    if (!roomInfo) return true;
+    if (!currentUser) {
+      showToast("Please log in to book a room.");
+      return false;
+    }
+
+    const roomGender = (roomInfo.forGender || "").toLowerCase().trim();
+    const userGender = (currentUser.gender || "").toLowerCase().trim();
+
+    if (roomGender && userGender && roomGender !== userGender) {
+      showToast(
+        `Access Denied: This room is for ${
+          roomGender.charAt(0).toUpperCase() + roomGender.slice(1)
+        } only!`,
+      );
+      return false;
+    }
+
+    return true;
+  };
+
+  async function handleConfirmBooking() {
+    if (selectedRoom === null) return;
+
+    if (!sessionLoaded) {
+      showToast("Session is still loading, please wait.");
+      return;
+    }
+
+    if (!currentUser) {
+      showToast("You must be logged in to book a room.");
+      router.push("/login");
+      return;
+    }
+
+    const isCorrectYear = await validateFloorYear();
+    if (!isCorrectYear) return;
+
+    const isCorrectGender = validateGender(selectedRoom);
+    if (!isCorrectGender) return;
+
+    const studentNumber = currentUser.studentNumber ?? currentUser.phoneNumber ?? currentUser.stdNo;
+
+    if (!studentNumber) {
+      showToast("Student number not found in session. Please log in again.");
+      return;
+    }
+
+    const fullRoomId = `${HB_NAME}-${selectedRoom}`;
+
+    try {
+      setIsBooking(true);
+      const res = await fetch("/api/booking", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          roomNumber: fullRoomId,
+          studentNumber: String(studentNumber),
+          checkIn: new Date().toISOString(),
+          checkOut: new Date(new Date().setMonth(new Date().getMonth() + 6)).toISOString(),
+        }),
+      });
+
+      const result = await res.json();
+      if (result.success) {
+        showToast(`Room ${fullRoomId} reserved successfully! Details sent to your email.`, "success");
+        const updatedUser = { ...currentUser, hasBooked: true };
+        setCurrentUser(updatedUser);
+        localStorage.setItem("session", JSON.stringify(updatedUser));
+        setRoomsData((prev) =>
+          prev.map((r) =>
+            r.roomNumber === fullRoomId ? { ...r, occupied: (r.occupied || 0) + 1 } : r,
+          ),
+        );
+      } else {
+        showToast("Error: " + (result.error || "Could not complete booking."));
+      }
+    } catch (err) {
+      console.error("Booking error:", err);
+      showToast("Connection failed. Please try again.");
+    } finally {
+      setIsBooking(false);
+      setSelectedRoom(null);
+    }
   }
 
   // Simple Room Block component - no API calls
@@ -107,7 +244,11 @@ export default function HbFloorPage({ params }) {
   
   // 2. Extract database values
       const dbValue = roomInfo.isActive ?? roomInfo.is_active;
-      const isRoomActive = dbValue !== false && String(dbValue).toUpperCase().trim() !== "FALSE";
+      const status = String(roomInfo.status ?? "").toLowerCase().trim();
+      const isRoomActive =
+        dbValue !== false &&
+        String(dbValue).toUpperCase().trim() !== "FALSE" &&
+        !["disabled", "inactive", "maintenance"].includes(status);
       const occupied = roomInfo.occupied || 0;
       const capacity = roomInfo.capacity || 3;
   
@@ -119,20 +260,20 @@ export default function HbFloorPage({ params }) {
       const colors = !isRoomActive
         ? "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed opacity-60"
         : isFully
-          ? "border-red-200 bg-red-50 text-red-700 cursor-not-allowed ring-1 ring-red-300/70"
+          ? "border-slate-300 bg-slate-100 text-slate-500 cursor-not-allowed opacity-70"
           : isSelected
             ? "border-emerald-200 bg-emerald-50 text-emerald-700 ring-2 ring-emerald-300/70"
             : isPartial
               ? "border-amber-200 bg-amber-50 text-amber-700 hover:border-amber-300/80 hover:bg-amber-50/80 hover:-translate-y-0.5 hover:shadow-md"
-              : "border-slate-200 bg-white text-slate-800 hover:border-slate-300 hover:bg-slate-50 hover:-translate-y-0.5 hover:shadow-md";
+              : "border-green-700 bg-green-700 text-white hover:border-green-800 hover:bg-green-800 hover:-translate-y-0.5 hover:shadow-md";
 
     return (
       <button
+        disabled={!isRoomActive || isFully || loading}
         onClick={() => setSelectedRoom(room)}
         className={`
-          group relative rounded-xl border bg-white text-slate-800 shadow-sm 
-          transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md
-          w-full h-full border-slate-300
+          group relative rounded-xl border shadow-sm transition-all duration-200
+          w-full h-full disabled:shadow-none ${colors}
           ${isSelected ? "ring-2 ring-emerald-300" : ""}
         `}
       >
@@ -140,14 +281,14 @@ export default function HbFloorPage({ params }) {
           <span className="text-sm xs:text-base sm:text-base font-semibold tracking-wide">
             {room}
           </span>
-          <span className="text-[9px] xs:text-[10px] sm:text-[11px] text-slate-700 whitespace-nowrap">
+          <span className={`text-[9px] xs:text-[10px] sm:text-[11px] whitespace-nowrap ${!isRoomActive || isFully || isPartial ? "text-slate-700" : "text-white"}`}>
             {!isRoomActive
               ? roomInfo.disabledReason || "Inactive"
               : isFully
-                ? "Fully Booked"
+                ? `${capacity}/${capacity} Booked`
                 : isPartial
-                  ? `${occupied}/${capacity} Occupied`
-                  : `0/${capacity} Available`}
+                  ? `${occupied}/${capacity} Booked`
+                  : `${capacity - occupied} Available`}
           </span>
         </div>
         <div className="pointer-events-none absolute inset-0 rounded-xl ring-0 transition group-hover:ring-1 group-hover:ring-slate-300/60" />
@@ -160,7 +301,20 @@ export default function HbFloorPage({ params }) {
   return (
     <main className="min-h-screen bg-zinc-100 py-4 sm:py-6 md:py-8 text-slate-900 overflow-x-hidden">
       <div className="mx-auto w-full max-w-full px-3 xs:px-4 sm:px-6 lg:max-w-7xl lg:px-8">
-        {/* Mobile hamburger menu button */}
+        {toast && (
+          <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] ${toastType === "success" ? "bg-green-800" : "bg-red-600"} text-white px-5 py-3 rounded-xl shadow-xl text-sm text-center max-w-sm w-[90%]`}>
+            {toast}
+          </div>
+        )}
+
+        
+        <FloorBookingsView
+          building={HB_NAME}
+          floor={floorNum}
+          currentUser={currentUser}
+          onDenied={(message) => showToast(message)}
+        />
+{/* Mobile hamburger menu button */}
         <div className="md:hidden flex items-center justify-between mb-4">
           <button
             onClick={() => setSidebarOpen(!sidebarOpen)}
@@ -452,8 +606,8 @@ export default function HbFloorPage({ params }) {
         {selectedRoom && (
           <ConfirmationDialog
             message={`Reserve one bed in Room ${HB_NAME}-${selectedRoom}?`}
-            isLoading={false}
-            onCancel={() => setSelectedRoom(null)}
+            isLoading={isBooking}
+            onCancel={() => !isBooking && setSelectedRoom(null)}
             onConfirm={handleConfirmBooking}
           />
         )}

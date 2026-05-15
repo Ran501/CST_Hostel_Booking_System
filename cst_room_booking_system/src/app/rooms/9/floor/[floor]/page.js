@@ -1,8 +1,10 @@
 "use client";
 
 import Link from "next/link";
-import { use, useState } from "react";
+import { use, useEffect, useState } from "react";
+import { useRouter } from "next/navigation";
 import RoomLegend from "../../../components/RoomLegend";
+import FloorBookingsView from "../../../components/FloorBookingsView";
 import FloorSidebar from "../../../components/FloorSidebar";
 import ConfirmationDialog from "../../../../confirmation";
 import {
@@ -30,6 +32,25 @@ function isValidFloor(n) {
   return Number.isFinite(n) && n >= 1 && n <= 2;
 }
 
+function getNumericRoomNumber(roomNumber) {
+  const match = String(roomNumber ?? "").match(/(\d+)$/);
+  return match ? Number(match[1]) : null;
+}
+
+function getStoredSession() {
+  if (typeof window === "undefined") return null;
+
+  const session = window.localStorage.getItem("session");
+  if (!session) return null;
+
+  try {
+    return JSON.parse(session);
+  } catch {
+    console.error("Invalid session data");
+    return null;
+  }
+}
+
 // ─────────────────────────────────────────────────────────────────────────────
 // Room Status
 // ─────────────────────────────────────────────────────────────────────────────
@@ -41,16 +62,16 @@ const STATUS = {
 
 const STATUS_STYLES = {
   [STATUS.AVAILABLE]: {
-    border: "border-slate-200",
-    bg:     "bg-white",
-    text:   "text-slate-400",
+    border: "border-green-700",
+    bg:     "bg-green-700",
+    text:   "text-white",
     ring:   "",
     label:  "Available",
   },
   [STATUS.BOOKED]: {
-    border: "border-red-300",
-    bg:     "bg-red-50",
-    text:   "text-red-400",
+    border: "border-slate-300",
+    bg:     "bg-slate-100",
+    text:   "text-slate-500",
     ring:   "",
     label:  "Booked",
   },
@@ -68,7 +89,7 @@ const STATUS_STYLES = {
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Standard room tile — portrait orientation matching the floor plan */
-function RoomBlock({ room, status, onClick }) {
+function RoomBlock({ room, status, label, onClick }) {
   const s = STATUS_STYLES[status] ?? STATUS_STYLES[STATUS.AVAILABLE];
   const clickable = status !== STATUS.BOOKED;
   return (
@@ -89,7 +110,7 @@ function RoomBlock({ room, status, onClick }) {
         {room}
       </span>
       <span className={`text-[8px] xs:text-[9px] sm:text-[10px] font-medium mt-0.5 ${s.text}`}>
-        {s.label}
+        {label ?? s.label}
       </span>
     </button>
   );
@@ -133,7 +154,7 @@ function StairLabel({ direction = "up", label = "Stair" }) {
   );
 }
 // FLOOR 1 Plan
-function Floor1Plan({ getStatus, onRoomClick }) {
+function Floor1Plan({ getStatus, getRoomLabel, onRoomClick }) {
   const topRow    = floor1TopRow();    // [101..106]
   const bottomRow = floor1BottomRow(); // [112..107]
 
@@ -169,7 +190,7 @@ function Floor1Plan({ getStatus, onRoomClick }) {
             <div className="flex flex-wrap gap-1.5 xs:gap-2 sm:gap-2.5 md:gap-3">
               {topRow.map((r) => (
                 <div key={r} className={`${RW} ${RH}`}>
-                  <RoomBlock room={r} status={getStatus(r)} onClick={() => onRoomClick(r)} />
+                  <RoomBlock room={r} status={getStatus(r)} label={getRoomLabel(r)} onClick={() => onRoomClick(r)} />
                 </div>
               ))}
             </div>
@@ -182,7 +203,7 @@ function Floor1Plan({ getStatus, onRoomClick }) {
           <div className="flex flex-wrap gap-1.5 xs:gap-2 sm:gap-2.5 md:gap-3 pl-8 xs:pl-9 sm:pl-10">
             {bottomRow.map((r) => (
               <div key={r} className={`${RW} ${RH}`}>
-                <RoomBlock room={r} status={getStatus(r)} onClick={() => onRoomClick(r)} />
+                <RoomBlock room={r} status={getStatus(r)} label={getRoomLabel(r)} onClick={() => onRoomClick(r)} />
               </div>
             ))}
           </div>
@@ -206,7 +227,7 @@ function Floor1Plan({ getStatus, onRoomClick }) {
             <div className="text-center text-xs font-medium text-slate-600 mb-1">Left Side</div>
             {topRow.map((r) => (
               <div key={r} className={`${RW} ${RH}`}>
-                <RoomBlock room={r} status={getStatus(r)} onClick={() => onRoomClick(r)} />
+                <RoomBlock room={r} status={getStatus(r)} label={getRoomLabel(r)} onClick={() => onRoomClick(r)} />
               </div>
             ))}
           </div>
@@ -216,7 +237,7 @@ function Floor1Plan({ getStatus, onRoomClick }) {
             <div className="text-center text-xs font-medium text-slate-600 mb-1">Right Side</div>
             {bottomRow.map((r) => (
               <div key={r} className={`${RW} ${RH}`}>
-                <RoomBlock room={r} status={getStatus(r)} onClick={() => onRoomClick(r)} />
+                <RoomBlock room={r} status={getStatus(r)} label={getRoomLabel(r)} onClick={() => onRoomClick(r)} />
               </div>
             ))}
           </div>
@@ -226,7 +247,7 @@ function Floor1Plan({ getStatus, onRoomClick }) {
   );
 }
 // FLOOR 2 Plan
-function Floor2Plan({ getStatus, onRoomClick }) {
+function Floor2Plan({ getStatus, getRoomLabel, onRoomClick }) {
   const topA    = floor2TopRowGroupA();    // [224..228]
   const topB    = floor2TopRowGroupB();    // [229..233]
   const topC    = floor2TopRowGroupC();    // [201..206]
@@ -242,7 +263,7 @@ function Floor2Plan({ getStatus, onRoomClick }) {
     <div className="flex gap-1 xs:gap-1.5 sm:gap-2">
       {rooms.map((r) => (
         <div key={r} className={`${RW} ${RH}`}>
-          <RoomBlock room={r} status={getStatus(r)} onClick={() => onRoomClick(r)} />
+          <RoomBlock room={r} status={getStatus(r)} label={getRoomLabel(r)} onClick={() => onRoomClick(r)} />
         </div>
       ))}
     </div>
@@ -337,7 +358,7 @@ function Floor2Plan({ getStatus, onRoomClick }) {
             <div className="flex flex-col gap-1">
               {topA.map((r) => (
                 <div key={r} className={`${RW} ${RH}`}>
-                  <RoomBlock room={r} status={getStatus(r)} onClick={() => onRoomClick(r)} />
+                  <RoomBlock room={r} status={getStatus(r)} label={getRoomLabel(r)} onClick={() => onRoomClick(r)} />
                 </div>
               ))}
             </div>
@@ -346,7 +367,7 @@ function Floor2Plan({ getStatus, onRoomClick }) {
             <div className="flex flex-col gap-1">
               {botA.map((r) => (
                 <div key={r} className={`${RW} ${RH}`}>
-                  <RoomBlock room={r} status={getStatus(r)} onClick={() => onRoomClick(r)} />
+                  <RoomBlock room={r} status={getStatus(r)} label={getRoomLabel(r)} onClick={() => onRoomClick(r)} />
                 </div>
               ))}
             </div>
@@ -358,7 +379,7 @@ function Floor2Plan({ getStatus, onRoomClick }) {
             <div className="flex flex-col gap-1">
               {topB.map((r) => (
                 <div key={r} className={`${RW} ${RH}`}>
-                  <RoomBlock room={r} status={getStatus(r)} onClick={() => onRoomClick(r)} />
+                  <RoomBlock room={r} status={getStatus(r)} label={getRoomLabel(r)} onClick={() => onRoomClick(r)} />
                 </div>
               ))}
             </div>
@@ -367,7 +388,7 @@ function Floor2Plan({ getStatus, onRoomClick }) {
             <div className="flex flex-col gap-1">
               {botB.map((r) => (
                 <div key={r} className={`${RW} ${RH}`}>
-                  <RoomBlock room={r} status={getStatus(r)} onClick={() => onRoomClick(r)} />
+                  <RoomBlock room={r} status={getStatus(r)} label={getRoomLabel(r)} onClick={() => onRoomClick(r)} />
                 </div>
               ))}
             </div>
@@ -381,14 +402,14 @@ function Floor2Plan({ getStatus, onRoomClick }) {
             <div className="flex flex-col gap-1">
               {topC.map((r) => (
                 <div key={r} className={`${RW} ${RH}`}>
-                  <RoomBlock room={r} status={getStatus(r)} onClick={() => onRoomClick(r)} />
+                  <RoomBlock room={r} status={getStatus(r)} label={getRoomLabel(r)} onClick={() => onRoomClick(r)} />
                 </div>
               ))}
             </div>
             <div className="flex flex-col gap-1">
               {botC.map((r) => (
                 <div key={r} className={`${RW} ${RH}`}>
-                  <RoomBlock room={r} status={getStatus(r)} onClick={() => onRoomClick(r)} />
+                  <RoomBlock room={r} status={getStatus(r)} label={getRoomLabel(r)} onClick={() => onRoomClick(r)} />
                 </div>
               ))}
             </div>
@@ -410,6 +431,7 @@ function Floor2Plan({ getStatus, onRoomClick }) {
 // Main Page
 // ─────────────────────────────────────────────────────────────────────────────
 export default function HeFloorPage({ params }) {
+  const router = useRouter();
   const { floor } = use(params);
   const rawFloor  = Number(floor);
   const floorNum  = isValidFloor(rawFloor) ? rawFloor : 1;
@@ -418,26 +440,181 @@ export default function HeFloorPage({ params }) {
   const [sidebarOpen,  setSidebarOpen]  = useState(false);
   // Swap with real API data: e.g. const [bookedRooms] = useState(new Set([101, 205]));
   const [bookedRooms] = useState(new Set());
+  const [roomsData, setRoomsData] = useState([]);
+  const [isBooking, setIsBooking] = useState(false);
+  const [toast, setToast] = useState(null);
+  const [toastType, setToastType] = useState("error");
+  const [currentUser, setCurrentUser] = useState(getStoredSession);
 
   const meta = HE_FLOOR_META[floorNum] ?? HE_FLOOR_META[1];
+
+  useEffect(() => {
+    async function fetchRooms() {
+      try {
+        const res = await fetch(`/api/rooms?floor=${floorNum}&building=HE`);
+        const data = await res.json();
+        if (data.success) setRoomsData(data.rooms || []);
+      } catch (err) {
+        console.error("Fetch error:", err);
+      }
+    }
+
+    fetchRooms();
+  }, [floorNum]);
+
+  const getRoomInfo = (roomNo) => {
+    const fullRoomId = `${HE_NAME}-${roomNo}`;
+    return roomsData.find((r) => {
+      const roomNumber = String(r.roomNumber);
+      return roomNumber === fullRoomId || getNumericRoomNumber(roomNumber) === roomNo;
+    });
+  };
 
   function getStatus(room) {
     if (room === selectedRoom)  return STATUS.SELECTED;
     if (bookedRooms.has(room))  return STATUS.BOOKED;
+    const roomInfo = getRoomInfo(room);
+    if (!roomInfo) return STATUS.AVAILABLE;
+    if (!roomInfo.isActive || (roomInfo.occupied || 0) >= (roomInfo.capacity || 0)) {
+      return STATUS.BOOKED;
+    }
     return STATUS.AVAILABLE;
+  }
+
+  function getRoomLabel(room) {
+    const status = getStatus(room);
+    if (status === STATUS.SELECTED) return STATUS_STYLES[STATUS.SELECTED].label;
+
+    const roomInfo = getRoomInfo(room);
+    if (!roomInfo) return STATUS_STYLES[status]?.label ?? STATUS_STYLES[STATUS.AVAILABLE].label;
+    if (!roomInfo.isActive) return roomInfo.disabledReason || "Inactive";
+
+    const occupied = roomInfo.occupied || 0;
+    const capacity = roomInfo.capacity || 0;
+    if (!capacity) return STATUS_STYLES[status]?.label ?? STATUS_STYLES[STATUS.AVAILABLE].label;
+    if (occupied >= capacity) return `${capacity}/${capacity} Booked`;
+    if (occupied > 0) return `${occupied}/${capacity} Booked`;
+    return `${capacity - occupied} Available`;
   }
 
   function handleRoomClick(room) {
     setSelectedRoom((prev) => (prev === room ? null : room));
   }
 
-  function handleConfirmBooking() {
-    if (selectedRoom === null) return;
-    alert(`Room ${HE_NAME}-${selectedRoom} booked! (UI only — connect your API)`);
+  function showToast(msg, type = "error") {
     setSelectedRoom(null);
+    setToastType(type);
+    setToast(msg);
+    setTimeout(() => setToast(null), 4000);
   }
 
-  const floorPlanProps = { getStatus, onRoomClick: handleRoomClick };
+  const validateFloorYear = async () => {
+    if (!currentUser?.year) {
+      showToast("Student year not found. Please log in again.");
+      return false;
+    }
+
+    try {
+      const res = await fetch(`/api/floor-allocation?building=HE&floor=${floorNum}`);
+      const data = await res.json();
+
+      if (data.success && data.allocatedYear && data.allocatedYear != currentUser.year) {
+        showToast(`Access Denied: This floor is reserved for Year ${data.allocatedYear} students.`);
+        return false;
+      }
+
+      return true;
+    } catch (err) {
+      console.error("Floor validation error:", err);
+      return true;
+    }
+  };
+
+  const validateGender = (roomNo) => {
+    const roomInfo = getRoomInfo(roomNo);
+
+    if (!roomInfo) return true;
+    if (!currentUser) {
+      showToast("Please log in to book a room.");
+      return false;
+    }
+
+    const roomGender = (roomInfo.forGender || "").toLowerCase().trim();
+    const userGender = (currentUser.gender || "").toLowerCase().trim();
+
+    if (roomGender && userGender && roomGender !== userGender) {
+      showToast(
+        `Access Denied: This room is for ${
+          roomGender.charAt(0).toUpperCase() + roomGender.slice(1)
+        } only!`,
+      );
+      return false;
+    }
+
+    return true;
+  };
+
+  async function handleConfirmBooking() {
+    if (selectedRoom === null) return;
+
+    if (!currentUser) {
+      showToast("You must be logged in to book a room.");
+      router.push("/login");
+      return;
+    }
+
+    const isCorrectYear = await validateFloorYear();
+    if (!isCorrectYear) return;
+
+    const isCorrectGender = validateGender(selectedRoom);
+    if (!isCorrectGender) return;
+
+    const studentNumber = currentUser.studentNumber ?? currentUser.phoneNumber ?? currentUser.stdNo;
+
+    if (!studentNumber) {
+      showToast("Student number not found in session. Please log in again.");
+      return;
+    }
+
+    const fullRoomId = `${HE_NAME}-${selectedRoom}`;
+
+    try {
+      setIsBooking(true);
+      const res = await fetch("/api/booking", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          roomNumber: fullRoomId,
+          studentNumber: String(studentNumber),
+          checkIn: new Date().toISOString(),
+          checkOut: new Date(new Date().setMonth(new Date().getMonth() + 6)).toISOString(),
+        }),
+      });
+
+      const result = await res.json();
+      if (result.success) {
+        showToast(`Room ${fullRoomId} reserved successfully! Details sent to your email.`, "success");
+        const updatedUser = { ...currentUser, hasBooked: true };
+        setCurrentUser(updatedUser);
+        localStorage.setItem("session", JSON.stringify(updatedUser));
+        setRoomsData((prev) =>
+          prev.map((r) =>
+            r.roomNumber === fullRoomId ? { ...r, occupied: (r.occupied || 0) + 1 } : r,
+          ),
+        );
+      } else {
+        showToast("Error: " + (result.error || "Could not complete booking."));
+      }
+    } catch (err) {
+      console.error("Booking error:", err);
+      showToast("Connection failed. Please try again.");
+    } finally {
+      setIsBooking(false);
+      setSelectedRoom(null);
+    }
+  }
+
+  const floorPlanProps = { getStatus, getRoomLabel, onRoomClick: handleRoomClick };
 
   const PLANS = {
     1: <Floor1Plan {...floorPlanProps} />,
@@ -462,8 +639,20 @@ export default function HeFloorPage({ params }) {
   return (
     <main className="min-h-screen bg-zinc-100 py-4 sm:py-6 md:py-8 text-slate-900 overflow-x-hidden">
       <div className="mx-auto w-full max-w-full px-3 xs:px-4 sm:px-6 lg:max-w-7xl lg:px-8">
+        {toast && (
+          <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] ${toastType === "success" ? "bg-green-800" : "bg-red-600"} text-white px-5 py-3 rounded-xl shadow-xl text-sm text-center max-w-sm w-[90%]`}>
+            {toast}
+          </div>
+        )}
 
-        {/* ══════════════════════════════════════════════
+        
+        <FloorBookingsView
+          building={HE_NAME}
+          floor={floorNum}
+          currentUser={currentUser}
+          onDenied={(message) => showToast(message)}
+        />
+{/* ══════════════════════════════════════════════
             MOBILE HEADER
         ══════════════════════════════════════════════ */}
         <div className="md:hidden flex items-center justify-between mb-4">
@@ -558,8 +747,8 @@ export default function HeFloorPage({ params }) {
         {selectedRoom !== null && (
           <ConfirmationDialog
             message={`Do you want to book a bed from Room ${HE_NAME}-${selectedRoom}?`}
-            isLoading={false}
-            onCancel={() => setSelectedRoom(null)}
+            isLoading={isBooking}
+            onCancel={() => !isBooking && setSelectedRoom(null)}
             onConfirm={handleConfirmBooking}
           />
         )}

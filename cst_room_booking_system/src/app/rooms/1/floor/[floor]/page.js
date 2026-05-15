@@ -5,6 +5,7 @@ import { use, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import FloorSidebar from "../../../components/FloorSidebar";
 import RoomLegend from "../../../components/RoomLegend";
+import FloorBookingsView from "../../../components/FloorBookingsView";
 import ConfirmationDialog from "../../../../confirmation";
 import {
   RKA_NAME,
@@ -20,6 +21,11 @@ function isValidFloor(n) {
   return n >= 1 && n <= 4;
 }
 
+function getNumericRoomNumber(roomNumber) {
+  const match = String(roomNumber ?? "").match(/(\d+)$/);
+  return match ? Number(match[1]) : null;
+}
+
 export default function RkaFloorPage({ params }) {
   const router = useRouter();
   const { floor } = use(params);
@@ -29,6 +35,7 @@ export default function RkaFloorPage({ params }) {
 
   const [isBooking, setIsBooking] = useState(false);
   const [toast, setToast] = useState(null);
+  const [toastType, setToastType] = useState("error");
   const [currentUser, setCurrentUser] = useState(null);       // FIX 1: null not undefined
   const [sessionLoaded, setSessionLoaded] = useState(false);  // FIX 2: track session load
   const [selectedRoom, setSelectedRoom] = useState(null);
@@ -69,19 +76,90 @@ export default function RkaFloorPage({ params }) {
 
   const getRoomInfo = (roomNo) => {
     const fullRoomId = `${RKA_NAME}-${roomNo}`;
-    return roomsData.find((r) => String(r.roomNumber) === fullRoomId);
+    return roomsData.find((r) => {
+      const roomNumber = String(r.roomNumber);
+      return roomNumber === fullRoomId || getNumericRoomNumber(roomNumber) === roomNo;
+    });
   };
 
-  const totalRooms = 12;
-  const totalBeds = totalRooms * 2;
 
-  const leftRooms = useMemo(() => leftColumnRoomsForFloor(floorNum), [floorNum]);
-  const rightRooms = useMemo(() => rightColumnRoomsForFloor(floorNum), [floorNum]);
+  const configuredLeftRooms = useMemo(() => leftColumnRoomsForFloor(floorNum), [floorNum]);
+  const configuredRightRooms = useMemo(() => rightColumnRoomsForFloor(floorNum), [floorNum]);
+  const fetchedRoomNumbers = useMemo(
+    () =>
+      roomsData
+        .map((room) => getNumericRoomNumber(room.roomNumber))
+        .filter((roomNo) => Number.isInteger(roomNo))
+        .sort((a, b) => a - b),
+    [roomsData]
+  );
+  const visibleRooms = fetchedRoomNumbers.length
+    ? fetchedRoomNumbers
+    : [...configuredLeftRooms, ...configuredRightRooms];
+  const splitAt = Math.ceil(visibleRooms.length / 2);
+  const leftRooms = visibleRooms.slice(0, splitAt);
+  const rightRooms = visibleRooms.slice(splitAt);
+  const totalRooms = visibleRooms.length;
+  const totalBeds = roomsData.length
+    ? roomsData.reduce((sum, room) => sum + (Number(room.capacity) || 0), 0)
+    : totalRooms * 3;
 
-  function showToast(msg) {
+  function showToast(msg, type = "error") {
+    setSelectedRoom(null);
+    setToastType(type);
     setToast(msg);
     setTimeout(() => setToast(null), 4000);
   }
+
+  const validateFloorYear = async () => {
+    if (!currentUser?.year) {
+      showToast("Student year not found. Please log in again.");
+      return false;
+    }
+
+    try {
+      // You'll need an endpoint that returns the allowed year for this floor
+      const res = await fetch(`/api/floor-allocation?building=RKA&floor=${floorNum}`);
+      const data = await res.json();
+
+      if (data.success) {
+        // Compare the floor's allocated year with the user's year
+        // Using == for flexible string/number comparison
+        if (data.allocatedYear && data.allocatedYear != currentUser.year) {
+          showToast(`Access Denied: This floor is reserved for Year ${data.allocatedYear} students.`);
+          return false;
+        }
+      }
+      return true;
+    } catch (err) {
+      console.error("Floor validation error:", err);
+      return true; // Fallback or handle as error
+    }
+  };
+
+
+  const validateGender = (roomNo) => {
+    const roomInfo = getRoomInfo(roomNo);
+
+    if (!roomInfo) return true;
+    if (!currentUser) {
+      setToast("Please log in to book a room.");
+      return false;
+    }
+
+    const roomGender = (roomInfo.forGender || "").toLowerCase().trim();
+    const userGender = (currentUser.gender || "").toLowerCase().trim();
+
+    if (roomGender && userGender && roomGender !== userGender) {
+      showToast(
+        `Access Denied: This room is for ${
+          roomGender.charAt(0).toUpperCase() + roomGender.slice(1)
+        } only!`,
+      );
+      return false;
+    }
+    return true;
+  };
 
   async function handleConfirmBooking() {
     // FIX 4: proper guards with user feedback
@@ -97,6 +175,14 @@ export default function RkaFloorPage({ params }) {
       router.push("/login");
       return;
     }
+
+    // 2. NEW: Floor Allocation Check
+  const isCorrectYear = await validateFloorYear();
+  if (!isCorrectYear) return; 
+
+  // 3. Existing Gender Check (Refactored to be used here if needed)
+  const isCorrectGender = validateGender(selectedRoom);
+  if (!isCorrectGender) return;
 
     // FIX 5: check which field your session actually uses
     const studentNumber = currentUser.studentNumber ?? currentUser.phoneNumber ?? currentUser.stdNo;
@@ -117,6 +203,7 @@ export default function RkaFloorPage({ params }) {
         body: JSON.stringify({
           roomNumber: fullRoomId,
           studentNumber: String(studentNumber),
+          email: currentUser.email,
           checkIn: new Date().toISOString(),
           checkOut: new Date(
             new Date().setMonth(new Date().getMonth() + 6)
@@ -133,8 +220,10 @@ export default function RkaFloorPage({ params }) {
         return;
       }
 
+      
+
       if (result.success) {
-        showToast(`Room ${fullRoomId} reserved successfully! Details sent to your email.`);
+        showToast(`Room ${fullRoomId} reserved successfully! Details sent to your email.`, "success");
 
         const updatedUser = { ...currentUser, hasBooked: true };
         setCurrentUser(updatedUser);
@@ -172,7 +261,11 @@ export default function RkaFloorPage({ params }) {
     }
 
     const dbValue = roomInfo.isActive ?? roomInfo.is_active;
-    const isRoomActive = dbValue !== false && String(dbValue).toUpperCase().trim() !== "FALSE";
+    const status = String(roomInfo.status ?? "").toLowerCase().trim();
+    const isRoomActive =
+      dbValue !== false &&
+      String(dbValue).toUpperCase().trim() !== "FALSE" &&
+      !["disabled", "inactive", "maintenance"].includes(status);
     const occupied = roomInfo.occupied || 0;
     const capacity = roomInfo.capacity || 3;
 
@@ -183,12 +276,12 @@ export default function RkaFloorPage({ params }) {
     const colors = !isRoomActive
       ? "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed opacity-60"
       : isFully
-        ? "border-red-200 bg-red-50 text-red-700 cursor-not-allowed ring-1 ring-red-300/70"
+        ? "border-slate-300 bg-slate-100 text-slate-500 cursor-not-allowed opacity-70"
         : isSelected
           ? "border-emerald-200 bg-emerald-50 text-emerald-700 ring-2 ring-emerald-300/70"
           : isPartial
             ? "border-amber-200 bg-amber-50 text-amber-700 hover:border-amber-300/80 hover:bg-amber-50/80 hover:-translate-y-0.5 hover:shadow-md"
-            : "border-slate-200 bg-white text-slate-800 hover:border-slate-300 hover:bg-slate-50 hover:-translate-y-0.5 hover:shadow-md";
+            : "border-green-700 bg-green-700 text-white hover:border-green-800 hover:bg-green-800 hover:-translate-y-0.5 hover:shadow-md";
 
     return (
       <button
@@ -200,14 +293,14 @@ export default function RkaFloorPage({ params }) {
           <span className="text-sm xs:text-base sm:text-lg font-semibold tracking-wider">
             {room}
           </span>
-          <span className="text-[9px] xs:text-[10px] sm:text-[11px] text-slate-700 whitespace-nowrap">
+          <span className={`text-[9px] xs:text-[10px] sm:text-[11px] whitespace-nowrap ${!isRoomActive || isFully || isPartial ? "text-slate-700" : "text-white"}`}>
             {!isRoomActive
               ? roomInfo.disabledReason || "Inactive"
               : isFully
-                ? "Fully Booked"
+                ? `${capacity}/${capacity} Booked`
                 : isPartial
-                  ? `${occupied}/${capacity} Occupied`
-                  : `0/${capacity} Available`}
+                  ? `${occupied}/${capacity} Booked`
+                  : `${capacity - occupied} Available`}
           </span>
         </div>
         <div className="pointer-events-none absolute inset-0 rounded-xl ring-0 transition group-hover:ring-1 group-hover:ring-slate-300/60" />
@@ -221,12 +314,19 @@ export default function RkaFloorPage({ params }) {
 
         {/* FIX 7: Toast notification - was never rendered before */}
         {toast && (
-          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-800 text-white px-5 py-3 rounded-xl shadow-xl text-sm text-center max-w-sm w-[90%]">
+          <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] ${toastType === "success" ? "bg-green-800" : "bg-red-600"} text-white px-5 py-3 rounded-xl shadow-xl text-sm text-center max-w-sm w-[90%]`}>
             {toast}
           </div>
         )}
 
-        {/* Mobile header */}
+        
+        <FloorBookingsView
+          building={RKA_NAME}
+          floor={floorNum}
+          currentUser={currentUser}
+          onDenied={(message) => showToast(message)}
+        />
+{/* Mobile header */}
         <div className="md:hidden flex items-center justify-between mb-4">
           <div className="flex items-center text-slate-500">
             <Link href="/" className="inline-flex items-center hover:text-slate-700">

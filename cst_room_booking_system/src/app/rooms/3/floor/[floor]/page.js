@@ -5,6 +5,7 @@ import { use, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import ConfirmationDialog from "../../../../confirmation";
 import RoomLegend from "../../../components/RoomLegend";
+import FloorBookingsView from "../../../components/FloorBookingsView";
 import FloorSidebar from "../../../components/FloorSidebar";
 
 import {
@@ -44,6 +45,25 @@ function floorLabel(n) {
 
 function isValidFloor(n) {
   return n >= 1 && n <= 4;
+}
+
+function getNumericRoomNumber(roomNumber) {
+  const match = String(roomNumber ?? "").match(/(\d+)$/);
+  return match ? Number(match[1]) : null;
+}
+
+function getStoredSession() {
+  if (typeof window === "undefined") return null;
+
+  const session = window.localStorage.getItem("session");
+  if (!session) return null;
+
+  try {
+    return JSON.parse(session);
+  } catch {
+    console.error("Invalid session data");
+    return null;
+  }
 }
 
 // LAYOUT POSITION MAPS
@@ -111,20 +131,20 @@ const desktopLayout = {
 };
 
 // ADDED: EnterArrow component to display arrows under specific rooms
-function EnterArrow({ 
-  roomNumber, 
-  top, 
-  left, 
-  roomCardHeight = 60, 
-  size = "desktop" 
+function EnterArrow({
+  roomNumber,
+  top,
+  left,
+  roomCardHeight = 60,
+  size = "desktop"
 }) {
   const isLeftArrow = roomNumber % 100 === 4; // 104, 204, 304
   const isRightArrow = roomNumber % 100 === 5; // 105, 205, 305
-  
+
   if (!isLeftArrow && !isRightArrow) return null;
-  
+
   const arrowTop = `calc(${top} + ${size === "mobile" ? 45 : roomCardHeight}px)`;
-  
+
   return (
     <div
       className="mt-8 absolute flex items-center justify-center text-slate-500 font-semibold pointer-events-none"
@@ -153,8 +173,8 @@ function EnterArrow({
   );
 }
 
-export default function NkFloorPage({ 
-  params 
+export default function NkFloorPage({
+  params
 }) {
   const router = useRouter();
   const { floor } = use(params);
@@ -173,18 +193,12 @@ export default function NkFloorPage({
   const [isBooking, setIsBooking] = useState(false);
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [toast, setToast] = useState(null);
+  const [toastType, setToastType] = useState("error");
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [mobileCarouselPage, setMobileCarouselPage] = useState(1);
 
-  // Simple States
-  const [currentUser, setCurrentUser] = useState({
-  phoneNumber: "17654321",
-  email: "test@example.com",
-  name: "Test User",
-  role: "student",
-  gender: "male",
-  hasBooked: false,
-});
+  const [currentUser, setCurrentUser] = useState(getStoredSession);
+  const sessionLoaded = true;
 
 
   // Kitchen numbering per floor: (floor-1)*2 + 1 and +2
@@ -228,92 +242,159 @@ export default function NkFloorPage({
     }
     if (isValid) fetchRooms();
   }, [floorNum, isValid]);
-    
+
   const getRoomInfo = (roomNo) => {
     const fullRoomId = `${NK_NAME}-${roomNo}`;
     const found = roomsData.find((r) => {
       // Try multiple formats for robustness
-      return String(r.roomNumber) === fullRoomId || 
-             String(r.roomNumber) === String(roomNo) ||
-             String(r.room_number) === fullRoomId ||
-             String(r.room_number) === String(roomNo);
+      return String(r.roomNumber) === fullRoomId ||
+        String(r.roomNumber) === String(roomNo) ||
+        getNumericRoomNumber(r.roomNumber) === roomNo ||
+        String(r.room_number) === fullRoomId ||
+        String(r.room_number) === String(roomNo) ||
+        getNumericRoomNumber(r.room_number) === roomNo;
     });
-    
+
     // If not found, return a fallback object to avoid "..." display
     if (!found && roomsData.length > 0) {
       console.warn(`Room ${fullRoomId} not found in roomsData`, roomsData);
     }
-    
-    return found || { 
-      roomNumber: fullRoomId, 
-      isActive: true, 
-      occupied: 0, 
-      capacity: 3 
+
+    return found || {
+      roomNumber: fullRoomId,
+      isActive: true,
+      occupied: 0,
+      capacity: 3
     };
   };
 
-  // Simple booking action - no API calls
-  async function handleConfirmBooking() {
-  if (selectedRoom === null || !currentUser) return;
-
-  const fullRoomId = `${NK_NAME}-${selectedRoom}`;
-
-  try {
-    setIsBooking(true);
-    const res = await fetch("/api/booking", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        roomNumber: fullRoomId,
-        userId: currentUser.phoneNumber,
-        email: currentUser.email,
-        userName: currentUser.name,
-        checkIn: new Date().toISOString(),
-        checkOut: new Date(
-          new Date().setMonth(new Date().getMonth() + 6),
-        ).toISOString(),
-      }),
-    });
-
-    const result = await res.json();
-    if (result.success) {
-      setToast(`Room ${fullRoomId} reserved successfully! Room details sent to your email.`);
-      const updatedUser = { ...currentUser, hasBooked: true };
-      setCurrentUser(updatedUser);
-      localStorage.setItem("session", JSON.stringify(updatedUser));
-      setRoomsData((prev) =>
-        prev.map((r) =>
-          r.roomNumber === fullRoomId
-            ? { ...r, occupied: (r.occupied || 0) + 1 }
-            : r,
-        ),
-      );
-    } else {
-      setToast("Error: " + (result.error || "Could not book"));
-    }
-  } catch (err) {
-    setToast("Connection failed.");
-  } finally {
-    setIsBooking(false);
+  function showToast(msg, type = "error") {
     setSelectedRoom(null);
-    setTimeout(() => setToast(null), 3000);
+    setToastType(type);
+    setToast(msg);
+    setTimeout(() => setToast(null), 4000);
   }
-}
 
-  
+  const validateFloorYear = async () => {
+    if (!currentUser?.year) {
+      showToast("Student year not found. Please log in again.");
+      return false;
+    }
 
-  // --- GENDER VALIDATION LOGIC --- (Backend Logic)
+    try {
+      const res = await fetch(`/api/floor-allocation?building=NK&floor=${floorNum}`);
+      const data = await res.json();
+
+      if (data.success && data.allocatedYear && data.allocatedYear != currentUser.year) {
+        showToast(`Access Denied: This floor is reserved for Year ${data.allocatedYear} students.`);
+        return false;
+      }
+
+      return true;
+    } catch (err) {
+      console.error("Floor validation error:", err);
+      return true;
+    }
+  };
+
   const validateGender = (roomNo) => {
+    const roomInfo = getRoomInfo(roomNo);
+
+    if (!roomInfo) return true;
+    if (!currentUser) {
+      showToast("Please log in to book a room.");
+      return false;
+    }
+
+    const roomGender = (roomInfo.forGender || "").toLowerCase().trim();
+    const userGender = (currentUser.gender || "").toLowerCase().trim();
+
+    if (roomGender && userGender && roomGender !== userGender) {
+      showToast(
+        `Access Denied: This room is for ${
+          roomGender.charAt(0).toUpperCase() + roomGender.slice(1)
+        } only!`,
+      );
+      return false;
+    }
+
     return true;
   };
-  
+
+  async function handleConfirmBooking() {
+    if (selectedRoom === null) return;
+
+    if (!sessionLoaded) {
+      showToast("Session is still loading, please wait.");
+      return;
+    }
+
+    if (!currentUser) {
+      showToast("You must be logged in to book a room.");
+      router.push("/login");
+      return;
+    }
+
+    const isCorrectYear = await validateFloorYear();
+    if (!isCorrectYear) return;
+
+    const isCorrectGender = validateGender(selectedRoom);
+    if (!isCorrectGender) return;
+
+    const studentNumber = currentUser.studentNumber ?? currentUser.phoneNumber ?? currentUser.stdNo;
+
+    if (!studentNumber) {
+      showToast("Student number not found in session. Please log in again.");
+      return;
+    }
+
+    const fullRoomId = `${NK_NAME}-${selectedRoom}`;
+
+    try {
+      setIsBooking(true);
+      const res = await fetch("/api/booking", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          roomNumber: fullRoomId,
+          studentNumber: String(studentNumber),
+          checkIn: new Date().toISOString(),
+          checkOut: new Date(
+            new Date().setMonth(new Date().getMonth() + 6),
+          ).toISOString(),
+        }),
+      });
+
+      const result = await res.json();
+      if (result.success) {
+        showToast(`Room ${fullRoomId} reserved successfully! Details sent to your email.`, "success");
+        const updatedUser = { ...currentUser, hasBooked: true };
+        setCurrentUser(updatedUser);
+        localStorage.setItem("session", JSON.stringify(updatedUser));
+        setRoomsData((prev) =>
+          prev.map((r) =>
+            r.roomNumber === fullRoomId
+              ? { ...r, occupied: (r.occupied || 0) + 1 }
+              : r,
+          ),
+        );
+      } else {
+        showToast("Error: " + (result.error || "Could not book"));
+      }
+    } catch (err) {
+      showToast("Connection failed.");
+    } finally {
+      setIsBooking(false);
+      setSelectedRoom(null);
+    }
+  }
 
   // Simple Room Card component - no API calls
   function RoomCard({ room, top, left }) {
     const roomInfo = getRoomInfo(room);
     console.log(roomInfo)
     const fullRoomId = `${NK_NAME}-${room}`;
-    
+
     // Show room number even while loading
     if (!roomInfo) {
       return (
@@ -332,34 +413,36 @@ export default function NkFloorPage({
       );
     }
 
-    const dbValue =  roomInfo.status;
+    const dbValue = roomInfo.status;
     const isRoomActive =
-      dbValue !== false && String(dbValue).toUpperCase() !== "FALSE";
+      dbValue !== false &&
+      String(dbValue).toUpperCase() !== "FALSE" &&
+      !["disabled", "inactive", "maintenance"].includes(String(dbValue ?? "").toLowerCase().trim());
     const occupied = roomInfo.occupied || 0;
     const capacity = roomInfo.capacity || 3;
     const isPartial = occupied > 0 && occupied < capacity;
     const isSelected = selectedRoom === room;
     const isFully = occupied >= capacity;
-    
+
     const ringColor = !isRoomActive
       ? "ring-slate-200"
       : isFully
-        ? "ring-red-300"
+        ? "ring-slate-300"
         : isPartial
           ? "ring-amber-300"
           : isSelected
             ? "ring-emerald-300"
             : "ring-slate-200";
-    
-      const colors = !isRoomActive
+
+    const colors = !isRoomActive
       ? "bg-slate-100 text-slate-400 border-slate-200 cursor-not-allowed"
       : isFully
-        ? "bg-red-50 text-red-700 border-red-200 cursor-not-allowed"
+        ? "bg-slate-100 text-slate-500 border-slate-300 cursor-not-allowed opacity-70"
         : isPartial
           ? "border-amber-200 bg-amber-50 text-amber-700 hover:border-amber-300 hover:bg-amber-50/80 hover:-translate-y-0.5 hover:shadow-md active:scale-[0.98]"
           : isSelected
             ? "border-emerald-200 bg-emerald-50 text-emerald-700 ring-2 ring-emerald-300/70"
-            : "border-slate-200 bg-white text-slate-800 hover:border-slate-300 hover:bg-slate-50 hover:-translate-y-0.5 hover:shadow-md active:scale-[0.98]";
+            : "border-green-700 bg-green-700 text-white hover:border-green-800 hover:bg-green-800 hover:-translate-y-0.5 hover:shadow-md active:scale-[0.98]";
 
 
     return (
@@ -367,12 +450,11 @@ export default function NkFloorPage({
         onClick={() => setSelectedRoom(room)}
         disabled={!isRoomActive || isFully || loading || isBooking}
         className={`
-          cursor-pointer group absolute rounded-2xl border bg-white text-slate-800 shadow-sm 
-          transition-all duration-200 hover:-translate-y-0.5 hover:shadow-md
+          cursor-pointer group absolute rounded-2xl border shadow-sm transition-all duration-200
           w-[65px] h-[65px] xs:w-[70px] xs:h-[70px] sm:w-[75px] sm:h-[75px] 
           md:w-[85px] md:h-[85px] lg:w-[95px] lg:h-[95px] xl:w-[105px] xl:h-[105px]
-          border-slate-300
-          ${isSelected ? "ring-2 ring-emerald-300" : "ring-1 ring-slate-200"}
+          disabled:shadow-none ${colors}
+          ${isSelected ? "ring-2 ring-emerald-300" : `ring-1 ${ringColor}`}
         `}
         style={{
           top,
@@ -384,14 +466,14 @@ export default function NkFloorPage({
           <span className="text-xs xs:text-sm sm:text-base md:text-lg font-semibold">
             {room}
           </span>
-          <span className="text-[9px] xs:text-[10px] sm:text-[11px] text-slate-700 whitespace-nowrap">
+          <span className={`text-[9px] xs:text-[10px] sm:text-[11px] whitespace-nowrap ${!isRoomActive || isFully || isPartial ? "text-slate-700" : "text-white"}`}>
             {!isRoomActive
               ? roomInfo.disabledReason || "Inactive"
               : isFully
-                ? "Fully Booked"
+                ? `${capacity}/${capacity} Booked`
                 : isPartial
-                  ? `${occupied}/${capacity} Occupied`
-                  : `0/${capacity} Available`}
+                  ? `${occupied}/${capacity} Booked`
+                  : `${capacity - occupied} Available`}
           </span>
         </div>
         <div className="pointer-events-none absolute inset-0 rounded-2xl ring-0 transition group-hover:ring-1 group-hover:ring-slate-300/50" />
@@ -428,7 +510,20 @@ export default function NkFloorPage({
   return (
     <main className="min-h-screen bg-zinc-100 py-4 sm:py-6 md:py-8 lg:py-10 text-slate-900 overflow-x-hidden">
       <div className="mx-auto max-w-full px-2 xs:px-3 sm:px-4 md:px-6 lg:px-8">
-        {/* Mobile hamburger menu button - UPDATED WITH BACK ARROW */}
+        {toast && (
+          <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] ${toastType === "success" ? "bg-green-800" : "bg-red-600"} text-white px-5 py-3 rounded-xl shadow-xl text-sm text-center max-w-sm w-[90%]`}>
+            {toast}
+          </div>
+        )}
+
+        
+        <FloorBookingsView
+          building={NK_NAME}
+          floor={floorNum}
+          currentUser={currentUser}
+          onDenied={(message) => showToast(message)}
+        />
+{/* Mobile hamburger menu button - UPDATED WITH BACK ARROW */}
         <div className="md:hidden flex items-center justify-between mb-4">
           {/* Back arrow for mobile - ADDED HERE */}
           <div className="flex items-center text-slate-500">
@@ -458,7 +553,7 @@ export default function NkFloorPage({
           </h1>
 
           <div className="flex items-center gap-2">
-            
+
             <button
               onClick={() => setSidebarOpen(!sidebarOpen)}
               className="cursor-pointer px-3 py-1 bg-white border border-slate-200 rounded-full shadow-sm flex items-center gap-0.5 text-xs"
@@ -779,10 +874,10 @@ export default function NkFloorPage({
                   {/* ADDED: Arrows under middle rooms 104 and 105 */}
                   {middleRooms.map((room, index) => {
                     if (room % 100 === 4 || room % 100 === 5) {
-                      const pos = isMid 
-                        ? midLayout.rooms[index + 3] 
+                      const pos = isMid
+                        ? midLayout.rooms[index + 3]
                         : desktopLayout.rooms[index + 3];
-                      
+
                       return (
                         <EnterArrow
                           key={`arrow-${room}`}
@@ -809,8 +904,8 @@ export default function NkFloorPage({
         {selectedRoom !== null && (
           <ConfirmationDialog
             message={`Would you like to reserve one bed in Room ${NK_NAME}-${selectedRoom}?`}
-            isLoading={false}
-            onCancel={() => setSelectedRoom(null)}
+            isLoading={isBooking}
+            onCancel={() => !isBooking && setSelectedRoom(null)}
             onConfirm={handleConfirmBooking}
           />
         )}

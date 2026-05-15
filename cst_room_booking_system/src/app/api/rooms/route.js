@@ -14,37 +14,65 @@ export async function GET(req) {
       );
     }
 
-    // 1. Fetch all rooms for this floor/building
-    // 2. Use 'include' with '_count' to get active bookings per room
-    // app/api/rooms/route.ts
-const rooms = await prisma.room.findMany({
-  where: {
-    floor: Number(floor),
-    hostel: { 
-      is: {
-        hostelName: building 
-      }
-    } // assuming building is the hostel name
-  },
-  
-  include: {
-    _count: { select: { bookings: true } },
-    hostel: true, // This brings in the forGender from the Hostel table
-  },
-});
+    const rooms = await prisma.room.findMany({
+      where: {
+        floor: Number(floor),
+        hostel: {
+          is: {
+            hostelName: building,
+          },
+        },
+      },
+      include: {
+        hostel: {
+          include: {
+            floorAllocations: {
+              where: { floor: Number(floor) },
+              orderBy: { floor: "asc" },
+            },
+          },
+        },
+      },
+      orderBy: { roomNumber: "asc" },
+    });
 
+    const occupancyCounts = rooms.length
+      ? await prisma.booking.groupBy({
+          by: ["roomId"],
+          where: {
+            roomId: { in: rooms.map((room) => room.id) },
+            checkOut: { gte: new Date() },
+          },
+          _count: {
+            _all: true,
+          },
+        })
+      : [];
+    const occupiedByRoom = new Map(
+      occupancyCounts.map((group) => [group.roomId, group._count._all]),
+    );
 
-const formattedRooms = rooms.map((room) => ({
-  roomNumber: room.roomNumber,
-  capacity: room.capacity,
-  occupied: room._count.bookings,
-  floor: room.floor,
-  // Now we get forGender from the hostel relation!
-  floorAllocation: room.hostel?.FloorAllocations || "unspecified", 
-  status: room.status,
-  year: room.year,
-  disabledReason: room.disabledReason,
-}));
+    const formattedRooms = rooms.map((room) => {
+      const status = String(room.status ?? "").toLowerCase().trim();
+      const hostelStatus = String(room.hostel?.status ?? "").toLowerCase().trim();
+      const isActive =
+        !["false", "disabled", "inactive", "maintenance"].includes(status) &&
+        !["false", "inactive", "maintenance"].includes(hostelStatus);
+
+      return {
+        id: room.id,
+        roomNumber: room.roomNumber,
+        capacity: room.capacity,
+        occupied: occupiedByRoom.get(room.id) || 0,
+        floor: room.floor,
+        floorAllocation: room.hostel?.floorAllocations?.[0] ?? null,
+        allocatedYear: room.hostel?.floorAllocations?.[0]?.studentYear ?? null,
+        forGender: room.hostel?.gender ?? "",
+        status: room.status,
+        isActive,
+        year: room.year,
+      };
+    });
 
 
     return NextResponse.json({ success: true, rooms: formattedRooms });

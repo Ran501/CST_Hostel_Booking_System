@@ -8,19 +8,20 @@ export const useMapStats = (hostels) => {
     occupancyRate: 0,
     loading: true,
   });
-  const [studentNumber, setStudentNumber] = useState("");
+  const [studentNumber] = useState(() => {
+    if (typeof window === "undefined") return "";
 
-  useEffect(() => {
     const storedUser = localStorage.getItem("session");
-    if (storedUser) {
-      try {
-        const parsedUser = JSON.parse(storedUser);
-        setStudentNumber(parsedUser.studentNumber || "");
-      } catch (e) {
-        console.error("Failed to parse user from local storage");
-      }
+    if (!storedUser) return "";
+
+    try {
+      const parsedUser = JSON.parse(storedUser);
+      return parsedUser.studentNumber || "";
+    } catch {
+      console.error("Failed to parse user from local storage");
+      return "";
     }
-  }, []);
+  });
 
   const fetchStats = useCallback(async () => {
     try {
@@ -70,13 +71,16 @@ export const useMapStats = (hostels) => {
   }, [hostels, studentNumber]);
 
   useEffect(() => {
-    fetchStats();
+    const initialFetchId = window.setTimeout(() => {
+      fetchStats();
+    }, 0);
 
     const intervalId = window.setInterval(() => {
       fetchStats();
-    }, 5000);
+    }, 30000);
 
     return () => {
+      window.clearTimeout(initialFetchId);
       window.clearInterval(intervalId);
     };
   }, [fetchStats]);

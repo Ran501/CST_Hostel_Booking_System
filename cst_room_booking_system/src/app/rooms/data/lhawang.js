@@ -27,7 +27,7 @@ export function floor2RightSection() {
     // Standalone room below the pair (right-aligned in the layout)
     standaloneRoom: 206,
     // Room shown next to Stairs at the bottom
-    stairsRoom: "204b",
+    stairsRoom: 207,
   };
 }
 // FLOOR 3

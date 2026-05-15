@@ -5,6 +5,7 @@ import { use, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import FloorSidebar from "../../../components/FloorSidebar";
 import RoomLegend from "../../../components/RoomLegend";
+import FloorBookingsView from "../../../components/FloorBookingsView";
 import ConfirmationDialog from "../../../../confirmation";
 import SpecialBlock from "../../../../room/components/SpecialBlock";
 
@@ -20,6 +21,25 @@ function floorLabel(n) {
 
 function isValidFloor(n) {
   return n >= 1 && n <= 3;
+}
+
+function getNumericRoomNumber(roomNumber) {
+  const match = String(roomNumber ?? "").match(/(\d+)$/);
+  return match ? Number(match[1]) : null;
+}
+
+function getStoredSession() {
+  if (typeof window === "undefined") return null;
+
+  const session = window.localStorage.getItem("session");
+  if (!session) return null;
+
+  try {
+    return JSON.parse(session);
+  } catch {
+    console.error("Invalid session data");
+    return null;
+  }
 }
 
 export default function HaFloorPage({ params }) {
@@ -38,14 +58,9 @@ export default function HaFloorPage({ params }) {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isBooking, setIsBooking] = useState(false);
   const [toast, setToast] = useState(null);
-  const [currentUser, setCurrentUser] = useState({
-    phoneNumber: "17654321",
-    email: "test@example.com",
-    name: "Test User",
-    role: "student",
-    gender: "male",
-    hasBooked: false,
-  });
+  const [toastType, setToastType] = useState("error");
+  const [currentUser, setCurrentUser] = useState(getStoredSession);
+  const sessionLoaded = true;
 
   useEffect(() => {
         async function fetchRooms() {
@@ -66,7 +81,10 @@ export default function HaFloorPage({ params }) {
     
       const getRoomInfo = (roomNo) => {
         const fullRoomId = `${HA_NAME}-${roomNo}`;
-        return roomsData.find((r) => String(r.roomNumber) === fullRoomId);
+        return roomsData.find((r) => {
+          const roomNumber = String(r.roomNumber);
+          return roomNumber === fullRoomId || getNumericRoomNumber(roomNumber) === roomNo;
+        });
       };
 
   // Simple redirect logic
@@ -74,14 +92,85 @@ export default function HaFloorPage({ params }) {
     if (!isValid) router.replace("/rooms/4/floor/1");
   }, [isValid, router]);
 
- 
-  // --- GENDER VALIDATION LOGIC ---
+  function showToast(msg, type = "error") {
+    setSelectedRoom(null);
+    setToastType(type);
+    setToast(msg);
+    setTimeout(() => setToast(null), 4000);
+  }
+
+  const validateFloorYear = async () => {
+    if (!currentUser?.year) {
+      showToast("Student year not found. Please log in again.");
+      return false;
+    }
+
+    try {
+      const res = await fetch(`/api/floor-allocation?building=HA&floor=${floorNum}`);
+      const data = await res.json();
+
+      if (data.success && data.allocatedYear && data.allocatedYear != currentUser.year) {
+        showToast(`Access Denied: This floor is reserved for Year ${data.allocatedYear} students.`);
+        return false;
+      }
+
+      return true;
+    } catch (err) {
+      console.error("Floor validation error:", err);
+      return true;
+    }
+  };
+
   const validateGender = (roomNo) => {
+    const roomInfo = getRoomInfo(roomNo);
+
+    if (!roomInfo) return true;
+    if (!currentUser) {
+      showToast("Please log in to book a room.");
+      return false;
+    }
+
+    const roomGender = (roomInfo.forGender || "").toLowerCase().trim();
+    const userGender = (currentUser.gender || "").toLowerCase().trim();
+
+    if (roomGender && userGender && roomGender !== userGender) {
+      showToast(
+        `Access Denied: This room is for ${
+          roomGender.charAt(0).toUpperCase() + roomGender.slice(1)
+        } only!`,
+      );
+      return false;
+    }
+
     return true;
   };
 
   async function handleConfirmBooking() {
-  if (selectedRoom === null || !currentUser) return;
+  if (selectedRoom === null) return;
+
+  if (!sessionLoaded) {
+    showToast("Session is still loading, please wait.");
+    return;
+  }
+
+  if (!currentUser) {
+    showToast("You must be logged in to book a room.");
+    router.push("/login");
+    return;
+  }
+
+  const isCorrectYear = await validateFloorYear();
+  if (!isCorrectYear) return;
+
+  const isCorrectGender = validateGender(selectedRoom);
+  if (!isCorrectGender) return;
+
+  const studentNumber = currentUser.studentNumber ?? currentUser.phoneNumber ?? currentUser.stdNo;
+
+  if (!studentNumber) {
+    showToast("Student number not found in session. Please log in again.");
+    return;
+  }
 
   const fullRoomId = `${HA_NAME}-${selectedRoom}`;
 
@@ -92,9 +181,8 @@ export default function HaFloorPage({ params }) {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
         roomNumber: fullRoomId,
-        userId: currentUser.phoneNumber,
+        studentNumber: String(studentNumber),
         email: currentUser.email,
-        userName: currentUser.name,
         checkIn: new Date().toISOString(),
         checkOut: new Date(
           new Date().setMonth(new Date().getMonth() + 6),
@@ -104,7 +192,7 @@ export default function HaFloorPage({ params }) {
 
     const result = await res.json();
     if (result.success) {
-      setToast(`Room ${fullRoomId} reserved successfully! Room details sent to your email.`);
+      showToast(`Room ${fullRoomId} reserved successfully! Details sent to your email.`, "success");
       const updatedUser = { ...currentUser, hasBooked: true };
       setCurrentUser(updatedUser);
       localStorage.setItem("session", JSON.stringify(updatedUser));
@@ -116,14 +204,14 @@ export default function HaFloorPage({ params }) {
         ),
       );
     } else {
-      setToast("Error: " + (result.error || "Could not book"));
+      showToast("Error: " + (result.error || "Could not book"));
     }
   } catch (err) {
-    setToast("Connection failed.");
+    console.error("Booking error:", err);
+    showToast("Connection failed.");
   } finally {
     setIsBooking(false);
     setSelectedRoom(null);
-    setTimeout(() => setToast(null), 3000);
   }
 } 
 
@@ -155,7 +243,11 @@ export default function HaFloorPage({ params }) {
       }
     // 2. Extract database values
       const dbValue = roomInfo.isActive ?? roomInfo.is_active;
-      const isRoomActive = dbValue !== false && String(dbValue).toUpperCase().trim() !== "FALSE";
+      const status = String(roomInfo.status ?? "").toLowerCase().trim();
+      const isRoomActive =
+        dbValue !== false &&
+        String(dbValue).toUpperCase().trim() !== "FALSE" &&
+        !["disabled", "inactive", "maintenance"].includes(status);
       const occupied = roomInfo.occupied || 0;
       const capacity = roomInfo.capacity || 3;
   
@@ -167,17 +259,18 @@ export default function HaFloorPage({ params }) {
       const colors = !isRoomActive
         ? "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed opacity-60"
         : isFully
-          ? "border-red-200 bg-red-50 text-red-700 cursor-not-allowed ring-1 ring-red-300/70"
+          ? "border-slate-300 bg-slate-100 text-slate-500 cursor-not-allowed opacity-70"
           : isSelected
             ? "border-emerald-200 bg-emerald-50 text-emerald-700 ring-2 ring-emerald-300/70"
             : isPartial
               ? "border-amber-200 bg-amber-50 text-amber-700 hover:border-amber-300/80 hover:bg-amber-50/80 hover:-translate-y-0.5 hover:shadow-md"
-              : "border-slate-200 bg-white text-slate-800 hover:border-slate-300 hover:bg-slate-50 hover:-translate-y-0.5 hover:shadow-md";
+              : "border-green-700 bg-green-700 text-white hover:border-green-800 hover:bg-green-800 hover:-translate-y-0.5 hover:shadow-md";
 
 
     return (
       <button
-        className={`group relative rounded-xl border shadow-sm transition-all duration-200 w-full h-full flex flex-col items-center justify-center p-1 border-slate-300 bg-white hover:border-slate-300 text-slate-800 ${
+        disabled={!isRoomActive || isFully || loading}
+        className={`group relative rounded-xl border shadow-sm transition-all duration-200 w-full h-full flex flex-col items-center justify-center p-1 disabled:shadow-none ${colors} ${
           isSelected ? "ring-2 ring-emerald-300" : ""
         }`}
         onClick={() => setSelectedRoom(room)}
@@ -185,14 +278,14 @@ export default function HaFloorPage({ params }) {
         <span className="text-[11px] font-bold tracking-tight">
           {room}
         </span>
-        <span className="text-[9px] xs:text-[10px] sm:text-[11px] text-slate-700 whitespace-nowrap">
+        <span className={`text-[9px] xs:text-[10px] sm:text-[11px] whitespace-nowrap ${!isRoomActive || isFully || isPartial ? "text-slate-700" : "text-white"}`}>
             {!isRoomActive
               ? roomInfo.disabledReason || "Inactive"
               : isFully
-                ? "Fully Booked"
+                ? `${capacity}/${capacity} Booked`
                 : isPartial
-                  ? `${occupied}/${capacity} Occupied`
-                  : `0/${capacity} Available`}
+                  ? `${occupied}/${capacity} Booked`
+                  : `${capacity - occupied} Available`}
           </span>
       </button>
     );
@@ -214,7 +307,20 @@ export default function HaFloorPage({ params }) {
   return (
     <main className="min-h-screen bg-zinc-100 py-4 sm:py-6 md:py-8 text-slate-900 overflow-x-hidden">
       <div className="mx-auto w-full max-w-full px-3 xs:px-4 sm:px-6 lg:max-w-7xl lg:px-8">
-        <div className="mb-4 flex items-center text-slate-500">
+        {toast && (
+          <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 z-[60] ${toastType === "success" ? "bg-green-800" : "bg-red-600"} text-white px-5 py-3 rounded-xl shadow-xl text-sm text-center max-w-sm w-[90%]`}>
+            {toast}
+          </div>
+        )}
+
+        
+        <FloorBookingsView
+          building={HA_NAME}
+          floor={floorNum}
+          currentUser={currentUser}
+          onDenied={(message) => showToast(message)}
+        />
+<div className="mb-4 flex items-center text-slate-500">
           <Link
             href="/"
             className="inline-flex items-center hover:text-slate-700"
@@ -322,8 +428,8 @@ export default function HaFloorPage({ params }) {
         {selectedRoom !== null && (
           <ConfirmationDialog
             message={`Would you like to reserve one bed in Room ${HA_NAME}-${selectedRoom}?`}
-            isLoading={false}
-            onCancel={() => setSelectedRoom(null)}
+            isLoading={isBooking}
+            onCancel={() => !isBooking && setSelectedRoom(null)}
             onConfirm={handleConfirmBooking}
           />
         )}

@@ -154,6 +154,7 @@ export default function LoginModal({ open = true, onClose, onSuccess }) {
         email: user.email,
         gender: user.gender,
         role: user.role,
+        year: user.year,
         timestamp: Date.now(),
       });
       localStorage.setItem("session", payload);

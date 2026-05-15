@@ -33,7 +33,7 @@ export const StatsCards = ({ stats }) => {
               <div className="h-4 sm:h-6 w-8 sm:w-12 bg-gray-200 animate-pulse rounded mx-auto sm:mx-0"></div>
             ) : (
               <div className="text-sm sm:text-xl md:text-xl font-bold text-gray-900">
-                {stats.totalAvailableRooms}
+                {stats.totalAvailableRooms} rooms
               </div>
             )}
           </div>
