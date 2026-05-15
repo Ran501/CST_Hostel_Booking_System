@@ -6,7 +6,7 @@ import { useState, useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
 // import LoginModal from "../../../login/page";
 // import AdminManagementModal from "../../../admin_dashboard/components/AdminManagementModal";
-import ConfirmationDialog from "../../confirmation";
+import { useConfirmation } from "../components/useConfirmation";
 
 export default function Navbar() {
     
@@ -19,25 +19,13 @@ export default function Navbar() {
 
   const [loginModalOpen, setLoginModalOpen] = useState(false);
   const [adminModalOpen, setAdminModalOpen] = useState(false);
+  const { confirm, confirmationDialog } = useConfirmation();
 
 //   const [userName, setUserName] = useState("");
 //   const [userEmail, setUserEmail] = useState("");
 //   const [gender, setGender] = useState("male");
 
   const navItems = ["Dashboard", "Students", "Rooms", "Hostel"];
-
-  const [confirmation, setConfirmation] = useState({
-    message: "",
-    onConfirm: () => {},
-    isOpen: false,
-  });
-
-  const openConfirmation = (message, onConfirm) => {
-    setConfirmation({ message, onConfirm, isOpen: true });
-  };
-
-  const closeConfirmation = () =>
-    setConfirmation({ ...confirmation, isOpen: false });
 
   const isActive = (item) => {
     if (item === "Dashboard") return pathname === "/admin_dashboard";
@@ -190,12 +178,14 @@ export default function Navbar() {
 
                   <button
                     className="w-full px-4 py-2 text-left text-red-600 hover:bg-red-100"
-                    onClick={() =>
-                      openConfirmation("Logout?", () => {
-                        handleLogout();
-                        setUserMenuOpen(false);
-                      })
-                    }
+                    onClick={() => {
+                      setUserMenuOpen(false);
+                      confirm({
+                        message: "Logout?",
+                        confirmText: "Logout",
+                        onConfirm: handleLogout,
+                      });
+                    }}
                   >
                     <LogOut className="inline w-4 h-4 mr-2" />
                     Logout
@@ -262,13 +252,7 @@ export default function Navbar() {
         onSuccess={(id) => console.log("Logged in", id)}
       /> */}
 
-      {confirmation.isOpen && (
-        <ConfirmationDialog
-          message={confirmation.message}
-          onConfirm={confirmation.onConfirm}
-          onCancel={closeConfirmation}
-        />
-      )}
+      {confirmationDialog}
     </header>
   );
 }

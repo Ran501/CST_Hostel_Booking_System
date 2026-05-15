@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useEffect, useRef, useCallback } from "react";
-import ConfirmationModal from "./ConfirmationModal";
+import { useConfirmation } from "../../components/useConfirmation";
 
 const departments = [
   "All", "Architecture", "Information Technology", "Engineering Geology",
@@ -45,7 +45,8 @@ function AddStudentModal({ isOpen, onClose, onAdd }) {
     }
     setSaving(true);
     try {
-      await onAdd(form);
+      const saved = await onAdd(form);
+      if (saved === false) return;
       onClose();
       setForm({
         studentNumber: "", name: "", email: "", role: "student",
@@ -188,6 +189,7 @@ function ImportModal({ isOpen, onClose, onImport }) {
     try {
       // Pass the already-read text string to onImport — no second File read needed.
       const result = await onImport(fileText);
+      if (result === false) return;
       setImportResult(result);
     } catch (err) {
       alert(err.message || "Import failed");
@@ -277,22 +279,12 @@ export default function StudentManagement() {
   const [selectedStudents, setSelectedStudents] = useState([]);
 
   // Modals
-  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
-  const [showSaveConfirm, setShowSaveConfirm] = useState(false);
-  const [showBulkConfirm, setShowBulkConfirm] = useState(false);
-  const [showRoleConfirm, setShowRoleConfirm] = useState(false);
-  const [showDepartmentConfirm, setShowDepartmentConfirm] = useState(false);
-  const [showGenderConfirm, setShowGenderConfirm] = useState(false);
-
-  const [pendingEdit, setPendingEdit] = useState(null);
-  const [pendingRoleChange, setPendingRoleChange] = useState(null);
-  const [pendingDepartmentChange, setPendingDepartmentChange] = useState(null);
-  const [pendingGenderChange, setPendingGenderChange] = useState(null);
-  const [bulkActionType, setBulkActionType] = useState(null);
+  const { confirm, confirmationDialog } = useConfirmation();
 
   const [editingCell, setEditingCell] = useState({ id: null, field: null, value: "" });
+  const editConfirmationPending = useRef(false);
   const loadMoreRef = useRef(null);
 
   // ── Helpers ──────────────────────────────────────────────────────────────
@@ -383,23 +375,38 @@ export default function StudentManagement() {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, ...fields }),
     });
-    if (!res.ok) throw new Error("Update failed");
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Update failed");
+    }
     return res.json();
   };
 
   const deleteSelectedStudents = async () => {
-    try {
-      await fetch("/api/admin/student", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ ids: selectedStudents }),
-      });
-      setStudents(prev => prev.filter(s => !selectedStudents.includes(s.id)));
-      setSelectedStudents([]);
-    } catch {
-      alert("Failed to delete");
+    const ids = [...selectedStudents];
+    const res = await fetch("/api/admin/student", {
+      method: "DELETE",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ ids }),
+    });
+
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Failed to delete");
     }
-    setShowDeleteConfirm(false);
+
+    setStudents(prev => prev.filter(s => !ids.includes(s.id)));
+    setSelectedStudents([]);
+  };
+
+  const requestDeleteSelectedStudents = () => {
+    if (selectedStudents.length === 0) return;
+
+    confirm({
+      message: `Delete ${selectedStudents.length} student${selectedStudents.length !== 1 ? "s" : ""}? This cannot be undone.`,
+      confirmText: "Delete",
+      onConfirm: deleteSelectedStudents,
+    });
   };
 
   // FIX #4: Add student
@@ -415,8 +422,16 @@ export default function StudentManagement() {
     }
     const newStudent = await res.json();
 
-setStudents(prev => [newStudent, ...prev]);
+    setStudents(prev => [normalizeStudent(newStudent), ...prev]);
+    return newStudent;
   };
+
+  const requestAddStudent = (form) =>
+    confirm({
+      message: `Add ${form.name || form.studentNumber} as a ${form.role}?`,
+      confirmText: "Add Student",
+      onConfirm: () => handleAddStudent(form),
+    });
 
   // FIX #4: Bulk import
   // Receives raw CSV text from ImportModal (file is read once there).
@@ -435,10 +450,17 @@ setStudents(prev => [newStudent, ...prev]);
     // Refresh the list so newly imported students appear
     setStudents([]);
     setNextCursor(null);
-    fetchStudents();
+    await fetchStudents();
     // Return result so ImportModal can show the summary (created / skipped / errors)
     return result;
   };
+
+  const requestImportStudents = (csvText) =>
+    confirm({
+      message: "Import students from the selected CSV file?",
+      confirmText: "Import",
+      onConfirm: () => handleImportStudents(csvText),
+    });
 
   // FIX #4: Export
   const handleExport = async () => {
@@ -473,22 +495,32 @@ setStudents(prev => [newStudent, ...prev]);
   const startEdit = (id, field, value) => setEditingCell({ id, field, value: value ?? "" });
 
   const saveEdit = (id, field, newValue) => {
-    setPendingEdit({ id, field, newValue });
-    setShowSaveConfirm(true);
+    if (editConfirmationPending.current) return;
+
+    editConfirmationPending.current = true;
+    setEditingCell({ id: null, field: null, value: "" });
+
+    confirm({
+      message: `Update ${field} to "${newValue}"?`,
+      confirmText: "Save",
+      onConfirm: async () => {
+        await updateStudent(id, { [field]: newValue });
+        setStudents(prev => prev.map(s => s.id === id ? { ...s, [field]: newValue } : s));
+      },
+      onCancel: () => setEditingCell({ id: null, field: null, value: "" }),
+    }).finally(() => {
+      editConfirmationPending.current = false;
+    });
   };
 
-  const confirmEdit = async () => {
-    if (!pendingEdit) return;
-    const { id, field, newValue } = pendingEdit;
+  const updateStudentYear = async (student, newYear) => {
+    setStudents(prev => prev.map(s => s.id === student.id ? { ...s, year: newYear } : s));
     try {
-      await updateStudent(id, { [field]: newValue });
-      setStudents(prev => prev.map(s => s.id === id ? { ...s, [field]: newValue } : s));
-    } catch {
-      alert("Failed to save");
+      await updateStudent(student.id, { year: newYear });
+    } catch (error) {
+      setStudents(prev => prev.map(s => s.id === student.id ? { ...s, year: student.year } : s));
+      throw error;
     }
-    setShowSaveConfirm(false);
-    setPendingEdit(null);
-    setEditingCell({ id: null, field: null, value: "" });
   };
 
   const renderEditableCell = (student, field, displayValue) => {
@@ -517,46 +549,56 @@ setStudents(prev => [newStudent, ...prev]);
     );
   };
 
-  const toggleStatus = async (student) => {
+  const toggleStatus = (student) => {
     const newStatus = !student.isActive;
-    // Optimistic update first
-    setStudents(prev => prev.map(s => s.id === student.id ? { ...s, isActive: newStatus } : s));
-    try {
-      await updateStudent(student.id, { isActive: newStatus });
-    } catch {
-      // Rollback on failure
-      setStudents(prev => prev.map(s => s.id === student.id ? { ...s, isActive: student.isActive } : s));
-      alert("Failed to update status");
-    }
+
+    confirm({
+      message: `${newStatus ? "Activate" : "Deactivate"} ${student.name}?`,
+      confirmText: newStatus ? "Activate" : "Deactivate",
+      onConfirm: async () => {
+        setStudents(prev => prev.map(s => s.id === student.id ? { ...s, isActive: newStatus } : s));
+        try {
+          await updateStudent(student.id, { isActive: newStatus });
+        } catch (error) {
+          setStudents(prev => prev.map(s => s.id === student.id ? { ...s, isActive: student.isActive } : s));
+          throw error;
+        }
+      },
+    });
   };
 
   // ── Year actions ─────────────────────────────────────────────────────────
-  const promoteStudent = async (student) => {
+  const promoteStudent = (student) => {
     const isArch = student.department === "Architecture";
     const maxYear = isArch ? 6 : 5;
     if (student.year >= maxYear) return;
     const newYear = student.year + 1;
-    setStudents(prev => prev.map(s => s.id === student.id ? { ...s, year: newYear } : s));
-    try { await updateStudent(student.id, { year: newYear }); }
-    catch { setStudents(prev => prev.map(s => s.id === student.id ? { ...s, year: student.year } : s)); }
+
+    confirm({
+      message: `Promote ${student.name} from year ${student.year} to year ${newYear}?`,
+      confirmText: "Promote",
+      onConfirm: () => updateStudentYear(student, newYear),
+    });
   };
 
-  const demoteStudent = async (student) => {
+  const demoteStudent = (student) => {
     if (student.year <= 1) return;
     const newYear = student.year - 1;
-    setStudents(prev => prev.map(s => s.id === student.id ? { ...s, year: newYear } : s));
-    try { await updateStudent(student.id, { year: newYear }); }
-    catch { setStudents(prev => prev.map(s => s.id === student.id ? { ...s, year: student.year } : s)); }
+
+    confirm({
+      message: `Demote ${student.name} from year ${student.year} to year ${newYear}?`,
+      confirmText: "Demote",
+      onConfirm: () => updateStudentYear(student, newYear),
+    });
   };
 
   // FIX #6: Bulk promote/demote for selected students
-  const confirmBulkAction = async () => {
-    if (!bulkActionType) return;
+  const applyBulkYearAction = async (type) => {
     const targets = students.filter(s => selectedStudents.includes(s.id));
     const updates = targets.map(s => {
       const isArch = s.department === "Architecture";
       const maxYear = isArch ? 6 : 5;
-      const newYear = bulkActionType === "promote"
+      const newYear = type === "promote"
         ? Math.min(s.year + 1, maxYear)
         : Math.max(s.year - 1, 1);
       return { ...s, year: newYear };
@@ -568,46 +610,63 @@ setStudents(prev => [newStudent, ...prev]);
       return updated ? { ...s, year: updated.year } : s;
     }));
 
-    // Persist each
-    await Promise.allSettled(updates.map(s => updateStudent(s.id, { year: s.year })));
+    const results = await Promise.allSettled(updates.map(s => updateStudent(s.id, { year: s.year })));
+    const failures = results.filter((result) => result.status === "rejected");
 
-    setShowBulkConfirm(false);
-    setBulkActionType(null);
+    if (failures.length > 0) {
+      await fetchStudents();
+      throw new Error(`Failed to update ${failures.length} student${failures.length !== 1 ? "s" : ""}`);
+    }
+  };
+
+  const requestBulkYearAction = (type) => {
+    if (selectedStudents.length === 0) { alert("Select at least one student first."); return; }
+
+    confirm({
+      message: `${type === "promote" ? "Promote" : "Demote"} ${selectedStudents.length} selected student${selectedStudents.length !== 1 ? "s" : ""} by one year?`,
+      confirmText: type === "promote" ? "Promote" : "Demote",
+      onConfirm: () => applyBulkYearAction(type),
+    });
   };
 
   // ── Confirm handlers ─────────────────────────────────────────────────────
-  const confirmRoleChange = async () => {
-    if (!pendingRoleChange) return;
-    const { student, newRole } = pendingRoleChange;
-    try {
-      await updateStudent(student.id, { role: newRole });
-      setStudents(prev => prev.map(s => s.id === student.id ? { ...s, role: newRole } : s));
-    } catch { alert("Failed to update role"); }
-    setShowRoleConfirm(false);
-    setPendingRoleChange(null);
+  const requestRoleChange = (student, newRole) => {
+    if (newRole === student.role) return;
+
+    confirm({
+      message: `Change ${student.name}'s role to "${newRole}"?`,
+      confirmText: "Change",
+      onConfirm: async () => {
+        await updateStudent(student.id, { role: newRole });
+        setStudents(prev => prev.map(s => s.id === student.id ? { ...s, role: newRole } : s));
+      },
+    });
   };
 
-  const confirmDepartmentChange = async () => {
-    if (!pendingDepartmentChange) return;
-    const { student, newDepartment } = pendingDepartmentChange;
-    try {
-      await updateStudent(student.id, { department: newDepartment });
-      setStudents(prev => prev.map(s => s.id === student.id ? { ...s, department: newDepartment } : s));
-    } catch { alert("Failed to update department"); }
-    setShowDepartmentConfirm(false);
-    setPendingDepartmentChange(null);
+  const requestDepartmentChange = (student, newDepartment) => {
+    if (newDepartment === student.department) return;
+
+    confirm({
+      message: `Move ${student.name} to "${newDepartment}"?`,
+      confirmText: "Change",
+      onConfirm: async () => {
+        await updateStudent(student.id, { department: newDepartment });
+        setStudents(prev => prev.map(s => s.id === student.id ? { ...s, department: newDepartment } : s));
+      },
+    });
   };
 
-  // FIX #3: Gender confirmation actually updates the DB
-  const confirmGenderChange = async () => {
-    if (!pendingGenderChange) return;
-    const { student, newGender } = pendingGenderChange;
-    try {
-      await updateStudent(student.id, { gender: newGender });
-      setStudents(prev => prev.map(s => s.id === student.id ? { ...s, gender: newGender } : s));
-    } catch { alert("Failed to update gender"); }
-    setShowGenderConfirm(false);
-    setPendingGenderChange(null);
+  const requestGenderChange = (student) => {
+    const newGender = student.gender === "male" ? "female" : "male";
+
+    confirm({
+      message: `Change ${student.name}'s gender to "${newGender}"?`,
+      confirmText: "Change",
+      onConfirm: async () => {
+        await updateStudent(student.id, { gender: newGender });
+        setStudents(prev => prev.map(s => s.id === student.id ? { ...s, gender: newGender } : s));
+      },
+    });
   };
 
   // ── Selection ────────────────────────────────────────────────────────────
@@ -618,15 +677,11 @@ setStudents(prev => [newStudent, ...prev]);
     setSelectedStudents(prev => prev.length === students.length && students.length > 0 ? [] : students.map(s => s.id));
 
   const handleHeaderPromote = () => {
-    if (selectedStudents.length === 0) { alert("Select at least one student first."); return; }
-    setBulkActionType("promote");
-    setShowBulkConfirm(true);
+    requestBulkYearAction("promote");
   };
 
   const handleHeaderDemote = () => {
-    if (selectedStudents.length === 0) { alert("Select at least one student first."); return; }
-    setBulkActionType("demote");
-    setShowBulkConfirm(true);
+    requestBulkYearAction("demote");
   };
 
   // ── Render ───────────────────────────────────────────────────────────────
@@ -684,7 +739,7 @@ setStudents(prev => [newStudent, ...prev]);
               </button>
               {selectedStudents.length > 0 && (
                 <button
-                  onClick={() => setShowDeleteConfirm(true)}
+                  onClick={requestDeleteSelectedStudents}
                   className="bg-red-500 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-red-600"
                 >
                   Delete ({selectedStudents.length})
@@ -773,10 +828,7 @@ setStudents(prev => [newStudent, ...prev]);
                     <td className="px-2 py-2 text-sm">
                       <select
                         value={student.role}
-                        onChange={(e) => {
-                          setPendingRoleChange({ student, newRole: e.target.value });
-                          setShowRoleConfirm(true);
-                        }}
+                        onChange={(e) => requestRoleChange(student, e.target.value)}
                         className="border border-gray-300 rounded px-2 py-1 text-sm text-gray-900 bg-white w-full focus:ring-2 focus:ring-blue-500"
                       >
                         {/* Placeholder shown when DB value doesn't match any option */}
@@ -791,10 +843,7 @@ setStudents(prev => [newStudent, ...prev]);
                     <td className="px-2 py-2 text-sm">
                       <select
                         value={student.department}
-                        onChange={(e) => {
-                          setPendingDepartmentChange({ student, newDepartment: e.target.value });
-                          setShowDepartmentConfirm(true);
-                        }}
+                        onChange={(e) => requestDepartmentChange(student, e.target.value)}
                         className="border border-gray-300 rounded px-2 py-1 text-sm text-gray-900 bg-white w-full focus:ring-2 focus:ring-blue-500"
                       >
                         {/* Show whatever the DB has, even if it doesn't match our list */}
@@ -831,11 +880,7 @@ setStudents(prev => [newStudent, ...prev]);
                     {/* FIX #3: Gender button opens confirmation modal to change */}
                     <td className="px-2 py-2">
                       <button
-                        onClick={() => {
-                          const newGender = student.gender === "male" ? "female" : "male";
-                          setPendingGenderChange({ student, newGender });
-                          setShowGenderConfirm(true);
-                        }}
+                        onClick={() => requestGenderChange(student)}
                         className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${
                           student.gender === "male"
                             ? "bg-blue-100 text-blue-800 hover:bg-blue-200"
@@ -878,77 +923,21 @@ setStudents(prev => [newStudent, ...prev]);
       </div>
 
       {/* ── Confirmation Modals ─────────────────────────────────────────── */}
-      <ConfirmationModal
-        isOpen={showSaveConfirm}
-        onClose={() => { setShowSaveConfirm(false); setPendingEdit(null); setEditingCell({ id: null, field: null, value: "" }); }}
-        onConfirm={confirmEdit}
-        title="Save Changes"
-        message={pendingEdit ? `Update ${pendingEdit.field} to "${pendingEdit.newValue}"?` : "Save this change?"}
-      />
-
-      <ConfirmationModal
-        isOpen={showDeleteConfirm}
-        onClose={() => setShowDeleteConfirm(false)}
-        onConfirm={deleteSelectedStudents}
-        title="Confirm Delete"
-        message={`Delete ${selectedStudents.length} student${selectedStudents.length !== 1 ? "s" : ""}? This cannot be undone.`}
-        actionType="danger"
-      />
-
-      <ConfirmationModal
-        isOpen={showRoleConfirm}
-        onClose={() => { setShowRoleConfirm(false); setPendingRoleChange(null); }}
-        onConfirm={confirmRoleChange}
-        title="Change Role"
-        message={pendingRoleChange
-          ? `Change ${pendingRoleChange.student.name}'s role to "${pendingRoleChange.newRole}"?`
-          : ""}
-      />
-
-      {/* FIX #1: Department confirmation modal wired up */}
-      <ConfirmationModal
-        isOpen={showDepartmentConfirm}
-        onClose={() => { setShowDepartmentConfirm(false); setPendingDepartmentChange(null); }}
-        onConfirm={confirmDepartmentChange}
-        title="Change Department"
-        message={pendingDepartmentChange
-          ? `Move ${pendingDepartmentChange.student.name} to "${pendingDepartmentChange.newDepartment}"?`
-          : ""}
-      />
-
-      {/* FIX #3: Gender confirmation modal wired up and saves to DB */}
-      <ConfirmationModal
-        isOpen={showGenderConfirm}
-        onClose={() => { setShowGenderConfirm(false); setPendingGenderChange(null); }}
-        onConfirm={confirmGenderChange}
-        title="Change Gender"
-        message={pendingGenderChange
-          ? `Change ${pendingGenderChange.student.name}'s gender to "${pendingGenderChange.newGender}"?`
-          : ""}
-      />
-
-      {/* FIX #6: Bulk year confirm */}
-      <ConfirmationModal
-        isOpen={showBulkConfirm}
-        onClose={() => { setShowBulkConfirm(false); setBulkActionType(null); }}
-        onConfirm={confirmBulkAction}
-        title={bulkActionType === "promote" ? "Bulk Promote" : "Bulk Demote"}
-        message={`${bulkActionType === "promote" ? "Promote" : "Demote"} ${selectedStudents.length} selected student${selectedStudents.length !== 1 ? "s" : ""} by one year?`}
-      />
-
       {/* FIX #4: Add modal rendered */}
       <AddStudentModal
         isOpen={showAddModal}
         onClose={() => setShowAddModal(false)}
-        onAdd={handleAddStudent}
+        onAdd={requestAddStudent}
       />
 
       {/* FIX #4: Import modal rendered */}
       <ImportModal
         isOpen={showImportModal}
         onClose={() => setShowImportModal(false)}
-        onImport={handleImportStudents}
+        onImport={requestImportStudents}
       />
+
+      {confirmationDialog}
     </div>
   );
 }

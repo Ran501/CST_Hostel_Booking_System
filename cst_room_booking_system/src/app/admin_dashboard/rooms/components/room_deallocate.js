@@ -194,9 +194,9 @@ export default function DeallocateStudents({
           </button>
 
           <button
-            onClick={() => {
-              onConfirm(selected);
-              setSelected([]);
+            onClick={async () => {
+              const confirmed = await onConfirm(selected);
+              if (confirmed !== false) setSelected([]);
             }}
             disabled={selected.length === 0}
             className={`px-6 py-2.5 rounded-xl text-white text-sm font-medium transition shadow-sm ${

@@ -6,6 +6,7 @@ import RoomCard from "./room_card";
 import EditRoomsModal from "./room_edit";
 import AllocateStudents from "./room_allocate";
 import DeallocateStudents from "./room_deallocate";
+import { useConfirmation } from "../../components/useConfirmation";
 
 function Badge({ children, color }) {
   return (
@@ -213,6 +214,7 @@ export default function RoomManagement() {
   const [allocateRoom, setAllocateRoom] = useState(null);
   const [reason,       setReason]       = useState("");
   const [downloading,  setDownloading]  = useState(false);
+  const { confirm, confirmationDialog } = useConfirmation();
 
   // ── Derived ───────────────────────────────────────────────────────────────
   const hostelId       = hostel?.id;
@@ -317,7 +319,7 @@ export default function RoomManagement() {
   }, []);
 
   // ── API helper ────────────────────────────────────────────────────────────
-  async function callAction(body) {
+  const callAction = useCallback(async (body) => {
     const res  = await fetch("/api/admin/room", {
       method:  "POST",
       headers: { "Content-Type": "application/json" },
@@ -326,7 +328,7 @@ export default function RoomManagement() {
     const json = await res.json();
     if (!res.ok) throw new Error(json.message ?? "Action failed");
     return json.data;
-  }
+  }, []);
 
   // ── Selection ─────────────────────────────────────────────────────────────
   const handleSelectAll = useCallback(() => {
@@ -378,69 +380,114 @@ export default function RoomManagement() {
     if (selectionMode) { toggleRoomSelection(roomId); return; }
     const room = rooms.find((r) => r.id === roomId);
     if (!room) return;
-    if (room.status === "disabled") handleEnableRoom(roomId);
+    if (room.status === "disabled") requestEnableRooms([roomId], `Enable room ${room.room}?`);
     else { setAllocateRoom(roomId); setAllocateOpen(true); }
   };
 
-  const handleEnableRoom = async (roomId) => {
-    setRooms((prev) => prev.map((r) => r.id === roomId ? { ...r, status: "empty" } : r));
-    try { await callAction({ action: "enable", roomIds: [roomId] }); }
-    catch (err) { console.error(err); fetchRooms(); }
-  };
+  const enableRooms = useCallback(async (roomIds) => {
+    setRooms((prev) => prev.map((r) => roomIds.includes(r.id) ? { ...r, status: "empty" } : r));
+    try {
+      await callAction({ action: "enable", roomIds });
+    } catch (err) {
+      await fetchRooms();
+      throw err;
+    }
+  }, [callAction, fetchRooms]);
 
-  const confirmDisable = async () => {
+  const requestEnableRooms = useCallback((roomIds, message) => {
+    if (!roomIds.length) return false;
+
+    return confirm({
+      message,
+      confirmText: "Enable",
+      onConfirm: () => enableRooms(roomIds),
+    });
+  }, [confirm, enableRooms]);
+
+  const confirmDisable = () => {
     const ids = [...selectedRooms];
-    setRooms((prev) => prev.map((r) => ids.includes(r.id) ? { ...r, status: "disabled" } : r));
-    setDisableReasonOpen(false);
-    setSelectedRooms([]);
-    setReason("");
-    try { await callAction({ action: "disable", roomIds: ids, reason }); }
-    catch (err) { console.error(err); fetchRooms(); }
+    const reasonText = reason;
+
+    confirm({
+      message: `Disable ${ids.length} selected room${ids.length !== 1 ? "s" : ""}?`,
+      confirmText: "Disable",
+      onConfirm: async () => {
+        setRooms((prev) => prev.map((r) => ids.includes(r.id) ? { ...r, status: "disabled" } : r));
+        try {
+          await callAction({ action: "disable", roomIds: ids, reason: reasonText });
+          setDisableReasonOpen(false);
+          setSelectedRooms([]);
+          setReason("");
+        } catch (err) {
+          await fetchRooms();
+          throw err;
+        }
+      },
+    });
   };
 
   // ── FIX 1: Edit — also send year so it's persisted ───────────────────────
-  const handleEditSave = async (data) => {
-    setEditModalOpen(false);
-    try {
-      await callAction({
-        action:   "edit",
-        roomIds:  selectedRooms,
-        // Pass both fields; service ignores undefined ones
-        ...(data.capacity !== undefined && { capacity: data.capacity }),
-        ...(data.year     !== undefined && { year:     data.year     }),
-      });
-      setSelectedRooms([]);
-      fetchRooms();
-    } catch (err) {
-      console.error("Edit failed:", err);
-    }
+  const handleEditSave = (data) => {
+    const ids = [...selectedRooms];
+
+    return confirm({
+      message: `Save changes to ${ids.length} selected room${ids.length !== 1 ? "s" : ""}?`,
+      confirmText: "Save",
+      onConfirm: async () => {
+        await callAction({
+          action:   "edit",
+          roomIds:  ids,
+          // Pass both fields; service ignores undefined ones
+          ...(data.capacity !== undefined && { capacity: data.capacity }),
+          ...(data.year     !== undefined && { year:     data.year     }),
+        });
+        setEditModalOpen(false);
+        setSelectedRooms([]);
+        await fetchRooms();
+      },
+    });
   };
 
-  const handleAllocateSave = async (data) => {
-    setAllocateOpen(false);
-    try {
-      await callAction({
-        action:         "allocate",
-        roomId:         allocateRoom,
-        studentNumbers: data.studentNumbers,
-        checkIn:        data.checkIn,
-        checkOut:       data.checkOut,
-      });
-      setAllocateRoom(null);
-      fetchRooms();
-    } catch (err) { console.error(err); }
+  const handleAllocateSave = (data) => {
+    const roomId = allocateRoom;
+    const room = rooms.find((r) => r.id === roomId);
+
+    return confirm({
+      message: `Allocate ${data.studentNumbers.length} student${data.studentNumbers.length !== 1 ? "s" : ""} to room ${room?.room ?? ""}?`,
+      confirmText: "Allocate",
+      onConfirm: async () => {
+        await callAction({
+          action:         "allocate",
+          roomId,
+          studentNumbers: data.studentNumbers,
+          checkIn:        data.checkIn,
+          checkOut:       data.checkOut,
+        });
+        setAllocateOpen(false);
+        setAllocateRoom(null);
+        await fetchRooms();
+      },
+    });
   };
 
-  const handleDeallocateConfirm = async (selectedBookingIds) => {
-    setDeallocateOpen(false);
-    try {
-      if (selectedBookingIds?.length)
-        await callAction({ action: "deallocate", bookingIds: selectedBookingIds });
-      else
-        await callAction({ action: "deallocate", roomIds: selectedRooms });
-      setSelectedRooms([]);
-      fetchRooms();
-    } catch (err) { console.error(err); }
+  const handleDeallocateConfirm = (selectedBookingIds) => {
+    const bookingIds = selectedBookingIds ?? [];
+    const roomIds = [...selectedRooms];
+    const count = bookingIds.length || students.filter((s) => roomIds.includes(s.roomId)).length;
+
+    return confirm({
+      message: `Remove ${count} student${count !== 1 ? "s" : ""} from selected room${roomIds.length !== 1 ? "s" : ""}?`,
+      confirmText: "Remove",
+      onConfirm: async () => {
+        if (bookingIds.length)
+          await callAction({ action: "deallocate", bookingIds });
+        else
+          await callAction({ action: "deallocate", roomIds });
+        setDeallocateOpen(false);
+        setSelectedRooms([]);
+        await fetchRooms();
+      },
+    });
   };
 
   // ── Download ──────────────────────────────────────────────────────────────
@@ -513,9 +560,15 @@ export default function RoomManagement() {
         e.preventDefault();
         const disabledIds = rooms.filter((r) => r.status === "disabled").map((r) => r.id);
         if (!disabledIds.length) return;
-        setRooms((prev) => prev.map((r) => r.status === "disabled" ? { ...r, status: "empty" } : r));
-        callAction({ action: "enable", roomIds: disabledIds }).catch(() => fetchRooms());
-        setSelectedRooms([]); setSelectionMode(false);
+        requestEnableRooms(
+          disabledIds,
+          `Enable all ${disabledIds.length} disabled room${disabledIds.length !== 1 ? "s" : ""}?`
+        ).then((confirmed) => {
+          if (confirmed) {
+            setSelectedRooms([]);
+            setSelectionMode(false);
+          }
+        });
       }
       if (selectionMode && e.key === "Tab") {
         e.preventDefault();
@@ -528,7 +581,7 @@ export default function RoomManagement() {
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [rooms, selectedRooms, selectionMode, handleSelectAll]);
+  }, [rooms, selectedRooms, selectionMode, handleSelectAll, requestEnableRooms]);
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
@@ -792,6 +845,8 @@ export default function RoomManagement() {
         hostelId={hostelId}
         hostelName={hostel?.hostelName ?? hostel?.name ?? "Hostel"}
       />
+
+      {confirmationDialog}
     </div>
   );
 }

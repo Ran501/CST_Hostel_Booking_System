@@ -3,12 +3,14 @@
 import HostelCard from "./hostel_card";
 import { useState, useEffect } from "react";
 import { X } from "lucide-react";
+import { useConfirmation } from "../../components/useConfirmation";
 
 export default function HostelPage() {
   const [hostels,         setHostels]         = useState([]);
   const [loading,         setLoading]         = useState(true);
   const [error,           setError]           = useState(null);
   const [selectedHostel,  setSelectedHostel]  = useState(null);
+  const { confirm, confirmationDialog } = useConfirmation();
 
   // ── Fetch hostels ───────────────────────────────────────────────────────────
   useEffect(() => {
@@ -37,26 +39,32 @@ export default function HostelPage() {
 
   // ── Update hostel (gender / status) ────────────────────────────────────────
   async function updateHostel(updatedHostel) {
-    try {
-      const res = await fetch("/api/admin/hostel", {
-        method:  "PUT",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          id:     updatedHostel.id,
-          gender: updatedHostel.gender,
-          status: updatedHostel.status,   // "active" | "inactive"
-        }),
-      });
+    const res = await fetch("/api/admin/hostel", {
+      method:  "PUT",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        id:     updatedHostel.id,
+        gender: updatedHostel.gender,
+        status: updatedHostel.status,   // "active" | "inactive"
+      }),
+    });
 
-      if (!res.ok) throw new Error("Update failed");
+    if (!res.ok) throw new Error("Update failed");
 
-      setHostels((prev) =>
-        prev.map((h) => (h.id === updatedHostel.id ? updatedHostel : h))
-      );
-      setSelectedHostel(updatedHostel);
-    } catch (err) {
-      alert("Update failed");
-    }
+    setHostels((prev) =>
+      prev.map((h) => (h.id === updatedHostel.id ? updatedHostel : h))
+    );
+    setSelectedHostel(updatedHostel);
+  }
+
+  function requestHostelUpdate(updatedHostel, message) {
+    if (!selectedHostel || updatedHostel.id !== selectedHostel.id) return;
+
+    confirm({
+      message,
+      confirmText: "Update",
+      onConfirm: () => updateHostel(updatedHostel),
+    });
   }
 
   // ── Loading skeleton ────────────────────────────────────────────────────────
@@ -191,9 +199,14 @@ export default function HostelPage() {
                 <label className="block mb-2 font-medium text-black">Gender</label>
                 <select
                   value={selectedHostel.gender ?? ""}
-                  onChange={(e) =>
-                    updateHostel({ ...selectedHostel, gender: e.target.value })
-                  }
+                  onChange={(e) => {
+                    const nextGender = e.target.value;
+                    if (nextGender === (selectedHostel.gender ?? "")) return;
+                    requestHostelUpdate(
+                      { ...selectedHostel, gender: nextGender },
+                      `Change ${selectedHostel.hostelName}'s gender restriction to "${nextGender || "not set"}"?`
+                    );
+                  }}
                   className="w-full px-4 py-2 rounded-lg border border-gray-300 text-black focus:outline-none focus:ring-2 focus:ring-blue-500"
                 >
                   <option value="">Select gender</option>
@@ -211,12 +224,16 @@ export default function HostelPage() {
                   </p>
                 </div>
                 <button
-                  onClick={() =>
-                    updateHostel({
-                      ...selectedHostel,
-                      status: selectedHostel.status === "active" ? "inactive" : "active",
-                    })
-                  }
+                  onClick={() => {
+                    const nextStatus = selectedHostel.status === "active" ? "inactive" : "active";
+                    requestHostelUpdate(
+                      {
+                        ...selectedHostel,
+                        status: nextStatus,
+                      },
+                      `${nextStatus === "active" ? "Activate" : "Deactivate"} ${selectedHostel.hostelName}?`
+                    );
+                  }}
                   className={`relative w-14 h-7 rounded-full transition-colors duration-200 ${
                     selectedHostel.status === "active" ? "bg-green-500" : "bg-gray-300"
                   }`}
@@ -233,6 +250,7 @@ export default function HostelPage() {
           </div>
         </div>
       )}
+      {confirmationDialog}
     </section>
   );
 }
