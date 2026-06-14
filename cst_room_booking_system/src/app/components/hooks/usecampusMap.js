@@ -70,7 +70,7 @@ export const useCampusMap = () => {
     });
   }, []);
 
-  // 🔥 FIXED FLY FUNCTION
+  // Fixed fly function
   const flyToPlace = useCallback((place) => {
     if (!mapRef.current) {
       console.log('Map not ready');
@@ -79,34 +79,7 @@ export const useCampusMap = () => {
 
     setSelectedHostel(place);
 
-    const isMobile =
-      typeof window !== 'undefined' && window.innerWidth < 640;
-
-    let lng = place.lng;
-  let lat = place.lat;
-
-  if (place.name === 'LHAWANG HOSTEL') {
-    if (isMobile) {
-      // 📱 phone version coordinate (adjust this)
-      lng = place.mobileLng ?? place.lng;
-      lat = place.mobileLat ?? place.lat;
-    } else {
-      // 💻 laptop version coordinate (adjust this)
-      lng = place.desktopLng ?? place.lng;
-      lat = place.desktopLat ?? place.lat;
-    }
-  }
-
-  const offset = isMobile ? [0, -120] : [0, 0];
-
-  mapRef.current.flyTo({
-    center: [lng, lat],
-    zoom: 18,
-    duration: 2000,
-    offset
-  });
-
-    // Reset all markers
+    // Reset all markers to default red color
     Object.keys(markersRef.current).forEach((key) => {
       const marker = markersRef.current[key];
       const markerEl = marker.getElement();
@@ -120,25 +93,41 @@ export const useCampusMap = () => {
       }
     });
 
-    // Highlight selected marker AFTER animation
+    // Highlight selected marker with a small delay to allow DOM to render
     setTimeout(() => {
-      // 🚨 FIX 2: use NAME instead of ID (important)
-      const selectedMarker = markersRef.current[place.name];
-
+      const selectedMarker = markersRef.current[place.id];
       if (selectedMarker) {
         const markerEl = selectedMarker.getElement();
-
         if (markerEl) {
           const path = markerEl.querySelector('svg path');
           if (path) {
             path.setAttribute('fill', '#135463');
           }
-
-          markerEl.style.filter =
-            'drop-shadow(0 0 12px rgba(37, 99, 235, 0.9)) drop-shadow(0 0 6px rgba(37, 99, 235, 0.6))';
+          markerEl.style.filter = 'drop-shadow(0 0 12px rgba(37, 99, 235, 0.9)) drop-shadow(0 0 6px rgba(37, 99, 235, 0.6))';
         }
       }
-    }, 2000); // 🚨 FIX 3: proper delay
+    }, 10); // Small delay for DOM to render the SVG path
+
+    // Fly to the place coordinates
+    const isMobile = typeof window !== 'undefined' && window.innerWidth < 640;
+
+    let lng = place.lng;
+    let lat = place.lat;
+
+    if (place.name === 'LHAWANG HOSTEL' || place.name === 'Lhawang Hostel') {
+      // Use desktop coordinates for Lhawang Hostel
+      lng = place.coordinates.desktop.lng;
+      lat = place.coordinates.desktop.lat;
+    }
+
+    const offset = isMobile ? [0, -120] : [0, 0];
+
+    mapRef.current.flyTo({
+      center: [lng, lat],
+      zoom: 18,
+      duration: 2000,
+      offset
+    });
   }, []);
 
   // Close card

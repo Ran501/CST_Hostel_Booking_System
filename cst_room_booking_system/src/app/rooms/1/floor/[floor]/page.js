@@ -4,9 +4,10 @@ import Link from "next/link";
 import { use, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import FloorSidebar from "../../../components/FloorSidebar";
-import RoomLegend from "../../../components/RoomLegend";
 import FloorBookingsView from "../../../components/FloorBookingsView";
 import ConfirmationDialog from "../../../../confirmation";
+import { getRoomColors, RoomLegend } from "../../../../room/components/useColors";
+
 import {
   RKA_NAME,
   leftColumnRoomsForFloor,
@@ -36,8 +37,8 @@ export default function RkaFloorPage({ params }) {
   const [isBooking, setIsBooking] = useState(false);
   const [toast, setToast] = useState(null);
   const [toastType, setToastType] = useState("error");
-  const [currentUser, setCurrentUser] = useState(null);       // FIX 1: null not undefined
-  const [sessionLoaded, setSessionLoaded] = useState(false);  // FIX 2: track session load
+  const [currentUser, setCurrentUser] = useState(null);       
+  const [sessionLoaded, setSessionLoaded] = useState(false);  
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [roomsData, setRoomsData] = useState([]);
@@ -57,22 +58,79 @@ export default function RkaFloorPage({ params }) {
     setSessionLoaded(true); // FIX 3: mark session as loaded regardless
   }, []);
 
-  // Fetch rooms
   useEffect(() => {
-    async function fetchRooms() {
-      try {
-        setLoading(true);
-        const res = await fetch(`/api/rooms?floor=${floorNum}&building=RKA`);
-        const data = await res.json();
-        if (data.success) setRoomsData(data.rooms || []);
-      } catch (err) {
-        console.error("Fetch error:", err);
-      } finally {
-        setLoading(false);
+  console.log("DEBUG: currentUser changed:", currentUser);
+  console.log("DEBUG: studentNumber:", currentUser?.studentNumber);
+  console.log("DEBUG: floorNum:", floorNum);
+}, [currentUser, floorNum]);
+
+
+
+  // Fetch rooms
+  // Fetch rooms and find user booking in one go (NO double fetching)
+useEffect(() => {
+  async function fetchData() {
+    try {
+      setLoading(true);
+      
+      // Fetch rooms data
+      const roomsRes = await fetch(`/api/rooms?floor=${floorNum}&building=RKA`);
+      const roomsData = await roomsRes.json();
+      
+      if (roomsData.success) {
+        setRoomsData(roomsData.rooms || []);
       }
+      
+      // Fetch user's booking using floor-bookings API (this has booking details)
+      if (currentUser) {
+        const studentNumber = currentUser.studentNumber ?? currentUser.phoneNumber ?? currentUser.stdNo;
+        
+        if (studentNumber) {
+          const params = new URLSearchParams({
+            building: RKA_NAME,
+            floor: String(floorNum),
+            studentNumber: String(studentNumber),
+          });
+          
+          const bookingsRes = await fetch(`/api/floor-bookings?${params.toString()}`);
+          const bookingsData = await bookingsRes.json();
+          
+          if (bookingsData.success && bookingsData.rooms) {
+            let userBookedRoom = null;
+            
+            for (const room of bookingsData.rooms) {
+              if (room.students && room.students.length > 0) {
+                const hasUserBooking = room.students.some(student => 
+                  student.studentNumber === studentNumber
+                );
+                
+                if (hasUserBooking) {
+                  userBookedRoom = room.roomNumber;
+                  break;
+                }
+              }
+            }
+            
+            if (userBookedRoom) {
+              setCurrentUser(prev => ({
+                ...prev,
+                bookedRoomNumber: userBookedRoom,
+                hasBooked: true
+              }));
+            }
+          }
+        }
+      }
+    } catch (err) {
+      console.error("Fetch error:", err);
+    } finally {
+      setLoading(false);
     }
-    if (isValid) fetchRooms();
-  }, [floorNum, isValid]);
+  }
+  
+  if (isValid) fetchData();
+}, [floorNum, isValid, currentUser?.studentNumber, currentUser?.phoneNumber, currentUser?.stdNo]);
+
 
   const getRoomInfo = (roomNo) => {
     const fullRoomId = `${RKA_NAME}-${roomNo}`;
@@ -225,7 +283,7 @@ export default function RkaFloorPage({ params }) {
       if (result.success) {
         showToast(`Room ${fullRoomId} reserved successfully! Details sent to your email.`, "success");
 
-        const updatedUser = { ...currentUser, hasBooked: true };
+        const updatedUser = { ...currentUser, hasBooked: true, bookedRoomNumber: fullRoomId};
         setCurrentUser(updatedUser);
         localStorage.setItem("session", JSON.stringify(updatedUser));
 
@@ -250,63 +308,42 @@ export default function RkaFloorPage({ params }) {
   }
 
   const RoomBlock = ({ room }) => {
-    const roomInfo = getRoomInfo(room);
+  const roomInfo = getRoomInfo(room);
 
-    if (!roomInfo) {
-      return (
-        <div className="w-full h-full rounded-xl border border-slate-200 bg-slate-50 animate-pulse flex items-center justify-center">
-          <span className="text-[10px] text-slate-400">Loading...</span>
-        </div>
-      );
-    }
-
-    const dbValue = roomInfo.isActive ?? roomInfo.is_active;
-    const status = String(roomInfo.status ?? "").toLowerCase().trim();
-    const isRoomActive =
-      dbValue !== false &&
-      String(dbValue).toUpperCase().trim() !== "FALSE" &&
-      !["disabled", "inactive", "maintenance"].includes(status);
-    const occupied = roomInfo.occupied || 0;
-    const capacity = roomInfo.capacity || 3;
-
-    const isFully = occupied >= capacity;
-    const isPartial = occupied > 0 && occupied < capacity;
-    const isSelected = selectedRoom === room;
-
-    const colors = !isRoomActive
-      ? "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed opacity-60"
-      : isFully
-        ? "border-slate-300 bg-slate-100 text-slate-500 cursor-not-allowed opacity-70"
-        : isSelected
-          ? "border-emerald-200 bg-emerald-50 text-emerald-700 ring-2 ring-emerald-300/70"
-          : isPartial
-            ? "border-amber-200 bg-amber-50 text-amber-700 hover:border-amber-300/80 hover:bg-amber-50/80 hover:-translate-y-0.5 hover:shadow-md"
-            : "border-green-700 bg-green-700 text-white hover:border-green-800 hover:bg-green-800 hover:-translate-y-0.5 hover:shadow-md";
-
+  if (!roomInfo) {
     return (
-      <button
-        disabled={!isRoomActive || isFully || loading}
-        className={`cursor-pointer group relative rounded-xl border shadow-sm transition-all duration-200 w-full h-full disabled:opacity-60 disabled:shadow-none ${colors}`}
-        onClick={() => setSelectedRoom(room)}
-      >
-        <div className="flex h-full flex-col items-center justify-center leading-tight px-1 sm:px-2">
-          <span className="text-sm xs:text-base sm:text-lg font-semibold tracking-wider">
-            {room}
-          </span>
-          <span className={`text-[9px] xs:text-[10px] sm:text-[11px] whitespace-nowrap ${!isRoomActive || isFully || isPartial ? "text-slate-700" : "text-white"}`}>
-            {!isRoomActive
-              ? roomInfo.disabledReason || "Inactive"
-              : isFully
-                ? `${capacity}/${capacity} Booked`
-                : isPartial
-                  ? `${occupied}/${capacity} Booked`
-                  : `${capacity - occupied} Available`}
-          </span>
-        </div>
-        <div className="pointer-events-none absolute inset-0 rounded-xl ring-0 transition group-hover:ring-1 group-hover:ring-slate-300/60" />
-      </button>
+      <div className="w-full h-full rounded-xl border border-slate-200 bg-slate-50 animate-pulse flex items-center justify-center">
+        <span className="text-[10px] text-slate-400">Loading...</span>
+      </div>
     );
-  };
+  }
+
+  const { colorClasses, textColorClass, statusText, isDisabled } = getRoomColors(
+    roomInfo,      // room information from API
+    selectedRoom,  // currently selected room
+    currentUser,   // logged in user data
+    RKA_NAME,      // building name (RKA)
+    room           // room number
+  );
+  
+  return (
+    <button
+      disabled={isDisabled || loading}
+      className={`cursor-pointer group relative rounded-xl border shadow-sm transition-all duration-200 w-full h-full disabled:opacity-60 disabled:shadow-none ${colorClasses}`}
+      onClick={() => setSelectedRoom(room)}
+    >
+      <div className="flex h-full flex-col items-center justify-center leading-tight px-1 sm:px-2">
+        <span className="text-sm xs:text-base sm:text-lg font-semibold tracking-wider">
+          {room}
+        </span>
+        <span className={`text-[9px] xs:text-[10px] sm:text-[11px] whitespace-nowrap ${textColorClass}`}>
+          {statusText}
+        </span>
+      </div>
+      <div className="pointer-events-none absolute inset-0 rounded-xl ring-0 transition group-hover:ring-1 group-hover:ring-gray-300/60" />
+    </button>
+  );
+};
 
   return (
     <main className="min-h-screen bg-zinc-100 py-4 sm:py-6 md:py-8 text-slate-900 overflow-x-hidden">

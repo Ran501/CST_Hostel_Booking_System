@@ -56,7 +56,7 @@ export default function FloorBookingsView({ building, floor, currentUser, onDeni
         type="button"
         onClick={loadBookings}
         disabled={loading}
-        className="fixed right-4 top-4 z-40 inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
+        className="cursor-pointer fixed right-4 top-4 z-40 inline-flex items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2 text-sm font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60"
       >
         <Eye className="h-4 w-4" />
         <span>{loading ? "Loading" : "View"}</span>

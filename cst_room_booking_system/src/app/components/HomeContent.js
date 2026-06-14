@@ -17,6 +17,12 @@ export default function HomeContent() {
   const [forceReauth, setForceReauth] = useState(false);
   const [showLogoutConfirm, setShowLogoutConfirm] = useState(false);
   const router = useRouter();
+  const [userBooking, setUserBooking] = useState(null);
+  const [isUnbooking, setIsUnbooking] = useState(false);
+  const [showUnbookConfirm, setShowUnbookConfirm] = useState(false);
+  const [unbookToast, setUnbookToast] = useState(null);
+  const [currentUser, setCurrentUser] = useState(null);
+  const [bookingPeriod, setBookingPeriod] = useState(null);
 
   useEffect(() => {
     // Get user info from localStorage or set default demo user
@@ -27,6 +33,27 @@ export default function HomeContent() {
         setUserName(parsed.name || parsed.phoneNumber || "Demo User");
         setUserEmail(parsed.email || "");
         setUserGender(parsed.gender || "");
+        setCurrentUser(parsed);
+
+        // Fetch booking
+        if (parsed.studentNumber) {
+          fetch(`/api/booking?studentNumber=${parsed.studentNumber}`)
+            .then(res => res.json())
+            .then(data => {
+              if (data.success && data.booking) setUserBooking(data.booking);
+            });
+        }
+
+
+        // Add this inside your existing useEffect after fetching session
+        fetch("/api/booking-period")
+          .then(res => res.json())
+          .then(data => {
+            if (data.success) setBookingPeriod(data.period);
+          })
+          .catch(err => console.error("Period fetch error:", err));
+
+          
       } else {
         // Redirect to login if no session
         router.push("/login");
@@ -38,6 +65,39 @@ export default function HomeContent() {
       router.push("/login");
     }
   }, [router]);
+
+  const canUnbook = bookingPeriod && new Date() < new Date(bookingPeriod.endDate);
+
+  const handleUnbook = async () => {
+    if (!currentUser?.studentNumber || !userBooking) return;
+    setIsUnbooking(true);
+
+    try {
+      const res = await fetch("/api/booking", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ studentNumber: currentUser.studentNumber }),
+      });
+
+      const result = await res.json();
+
+      if (result.success) {
+        setUserBooking(null);
+        setUnbookToast("Room unbooked successfully!");
+        const updatedUser = { ...currentUser, hasBooked: false };
+        setCurrentUser(updatedUser);
+        localStorage.setItem("session", JSON.stringify(updatedUser));
+      } else {
+        setUnbookToast(result.error || "Could not unbook.");
+      }
+    } catch {
+      setUnbookToast("Connection failed. Please try again.");
+    } finally {
+      setIsUnbooking(false);
+      setShowUnbookConfirm(false);
+      setTimeout(() => setUnbookToast(null), 4000);
+    }
+  };
 
   const normalizedGender = userGender?.toString?.().trim().toLowerCase();
   const avatarSrc =
@@ -219,6 +279,51 @@ export default function HomeContent() {
       <div className="h-[calc(100vh-60px)] min-h-125 sm:h-[calc(100vh-68px)] md:h-[calc(100vh-76px)]">
         <CampusMap />
       </div>
+      {/* Toast */}
+      {unbookToast &&  (
+        <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 bg-slate-800 text-white px-5 py-3 rounded-xl shadow-xl text-sm text-center max-w-sm w-[90%]">
+          {unbookToast}
+        </div>
+      )}
+
+      {/* Unbook button — only shows if user has a booking */}
+      {userBooking && canUnbook &&(
+        <div className="fixed top-20 right-4 z-40 sm:top-24 sm:right-6">
+          <button
+            onClick={() => setShowUnbookConfirm(true)}
+            className="bg-red-500 hover:bg-red-600 text-white text-xs sm:text-sm font-medium px-3 py-2 rounded-xl shadow-lg transition-colors"
+          >
+            Cancel Booking
+          </button>
+        </div>
+      )}
+
+      {/* Unbook confirmation modal */}
+      {showUnbookConfirm && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <div className="w-full max-w-sm rounded-2xl bg-white shadow-2xl p-6">
+            <h2 className="text-center text-lg font-semibold text-gray-900">Cancel Booking?</h2>
+            <p className="mt-2 text-center text-sm text-gray-600">
+              Are you sure you want to unbook <span className="font-medium">{userBooking.room?.roomNumber}</span>? This cannot be undone.
+            </p>
+            <div className="mt-6 flex gap-3">
+              <button
+                onClick={() => setShowUnbookConfirm(false)}
+                className="flex-1 h-10 rounded-md border border-gray-300 text-sm font-medium text-gray-700 hover:bg-gray-50"
+              >
+                Cancel
+              </button>
+              <button
+                onClick={handleUnbook}
+                disabled={isUnbooking}
+                className="flex-1 h-10 rounded-md bg-red-500 text-sm font-medium text-white hover:bg-red-600 disabled:opacity-60"
+              >
+                {isUnbooking ? "Unbooking..." : "Yes, Unbook"}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </main>
   );
 }
