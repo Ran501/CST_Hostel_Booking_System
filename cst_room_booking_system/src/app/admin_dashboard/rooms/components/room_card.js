@@ -82,7 +82,7 @@ export default function RoomCard({
 
   const handleClick = () => {
     if (selectionMode) {
-      onSelect();
+      onSelect?.();
       return;
     }
 
@@ -93,9 +93,12 @@ export default function RoomCard({
 
   return (
     <div
+      role="button"
+      aria-pressed={selected}
       tabIndex={0}
       onClick={handleClick}
       onKeyDown={(e) => {
+        if (e.target !== e.currentTarget) return;
         if (e.key === "Enter") {
           handleClick();
         }
@@ -108,27 +111,27 @@ export default function RoomCard({
             ? "cursor-pointer hover:shadow-md"
             : "cursor-pointer opacity-90"
         }
-        ${selected ? "ring-2 ring-blue-500" : ""}
+        ${selected ? "border-blue-600 ring-2 ring-blue-600 shadow-lg shadow-blue-100" : ""}
       `}
     >
 
       {/* Selection checkbox */}
-      {selectionMode && !isDisabled && (
-        <input
-          type="checkbox"
-          checked={selected}
-          onChange={(e) => {
-            e.stopPropagation();
-            onSelect();
-          }}
-          className="absolute top-4 left-4 w-4 h-4 accent-blue-600 z-10"
-        />
-      )}
+      <input
+        type="checkbox"
+        checked={selected}
+        aria-label={`Select room ${room}`}
+        onClick={(e) => e.stopPropagation()}
+        onChange={(e) => {
+          e.stopPropagation();
+          onSelect?.();
+        }}
+        className="absolute top-4 left-4 z-10 h-5 w-5 cursor-pointer rounded border-gray-300 accent-blue-600"
+      />
 
       {/* Header */}
       <div className="flex justify-between items-start">
 
-        <div className={selectionMode ? "ml-6" : ""}>
+        <div className="ml-7 min-w-0 pr-2">
           <h2 className="text-lg font-semibold text-gray-900">
             {room}
           </h2>
@@ -213,7 +216,9 @@ export default function RoomCard({
 
       {/* Footer */}
       <div className="mt-4 pt-3 border-t text-center text-sm text-gray-500">
-        {isDisabled
+        {selectionMode
+          ? selected ? "Selected" : "Not selected"
+          : isDisabled
           ? "Click to enable room"
           : "Click to Allocate"}
       </div>
