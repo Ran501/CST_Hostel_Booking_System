@@ -15,6 +15,72 @@ function bookingResponse(body, status = 200) {
   return { body, status };
 }
 
+// GET - Fetch student's current booking
+export async function GET(request) {
+  try {
+    const { searchParams } = new URL(request.url);
+    const studentNumber = searchParams.get("studentNumber");
+
+    if (!studentNumber) {
+      return Response.json({ success: false, error: "Missing studentNumber" }, { status: 400 });
+    }
+
+    const booking = await prisma.booking.findFirst({
+      where: { studentNumber: String(studentNumber) },
+      include: { room: true },
+    });
+
+    return Response.json({ success: true, booking: booking || null });
+
+  } catch (err) {
+    console.error("Get booking error:", err);
+    return Response.json({ success: false, error: err.message }, { status: 500 });
+  }
+}
+
+// DELETE - Unbook a room
+export async function DELETE(request) {
+  try {
+    const body = await request.json();
+    const { studentNumber } = body;
+
+    if (!studentNumber) {
+      return Response.json({ success: false, error: "Missing studentNumber" }, { status: 400 });
+    }
+
+    // Check active booking period
+    const period = await prisma.bookingPeriod.findFirst({
+      where: { isActive: true },
+      select: { endDate: true },
+    });
+
+    if (!period) {
+      return Response.json({ success: false, error: "No active booking period found." }, { status: 400 });
+    }
+
+    if (new Date() > period.endDate) {
+      return Response.json({ success: false, error: "Unbooking is no longer allowed. The booking period has closed." }, { status: 403 });
+    }
+
+    const booking = await prisma.booking.findFirst({
+      where: { studentNumber: String(studentNumber) },
+    });
+
+    if (!booking) {
+      return Response.json({ success: false, error: "No booking found for this student." }, { status: 404 });
+    }
+
+    await prisma.booking.delete({ where: { id: booking.id } });
+
+    return Response.json({ success: true, message: "Room unbooked successfully." });
+
+  } catch (err) {
+    console.error("Unbook error:", err);
+    return Response.json({ success: false, error: err.message }, { status: 500 });
+  }
+}
+
+// POST - Book a room (unchanged)
 export async function POST(request) {
   try {
     const body = await request.json();

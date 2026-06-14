@@ -52,6 +52,7 @@ model Room {
   floor      Int
   capacity   Int       @default(3)
   status     String    @default("available")
+  occupied   Int       @default(0)
   year       Int
   hostel_id  String
   bookings   Booking[]
@@ -90,4 +91,14 @@ model FloorAllocation {
 
   @@unique([hostelId, floor])
   @@index([studentYear])
+}
+
+model BookingPeriod {
+  id        String   @id @default(uuid())
+  startDate DateTime
+  endDate   DateTime
+  isActive  Boolean  @default(false)
+  year      Int
+
+  @@index([isActive])
 }
