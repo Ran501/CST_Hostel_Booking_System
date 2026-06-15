@@ -17,7 +17,7 @@ function Badge({ children, color }) {
 
 // ── Preview Modal ─────────────────────────────────────────────────────────────
 function PreviewModal({ isOpen, onClose, hostelId, hostelName }) {
-  const [groups,  setGroups]  = useState([]);
+  const [groups, setGroups] = useState([]);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -26,8 +26,8 @@ function PreviewModal({ isOpen, onClose, hostelId, hostelName }) {
     const load = async () => {
       setLoading(true);
       try {
-        const res   = await fetch(`/api/admin/room?hostelId=${hostelId}`);
-        const json  = await res.json();
+        const res = await fetch(`/api/admin/room?hostelId=${hostelId}`);
+        const json = await res.json();
         const rooms = (json.data ?? [])
           .filter((r) => r.status !== "disabled" && (r.occupants?.length ?? 0) > 0)
           .sort((a, b) => a.room.localeCompare(b.room, undefined, { numeric: true }));
@@ -40,20 +40,20 @@ function PreviewModal({ isOpen, onClose, hostelId, hostelName }) {
         let phoneMap = {};
         if (studentNumbers.length > 0) {
           try {
-            const sRes  = await fetch(`/api/admin/student?studentNumbers=${studentNumbers.join(",")}`);
+            const sRes = await fetch(`/api/admin/student?studentNumbers=${studentNumbers.join(",")}`);
             const sJson = await sRes.json();
-            const list  = Array.isArray(sJson.data) ? sJson.data
-                        : Array.isArray(sJson.students) ? sJson.students : [];
+            const list = Array.isArray(sJson.data) ? sJson.data
+              : Array.isArray(sJson.students) ? sJson.students : [];
             list.forEach((s) => { phoneMap[s.studentNumber] = s.phoneNumber ?? ""; });
-          } catch (_) {}
+          } catch (_) { }
         }
 
         setGroups(rooms.map((r) => ({
           roomNumber: r.room,
-          students:   (r.occupants ?? []).map((o) => ({
+          students: (r.occupants ?? []).map((o) => ({
             studentNumber: o.studentNumber ?? "",
-            name:          o.name          ?? "",
-            phone:         phoneMap[o.studentNumber] ?? "",
+            name: o.name ?? "",
+            phone: phoneMap[o.studentNumber] ?? "",
           })),
         })));
       } catch (err) {
@@ -120,9 +120,9 @@ function PreviewModal({ isOpen, onClose, hostelId, hostelName }) {
         </div>
 
         <div className="px-6 py-3 border-t border-gray-200 bg-gray-50 flex justify-end flex-shrink-0">
-          <button onClick={onClose} className="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm transition">
-            Close
-          </button>
+          {/* <button onClick={onClose} className="px-4 py-2 rounded-lg bg-gray-200 hover:bg-gray-300 text-gray-700 text-sm transition">
+  
+          </button> */}
         </div>
       </div>
     </div>
@@ -185,80 +185,80 @@ const SESSION_KEY = "room_mgmt_hostel_id";
 export default function RoomManagement() {
 
   const [hostelOpen, setHostelOpen] = useState(false);
-  const [floorOpen,  setFloorOpen]  = useState(false);
+  const [floorOpen, setFloorOpen] = useState(false);
 
   const [hostels, setHostels] = useState([]);
-  const [hostel,  setHostel]  = useState(null);
+  const [hostel, setHostel] = useState(null);
   const [floorIndex, setFloorIndex] = useState(1);
 
-  const [rooms,   setRooms]   = useState([]);
+  const [rooms, setRooms] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [error,   setError]   = useState(null);
+  const [error, setError] = useState(null);
 
   const [selectedRooms, setSelectedRooms] = useState([]);
-  const [actionsOpen,   setActionsOpen]   = useState(false);
+  const [actionsOpen, setActionsOpen] = useState(false);
 
-  const [editModalOpen,     setEditModalOpen]     = useState(false);
-  const [allocateOpen,      setAllocateOpen]      = useState(false);
+  const [editModalOpen, setEditModalOpen] = useState(false);
+  const [allocateOpen, setAllocateOpen] = useState(false);
   const [disableReasonOpen, setDisableReasonOpen] = useState(false);
-  const [disableGuardOpen,  setDisableGuardOpen]  = useState(false);
-  const [previewOpen,       setPreviewOpen]       = useState(false);
+  const [disableGuardOpen, setDisableGuardOpen] = useState(false);
+  const [previewOpen, setPreviewOpen] = useState(false);
 
-  const [guardOccupied,  setGuardOccupied]  = useState([]);
-  const [guardDisabled,  setGuardDisabled]  = useState([]);
+  const [guardOccupied, setGuardOccupied] = useState([]);
+  const [guardDisabled, setGuardDisabled] = useState([]);
 
   const [allocateRoom, setAllocateRoom] = useState(null);
-  const [reason,       setReason]       = useState("");
-  const [downloading,  setDownloading]  = useState(false);
+  const [reason, setReason] = useState("");
+  const [downloading, setDownloading] = useState(false);
   const { confirm, confirmationDialog } = useConfirmation();
 
   // ── Derived ───────────────────────────────────────────────────────────────
-  const hostelId       = hostel?.id;
-  const hostelGender   = hostel?.gender ?? "";
+  const hostelId = hostel?.id;
+  const hostelGender = hostel?.gender ?? "";
   const numberOfFloors = hostel?.numberOfFloor ?? 0;
-  const floorLabels    = Array.from({ length: numberOfFloors }, (_, i) => i + 1);
-  const floorAllocations  = hostel?.floorAllocations ?? [];
+  const floorLabels = Array.from({ length: numberOfFloors }, (_, i) => i + 1);
+  const floorAllocations = hostel?.floorAllocations ?? [];
   const currentFloorAlloc = floorAllocations.find((fa) => fa.floor === floorIndex);
-  const allowedYear       = currentFloorAlloc?.studentYear ?? null;
+  const allowedYear = currentFloorAlloc?.studentYear ?? null;
 
   const students = rooms.flatMap((r) =>
     (r.occupants ?? []).map((occ) => ({
-      bookingId:     occ.bookingId     ?? null,
+      bookingId: occ.bookingId ?? null,
       studentNumber: occ.studentNumber ?? "",
-      name:          occ.name          ?? "Unknown",
-      id:            occ.bookingId     ?? occ.studentNumber,
-      room:          r.room,
-      roomId:        r.id,
-      year:          "N/A",
+      name: occ.name ?? "Unknown",
+      id: occ.bookingId ?? occ.studentNumber,
+      room: r.room,
+      roomId: r.id,
+      year: "N/A",
     }))
   );
 
-  const selectionMode         = selectedRooms.length > 0;
-  const selectedRoomDetails   = rooms.filter((r) => selectedRooms.includes(r.id));
+  const selectionMode = selectedRooms.length > 0;
+  const selectedRoomDetails = rooms.filter((r) => selectedRooms.includes(r.id));
   const selectedOccupantCount = students.filter((s) => selectedRooms.includes(s.roomId)).length;
 
-  const totalRooms    = rooms.length;
+  const totalRooms = rooms.length;
   const totalCapacity = rooms.reduce((s, r) => s + r.capacity, 0);
-  const occupiedBeds  = rooms.reduce((s, r) => s + (r.occupants?.length ?? 0), 0);
+  const occupiedBeds = rooms.reduce((s, r) => s + (r.occupants?.length ?? 0), 0);
   const disabledCount = rooms.filter((r) => r.status === "disabled").length;
 
   // ── Persist selected hostel in sessionStorage ─────────────────────────────
   useEffect(() => {
     const load = async () => {
       try {
-        const res  = await fetch("/api/admin/hostel");
+        const res = await fetch("/api/admin/hostel");
         const json = await res.json();
-        const list = Array.isArray(json)         ? json
-                   : Array.isArray(json.data)    ? json.data
-                   : Array.isArray(json.hostels) ? json.hostels
-                   : [];
+        const list = Array.isArray(json) ? json
+          : Array.isArray(json.data) ? json.data
+            : Array.isArray(json.hostels) ? json.hostels
+              : [];
 
         setHostels(list);
 
         if (list.length === 0) return;
 
-        const savedId   = sessionStorage.getItem(SESSION_KEY);
-        const restored  = savedId ? list.find((h) => h.id === savedId) : null;
+        const savedId = sessionStorage.getItem(SESSION_KEY);
+        const restored = savedId ? list.find((h) => h.id === savedId) : null;
 
         setHostel(restored ?? list[0]);
       } catch (err) {
@@ -282,8 +282,8 @@ export default function RoomManagement() {
     setError(null);
     try {
       const params = new URLSearchParams({ hostelId, floor: floorIndex });
-      const res    = await fetch(`/api/admin/room?${params}`);
-      const json   = await res.json();
+      const res = await fetch(`/api/admin/room?${params}`);
+      const json = await res.json();
       if (!res.ok) throw new Error(json.message ?? "Failed to load rooms");
       setRooms(json.data ?? []);
     } catch (err) {
@@ -323,10 +323,10 @@ export default function RoomManagement() {
 
   // ── API helper ────────────────────────────────────────────────────────────
   const callAction = useCallback(async (body) => {
-    const res  = await fetch("/api/admin/room", {
-      method:  "POST",
+    const res = await fetch("/api/admin/room", {
+      method: "POST",
       headers: { "Content-Type": "application/json" },
-      body:    JSON.stringify(body),
+      body: JSON.stringify(body),
     });
     const json = await res.json();
     if (!res.ok) throw new Error(json.message ?? "Action failed");
@@ -480,10 +480,10 @@ export default function RoomManagement() {
       confirmText: "Save",
       onConfirm: async () => {
         await callAction({
-          action:   "edit",
-          roomIds:  ids,
+          action: "edit",
+          roomIds: ids,
           ...(data.capacity !== undefined && { capacity: data.capacity }),
-          ...(data.year     !== undefined && { year:     data.year     }),
+          ...(data.year !== undefined && { year: data.year }),
         });
         setEditModalOpen(false);
         clearSelection();
@@ -501,11 +501,11 @@ export default function RoomManagement() {
       confirmText: "Allocate",
       onConfirm: async () => {
         await callAction({
-          action:         "allocate",
+          action: "allocate",
           roomId,
           studentNumbers: data.studentNumbers,
-          checkIn:        data.checkIn,
-          checkOut:       data.checkOut,
+          checkIn: data.checkIn,
+          checkOut: data.checkOut,
         });
         setAllocateOpen(false);
         setAllocateRoom(null);
@@ -519,7 +519,7 @@ export default function RoomManagement() {
     if (!hostelId) return;
     setDownloading(true);
     try {
-      const roomRes  = await fetch(`/api/admin/room?hostelId=${hostelId}`);
+      const roomRes = await fetch(`/api/admin/room?hostelId=${hostelId}`);
       const roomJson = await roomRes.json();
       const allRooms = (roomJson.data ?? [])
         .filter((r) => r.status !== "disabled" && (r.occupants?.length ?? 0) > 0)
@@ -533,12 +533,12 @@ export default function RoomManagement() {
       let phoneMap = {};
       if (studentNumbers.length > 0) {
         try {
-          const sRes  = await fetch(`/api/admin/student?studentNumbers=${studentNumbers.join(",")}`);
+          const sRes = await fetch(`/api/admin/student?studentNumbers=${studentNumbers.join(",")}`);
           const sJson = await sRes.json();
-          const list  = Array.isArray(sJson.data) ? sJson.data
-                      : Array.isArray(sJson.students) ? sJson.students : [];
+          const list = Array.isArray(sJson.data) ? sJson.data
+            : Array.isArray(sJson.students) ? sJson.students : [];
           list.forEach((s) => { phoneMap[s.studentNumber] = s.phoneNumber ?? ""; });
-        } catch (_) {}
+        } catch (_) { }
       }
 
       const csvRows = [["Room No.", "Student No.", "Student Name", "Phone Number"]];
@@ -547,19 +547,19 @@ export default function RoomManagement() {
           csvRows.push([
             idx === 0 ? room.room : "",
             occ.studentNumber ?? "",
-            occ.name          ?? "",
+            occ.name ?? "",
             phoneMap[occ.studentNumber] ?? "",
           ]);
         });
       });
 
-      const csv  = csvRows
+      const csv = csvRows
         .map((row) => row.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(","))
         .join("\n");
       const blob = new Blob([csv], { type: "text/csv;charset=utf-8;" });
-      const url  = URL.createObjectURL(blob);
-      const a    = document.createElement("a");
-      a.href     = url;
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
       a.download = `${hostel?.hostelName ?? "hostel"}_allocation.csv`;
       a.click();
       URL.revokeObjectURL(url);
@@ -663,9 +663,8 @@ export default function RoomManagement() {
                         <button
                           key={item.id}
                           onClick={() => handleSetHostel(item)}
-                          className={`w-full text-left px-4 py-2.5 text-base hover:bg-blue-50 transition-colors ${
-                            item.id === hostelId ? "text-blue-600 font-medium bg-blue-50" : "text-gray-700"
-                          }`}
+                          className={`w-full text-left px-4 py-2.5 text-base hover:bg-blue-50 transition-colors ${item.id === hostelId ? "text-blue-600 font-medium bg-blue-50" : "text-gray-700"
+                            }`}
                         >
                           {item.hostelName ?? item.name}
                         </button>
@@ -686,7 +685,7 @@ export default function RoomManagement() {
                   <Badge color="bg-[#d9d9d9]">{numberOfFloors} Floor{numberOfFloors !== 1 ? "s" : ""}</Badge>
                   <Badge color="bg-[#d9d9d9]">{totalRooms} Rooms</Badge>
                   <Badge color="bg-[#d9d9d9]">{totalCapacity} Capacity</Badge>
-                  <Badge color="bg-[#d9d9d9]">{occupiedBeds} Occupied</Badge>
+                  {/*<Badge color="bg-[#d9d9d9]">{occupiedBeds} Occupied</Badge>*/}
                 </div>
               </div>
 
@@ -727,9 +726,8 @@ export default function RoomManagement() {
                           <button
                             key={num}
                             onClick={() => { setFloorIndex(num); setFloorOpen(false); }}
-                            className={`w-full text-left px-4 py-2.5 hover:bg-blue-50 transition-colors flex items-center justify-between ${
-                              num === floorIndex ? "text-blue-600 font-medium bg-blue-50" : "text-gray-700"
-                            }`}
+                            className={`w-full text-left px-4 py-2.5 hover:bg-blue-50 transition-colors flex items-center justify-between ${num === floorIndex ? "text-blue-600 font-medium bg-blue-50" : "text-gray-700"
+                              }`}
                           >
                             <span>Floor {num}</span>
                             {alloc && (
@@ -745,7 +743,7 @@ export default function RoomManagement() {
                 </div>
 
                 <span>{occupiedBeds}/{totalCapacity} Occupied</span>
-                <span className="text-gray-400">•</span>
+                <span className="text-gray-400">|</span>
                 <span>{disabledCount} disabled room{disabledCount !== 1 ? "s" : ""}</span>
 
                 {selectionMode && selectedRooms.length > 0 && (
@@ -765,66 +763,78 @@ export default function RoomManagement() {
               </div>
 
               <div className="flex flex-wrap items-center justify-start lg:justify-end gap-3">
-                {selectedRooms.length > 0 && (
-                  <div className="relative" data-dropdown>
-                    <button
-                      type="button"
-                      onClick={() => setActionsOpen((p) => !p)}
-                      aria-haspopup="menu"
-                      aria-expanded={actionsOpen}
-                      className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-base font-medium text-white shadow-sm transition hover:bg-blue-700"
-                    >
-                      Actions
-                      <ChevronDown size={16} />
-                    </button>
+              {selectedRooms.length > 0 && (
+                <div className="relative" data-dropdown>
+                  <button
+                    type="button"
+                    onClick={() => setActionsOpen((p) => !p)}
+                    aria-haspopup="menu"
+                    aria-expanded={actionsOpen}
+                    className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-base font-medium text-white shadow-sm transition hover:bg-blue-700"
+                  >
+                    Actions
+                    <ChevronDown size={16} />
+                  </button>
 
-                    {actionsOpen && (
-                      <div
-                        role="menu"
-                        className="absolute right-0 top-full z-50 mt-2 w-60 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-gray-200 bg-white py-1 text-sm shadow-xl"
+                  {actionsOpen && (
+                    <div
+                      role="menu"
+                      className="
+                        absolute top-full mt-2 z-50
+                        left-0 sm:right-0 sm:left-auto
+                        w-[90vw] sm:w-60
+                        max-w-sm
+                        overflow-hidden rounded-xl
+                        border border-gray-200
+                        bg-white py-1 text-sm
+                        shadow-xl
+                      "
+                    >
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => handleBulkAction("edit")}
+                        className="w-full px-4 py-2.5 text-left text-gray-700 transition hover:bg-blue-50 hover:text-blue-700"
                       >
-                        <button
-                          type="button"
-                          role="menuitem"
-                          onClick={() => handleBulkAction("edit")}
-                          className="w-full px-4 py-2.5 text-left text-gray-700 transition hover:bg-blue-50 hover:text-blue-700"
-                        >
-                          Edit Selected Rooms
-                        </button>
-                        <button
-                          type="button"
-                          role="menuitem"
-                          onClick={() => handleBulkAction("disable")}
-                          className="w-full px-4 py-2.5 text-left text-gray-700 transition hover:bg-red-50 hover:text-red-600"
-                        >
-                          Disable Selected Rooms
-                        </button>
-                        <button
-                          type="button"
-                          role="menuitem"
-                          onClick={() => handleBulkAction("enable")}
-                          className="w-full px-4 py-2.5 text-left text-gray-700 transition hover:bg-green-50 hover:text-green-700"
-                        >
-                          Enable Selected Rooms
-                        </button>
-                        <button
-                          type="button"
-                          role="menuitem"
-                          onClick={() => handleBulkAction("deallocate")}
-                          disabled={selectedOccupantCount === 0}
-                          className={`w-full px-4 py-2.5 text-left transition ${
-                            selectedOccupantCount > 0
-                              ? "text-gray-700 hover:bg-amber-50 hover:text-amber-700"
-                              : "cursor-not-allowed text-gray-300"
-                          }`}
-                        >
-                          Deallocate Students
-                        </button>
-                      </div>
-                    )}
-                  </div>
-                )}
-              </div>
+                        Edit Selected Rooms
+                      </button>
+
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => handleBulkAction("disable")}
+                        className="w-full px-4 py-2.5 text-left text-gray-700 transition hover:bg-red-50 hover:text-red-600"
+                      >
+                        Disable Selected Rooms
+                      </button>
+
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => handleBulkAction("enable")}
+                        className="w-full px-4 py-2.5 text-left text-gray-700 transition hover:bg-green-50 hover:text-green-700"
+                      >
+                        Enable Selected Rooms
+                      </button>
+
+                      <button
+                        type="button"
+                        role="menuitem"
+                        onClick={() => handleBulkAction("deallocate")}
+                        disabled={selectedOccupantCount === 0}
+                        className={`w-full px-4 py-2.5 text-left transition ${
+                          selectedOccupantCount > 0
+                            ? "text-gray-700 hover:bg-amber-50 hover:text-amber-700"
+                            : "cursor-not-allowed text-gray-300"
+                        }`}
+                      >
+                        Deallocate Students
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
             </div>
           </div>
         </div>
@@ -842,27 +852,27 @@ export default function RoomManagement() {
             {loading
               ? Array.from({ length: 12 }).map((_, i) => <RoomCard key={i} loading={true} />)
               : rooms.map((r) => (
-                  <RoomCard
-                    key={r.id}
-                    room={r.room}
-                    floor={`Floor ${r.floor}`}
-                    status={r.status}
-                    capacity={r.capacity}
-                    occupants={r.occupants?.map((o) => `${o.studentNumber}  ${o.name}`)}
-                    selectionMode={selectionMode}
-                    selected={selectedRooms.includes(r.id)}
-                    onSelect={() => toggleRoomSelection(r.id)}
-                    onClickRoom={() => handleRoomClickWrapper(r.id)}
-                  />
-                ))}
+                <RoomCard
+                  key={r.id}
+                  room={r.room}
+                  floor={`Floor ${r.floor}`}
+                  status={r.status}
+                  capacity={r.capacity}
+                  occupants={r.occupants?.map((o) => `${o.studentNumber}  ${o.name}`)}
+                  selectionMode={selectionMode}
+                  selected={selectedRooms.includes(r.id)}
+                  onSelect={() => toggleRoomSelection(r.id)}
+                  onClickRoom={() => handleRoomClickWrapper(r.id)}
+                />
+              ))}
           </div>
 
           <div className="mt-6 inline-flex flex-wrap gap-4 bg-[#f3f3f3] px-3 py-3 border rounded-sm text-[18px] text-gray-600">
             {[
-              { color: "bg-green-500",  label: "Available" },
+              { color: "bg-green-500", label: "Available" },
               { color: "bg-orange-400", label: "Partially Occupied" },
-              { color: "bg-red-500",    label: "Full" },
-              { color: "bg-gray-500",   label: "Disabled" },
+              { color: "bg-red-500", label: "Full" },
+              { color: "bg-gray-500", label: "Disabled" },
             ].map(({ color, label }) => (
               <div key={label} className="flex items-center gap-2">
                 <span className={`w-4 h-4 rounded-full ${color}`} />{label}
