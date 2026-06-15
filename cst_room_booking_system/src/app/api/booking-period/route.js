@@ -2,20 +2,18 @@ import { prisma } from "../../lib/prisma";
 
 export async function GET() {
   try {
-    console.log("prisma keys:", Object.keys(prisma));
-    console.log("bookingPeriod:", prisma.bookingPeriod);
     const period = await prisma.bookingPeriod.findFirst({
-      where: { isActive: true },
-      select: {
-        startDate: true,
-        endDate: true,
-        isActive: true,
-        year: true,
-      },
+
+        select: {
+          isActive: true,
+        }
     });
 
-    if (!period) {
-      return Response.json({ success: false, error: "No active booking period found." }, { status: 404 });
+    if (!period || !period.isActive) {
+      return Response.json({ 
+        success: false, 
+        error: "Unbooking is not allowed at this time." 
+      }, { status: 403 });
     }
 
     return Response.json({ success: true, period });

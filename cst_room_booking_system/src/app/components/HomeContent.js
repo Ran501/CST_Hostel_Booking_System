@@ -66,7 +66,7 @@ export default function HomeContent() {
     }
   }, [router]);
 
-  const canUnbook = bookingPeriod && new Date() < new Date(bookingPeriod.endDate);
+  const canUnbook = false
 
   const handleUnbook = async () => {
     if (!currentUser?.studentNumber || !userBooking) return;

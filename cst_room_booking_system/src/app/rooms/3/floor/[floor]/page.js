@@ -169,6 +169,10 @@ export default function NkFloorPage({ params }) {
   const kitchenLeftLabel = `Kitchen`;
   const kitchenRightLabel = `Kitchen`;
 
+  const [isUnbooking, setIsUnbooking] = useState(false);
+  const [showUnbookConfirm, setShowUnbookConfirm] = useState(false);
+  const [bookingPeriod, setBookingPeriod] = useState(null);
+
   // Fetch rooms data
   useEffect(() => {
     async function fetchRooms() {
@@ -192,6 +196,15 @@ export default function NkFloorPage({ params }) {
   useEffect(() => {
     if (!isValid) router.replace("/rooms/3/floor/1");
   }, [isValid]);
+
+  useEffect(() => {
+  fetch("/api/booking-period")
+    .then(res => res.json())
+    .then(data => {
+      if (data.success) setBookingPeriod(data.period);
+    })
+    .catch(err => console.error("Period fetch error:", err));
+}, []);
 
   // Fetch user's booking
   useEffect(() => {
@@ -338,9 +351,46 @@ export default function NkFloorPage({ params }) {
     }
   }
 
+  const canUnbook = bookingPeriod !== null && bookingPeriod.isActive === true;
+  async function handleUnbook() {
+    const studentNumber = currentUser?.studentNumber ?? currentUser?.phoneNumber ?? currentUser?.stdNo;
+    if (!studentNumber) return;
+    try {
+      setIsUnbooking(true);
+      const res = await fetch("/api/booking", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ studentNumber: String(studentNumber) }),
+      });
+      const result = await res.json();
+      if (result.success) {
+        showToast("Room unbooked successfully!", "success");
+        const updatedUser = { ...currentUser, hasBooked: false, bookedRoomNumber: null };
+        setCurrentUser(updatedUser);
+        localStorage.setItem("session", JSON.stringify(updatedUser));
+        setRoomsData((prev) =>
+          prev.map((r) =>
+            r.roomNumber === currentUser.bookedRoomNumber
+              ? { ...r, occupied: Math.max((r.occupied || 1) - 1, 0) }
+              : r
+          )
+        );
+      } else {
+        showToast(result.error || "Could not unbook.");
+      }
+    } catch (err) {
+      showToast("Connection failed. Please try again.");
+    } finally {
+      setIsUnbooking(false);
+      setShowUnbookConfirm(false);
+    }
+  }
+
   // Room Card component
   function RoomCard({ room, top, left }) {
     const roomInfo = getRoomInfo(room);
+    const isYourBooking = currentUser?.bookedRoomNumber === `${NK_NAME}-${room}`;
+
     if (!roomInfo) {
       return (
         <div className="absolute flex items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 animate-pulse" style={{ top, left, transform: "translate(-50%, -50%)", width: "65px", height: "65px" }}>
@@ -353,14 +403,24 @@ export default function NkFloorPage({ params }) {
     const ringColor = isSelected ? "ring-emerald-300" : "ring-slate-200";
     return (
       <button
-        onClick={() => setSelectedRoom(room)}
+        onClick={() => {
+          if (isYourBooking && canUnbook) {
+            setShowUnbookConfirm(true);
+          } else if (isYourBooking && !canUnbook) {
+            showToast("Unbooking is not allowed at this time.");
+          } else {
+            setSelectedRoom(room);
+          }
+        }}
         disabled={isDisabled || loading || isBooking}
         className={`cursor-pointer group absolute rounded-2xl border shadow-sm transition-all duration-200 w-[65px] h-[65px] xs:w-[70px] xs:h-[70px] sm:w-[75px] sm:h-[75px] md:w-[85px] md:h-[85px] lg:w-[95px] lg:h-[95px] xl:w-[105px] xl:h-[105px] disabled:shadow-none ${colorClasses} ${isSelected ? "ring-2 ring-emerald-300" : `ring-1 ${ringColor}`}`}
         style={{ top, left, transform: "translate(-50%, -50%)" }}
       >
         <div className="flex h-full flex-col items-center justify-center leading-tight p-1 sm:p-2">
           <span className="text-xs xs:text-sm sm:text-base md:text-lg font-semibold">{room}</span>
-          <span className={`text-[9px] xs:text-[10px] sm:text-[11px] whitespace-nowrap ${textColorClass}`}>{statusText}</span>
+          <span className={`text-[9px] xs:text-[10px] sm:text-[11px] whitespace-nowrap ${textColorClass}`}>
+            {isYourBooking ? (canUnbook ? "Your Room" : "Your Room") : statusText}
+          </span>
         </div>
         <div className="pointer-events-none absolute inset-0 rounded-2xl ring-0 transition group-hover:ring-1 group-hover:ring-slate-300/50" />
       </button>
@@ -527,6 +587,15 @@ export default function NkFloorPage({ params }) {
             onConfirm={handleConfirmBooking}
           />
         )}
+
+        {showUnbookConfirm && (
+        <ConfirmationDialog
+          message={`Do you want to unbook Room ${currentUser?.bookedRoomNumber}?`}
+          isLoading={isUnbooking}
+          onCancel={() => !isUnbooking && setShowUnbookConfirm(false)}
+          onConfirm={handleUnbook}
+        />
+      )}
       </div>
     </main>
   );
