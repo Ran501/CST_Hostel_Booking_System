@@ -60,6 +60,10 @@ export default function HdFloorPage({ params }) {
   const [currentUser, setCurrentUser] = useState(getStoredSession);
   const sessionLoaded = true;
 
+  const [isUnbooking, setIsUnbooking] = useState(false);
+  const [showUnbookConfirm, setShowUnbookConfirm] = useState(false);
+  const [bookingPeriod, setBookingPeriod] = useState(null);
+
   // Fetch rooms data
   useEffect(() => {
     async function fetchRooms() {
@@ -76,6 +80,15 @@ export default function HdFloorPage({ params }) {
     }
     if (isValid) fetchRooms();
   }, [floorNum, isValid]);
+
+  useEffect(() => {
+    fetch("/api/booking-period")
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) setBookingPeriod(data.period);
+      })
+      .catch(err => console.error("Period fetch error:", err));
+  }, []);
 
   // Fetch user's booking using floor-bookings API
   useEffect(() => {
@@ -146,6 +159,42 @@ export default function HdFloorPage({ params }) {
     setToastType(type);
     setToast(msg);
     setTimeout(() => setToast(null), 4000);
+  }
+
+  const canUnbook = bookingPeriod !== null && bookingPeriod.isActive === true;
+
+  async function handleUnbook() {
+    const studentNumber = currentUser?.studentNumber ?? currentUser?.phoneNumber ?? currentUser?.stdNo;
+    if (!studentNumber) return;
+    try {
+      setIsUnbooking(true);
+      const res = await fetch("/api/booking", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ studentNumber: String(studentNumber) }),
+      });
+      const result = await res.json();
+      if (result.success) {
+        showToast("Room unbooked successfully!", "success");
+        const updatedUser = { ...currentUser, hasBooked: false, bookedRoomNumber: null };
+        setCurrentUser(updatedUser);
+        localStorage.setItem("session", JSON.stringify(updatedUser));
+        setRoomsData((prev) =>
+          prev.map((r) =>
+            r.roomNumber === currentUser.bookedRoomNumber
+              ? { ...r, occupied: Math.max((r.occupied || 1) - 1, 0) }
+              : r
+          )
+        );
+      } else {
+        showToast(result.error || "Could not unbook.");
+      }
+    } catch (err) {
+      showToast("Connection failed. Please try again.");
+    } finally {
+      setIsUnbooking(false);
+      setShowUnbookConfirm(false);
+    }
   }
 
   const validateFloorYear = async () => {
@@ -284,34 +333,38 @@ export default function HdFloorPage({ params }) {
     }
 
     const { colorClasses, textColorClass, statusText, isDisabled } = getRoomColors(
-      roomInfo,
-      selectedRoom,
-      currentUser,
-      HD_NAME,
-      room
+      roomInfo, selectedRoom, currentUser, HD_NAME, room
     );
+
+    const isYourBooking = currentUser?.bookedRoomNumber === `${HC_NAME}-${room}`;
 
     return (
       <button
+        disabled={isDisabled || loading}
+        onClick={() => {
+          if (isYourBooking && canUnbook) {
+            setShowUnbookConfirm(true);
+          } else if (isYourBooking && !canUnbook) {
+            showToast("Unbooking is not allowed at this time.");
+          } else {
+            setSelectedRoom(room);
+          }
+        }}
         className={`
           cursor-pointer group relative rounded-xl border shadow-sm transition-all duration-200
           w-full h-full disabled:shadow-none ${colorClasses}
           ${isSelected ? "ring-2 ring-emerald-300" : ""}
         `}
-        disabled={isDisabled || loading}
-        onClick={() => setSelectedRoom(room)}
       >
         <div className="flex h-full flex-col items-center justify-center leading-tight px-2">
           <span className="text-sm xs:text-base sm:text-base font-semibold tracking-wide">
             {room}
           </span>
           <span className={`text-[9px] xs:text-[10px] sm:text-[11px] whitespace-nowrap ${textColorClass}`}>
-            {statusText}
+            {isYourBooking ? (canUnbook ? "Tap to Unbook" : "Your Booking") : statusText}
           </span>
         </div>
-        <div
-          className="pointer-events-none absolute inset-0 rounded-xl ring-0 transition group-hover:ring-1 group-hover:ring-slate-300/60"
-        />
+        <div className="pointer-events-none absolute inset-0 rounded-xl ring-0 transition group-hover:ring-1 group-hover:ring-slate-300/60" />
       </button>
     );
   };
@@ -580,6 +633,15 @@ export default function HdFloorPage({ params }) {
             onConfirm={handleConfirmBooking}
           />
         )}
+
+        {showUnbookConfirm && (
+        <ConfirmationDialog
+          message={`Do you want to unbook Room ${currentUser?.bookedRoomNumber}?`}
+          isLoading={isUnbooking}
+          onCancel={() => !isUnbooking && setShowUnbookConfirm(false)}
+          onConfirm={handleUnbook}
+        />
+      )}
       </div>
     </main>
   );
