@@ -4,8 +4,8 @@ import Link from "next/link";
 import { use, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import FloorSidebar from "../../../components/FloorSidebar";
-import RoomLegend from "../../../components/RoomLegend";
 import FloorBookingsView from "../../../components/FloorBookingsView";
+import { getRoomColors, RoomLegend } from "../../../../room/components/useColors";
 import ConfirmationDialog from "../../../../confirmation";
 import {
   RKB_NAME,
@@ -58,23 +58,82 @@ export default function RkbFloorPage({ params }) {
     }, []);
 
   
-    useEffect(() => {
-      async function fetchRooms() {
-        try {
-          setLoading(true);
-          // Replace with your actual API endpoint
-          const res = await fetch(`/api/rooms?floor=${floorNum}&building=RKB`);
-          const data = await res.json();
-          if (data.success) setRoomsData(data.rooms || []);
-        } catch (err) {
-          console.error("Fetch error:", err);
-        } finally {
-          setLoading(false);
+    // Fetch rooms and find user booking in one go
+// Fetch rooms and find user booking in one go
+useEffect(() => {
+  async function fetchData() {
+    try {
+      setLoading(true);
+      
+      // Fetch rooms data
+      const roomsRes = await fetch(`/api/rooms?floor=${floorNum}&building=RKB`);
+      const roomsData = await roomsRes.json();
+      
+      if (roomsData.success) {
+        setRoomsData(roomsData.rooms || []);
+      }
+      
+      // Fetch user's booking using floor-bookings API
+      if (currentUser) {
+        const studentNumber = currentUser.studentNumber ?? currentUser.phoneNumber ?? currentUser.stdNo;
+        
+        if (studentNumber) {
+          const params = new URLSearchParams({
+            building: RKB_NAME,
+            floor: String(floorNum),
+            studentNumber: String(studentNumber),
+          });
+          
+          const bookingsRes = await fetch(`/api/floor-bookings?${params.toString()}`);
+          const bookingsData = await bookingsRes.json();
+          
+          if (bookingsData.success && bookingsData.rooms) {
+            let userBookedRoom = null;
+            
+            for (const room of bookingsData.rooms) {
+              if (room.students && room.students.length > 0) {
+                const hasUserBooking = room.students.some(student => 
+                  student.studentNumber === studentNumber
+                );
+                
+                if (hasUserBooking) {
+                  userBookedRoom = room.roomNumber;
+                  break;
+                }
+              }
+            }
+            
+            if (userBookedRoom) {
+              setCurrentUser(prev => ({
+                ...prev,
+                bookedRoomNumber: userBookedRoom,
+                hasBooked: true
+              }));
+            } else {
+              // Clear booking if not found in database
+              if (currentUser?.bookedRoomNumber) {
+                setCurrentUser(prev => ({
+                  ...prev,
+                  bookedRoomNumber: null,
+                  hasBooked: false
+                }));
+                const updatedUser = { ...currentUser, bookedRoomNumber: null, hasBooked: false };
+                localStorage.setItem("session", JSON.stringify(updatedUser));
+              }
+            }
+          }
         }
       }
-      if (isValid) fetchRooms();
-    }, [floorNum, isValid]);
+    } catch (err) {
+      console.error("Fetch error:", err);
+    } finally {
+      setLoading(false);
+    }
+  }
   
+  if (isValid) fetchData();
+}, [floorNum, isValid, currentUser?.studentNumber, currentUser?.phoneNumber, currentUser?.stdNo]);
+
     const getRoomInfo = (roomNo) => {
       const fullRoomId = `${RKB_NAME}-${roomNo}`;
       return roomsData.find((r) => {
@@ -208,7 +267,7 @@ export default function RkbFloorPage({ params }) {
         if (result.success) {
           showToast(`Room ${fullRoomId} reserved successfully! Details sent to your email.`, "success");
   
-          const updatedUser = { ...currentUser, hasBooked: true };
+          const updatedUser = { ...currentUser, hasBooked: true, bookedRoomNumber: fullRoomId };
           setCurrentUser(updatedUser);
           localStorage.setItem("session", JSON.stringify(updatedUser));
   
@@ -243,58 +302,33 @@ export default function RkbFloorPage({ params }) {
           </div>
         );
       }
-      // 2. Extract database values
-      const dbValue = roomInfo.isActive ?? roomInfo.is_active;
-      const status = String(roomInfo.status ?? "").toLowerCase().trim();
-      const isRoomActive =
-        dbValue !== false &&
-        String(dbValue).toUpperCase().trim() !== "FALSE" &&
-        !["disabled", "inactive", "maintenance"].includes(status);
-      const occupied = roomInfo.occupied || 0;
-      const capacity = roomInfo.capacity || 3;
-  
-      // 3. Calculate states
-      const isFully = occupied >= capacity;
-      const isPartial = occupied > 0 && occupied < capacity;
-      const isSelected = selectedRoom === room;
-  
-      // 4. Assign dynamic CSS colors
-      const colors = !isRoomActive
-        ? "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed opacity-60"
-        : isFully
-          ? "border-slate-300 bg-slate-100 text-slate-500 cursor-not-allowed opacity-70"
-          : isSelected
-            ? "border-emerald-200 bg-emerald-50 text-emerald-700 ring-2 ring-emerald-300/70"
-            : isPartial
-              ? "border-amber-200 bg-amber-50 text-amber-700 hover:border-amber-300/80 hover:bg-amber-50/80 hover:-translate-y-0.5 hover:shadow-md"
-              : "border-green-700 bg-green-700 text-white hover:border-green-800 hover:bg-green-800 hover:-translate-y-0.5 hover:shadow-md";
+      
+       const { colorClasses, textColorClass, statusText, isDisabled } = getRoomColors(
+    roomInfo,
+    selectedRoom,
+    currentUser,
+    RKB_NAME,  // Change this to your hostel name constant
+    room
+  );
 
-    return (
-      <button
-        disabled={!isRoomActive || isFully || loading}
-        className={`cursor-pointer group relative rounded-xl border shadow-sm transition-all duration-200 w-full h-full disabled:opacity-60 disabled:shadow-none ${colors}`}
-        onClick={() => setSelectedRoom(room)}
-      >
-        <div className="flex h-full flex-col items-center justify-center leading-tight px-1 sm:px-2">
-          <span className="text-sm xs:text-base sm:text-lg font-semibold tracking-wider">
-            {room}
-          </span>
-          <span className={`text-[9px] xs:text-[10px] sm:text-[11px] whitespace-nowrap ${!isRoomActive || isFully || isPartial ? "text-slate-700" : "text-white"}`}>
-            {!isRoomActive
-              ? roomInfo.disabledReason || "Inactive"
-              : isFully
-                ? `${capacity}/${capacity} Booked`
-                : isPartial
-                  ? `${occupied}/${capacity} Booked`
-                  : `${capacity - occupied} Available`}
-          </span>
-        </div>
-        <div
-          className="pointer-events-none absolute inset-0 rounded-xl ring-0 transition group-hover:ring-1 group-hover:ring-slate-300/60"
-        />
-      </button>
-    );
-  };
+     return (
+    <button
+      disabled={isDisabled || loading}
+      className={`cursor-pointer group relative rounded-xl border shadow-sm transition-all duration-200 w-full h-full disabled:opacity-60 disabled:shadow-none ${colorClasses}`}
+      onClick={() => setSelectedRoom(room)}
+    >
+      <div className="flex h-full flex-col items-center justify-center leading-tight px-1 sm:px-2">
+        <span className="text-sm xs:text-base sm:text-lg font-semibold tracking-wider">
+          {room}
+        </span>
+        <span className={`text-[9px] xs:text-[10px] sm:text-[11px] whitespace-nowrap ${textColorClass}`}>
+          {statusText}
+        </span>
+      </div>
+      <div className="pointer-events-none absolute inset-0 rounded-xl ring-0 transition group-hover:ring-1 group-hover:ring-gray-300/60" />
+    </button>
+  );
+};
 
   return (
     <main className="min-h-screen bg-zinc-100 py-4 sm:py-6 md:py-8 text-slate-900 overflow-x-hidden">
@@ -304,14 +338,6 @@ export default function RkbFloorPage({ params }) {
             {toast}
           </div>
         )}
-
-        
-        <FloorBookingsView
-          building={RKB_NAME}
-          floor={floorNum}
-          currentUser={currentUser}
-          onDenied={(message) => showToast(message)}
-        />
 <div className="md:hidden flex items-center justify-between mb-4">
           <div className="flex items-center text-slate-500">
             <Link
@@ -333,6 +359,14 @@ export default function RkbFloorPage({ params }) {
                 />
               </svg>
             </Link>
+
+            <FloorBookingsView
+      building={RKB_NAME}
+      floor={floorNum}
+      currentUser={currentUser}
+      onDenied={(message) => showToast(message)}
+    />
+
           </div>
 
           <h1 className="text-center text-base xs:text-lg font-semibold tracking-wide flex-1">
@@ -416,6 +450,13 @@ export default function RkbFloorPage({ params }) {
               </span>
             </div>
           </div>
+
+          <FloorBookingsView
+    building={RKB_NAME}
+    floor={floorNum}
+    currentUser={currentUser}
+    onDenied={(message) => showToast(message)}
+  />
 
         </div>
 

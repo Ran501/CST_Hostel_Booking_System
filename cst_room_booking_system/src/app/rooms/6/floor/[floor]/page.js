@@ -4,10 +4,10 @@ import Link from "next/link";
 import { use, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import FloorSidebar from "../../../components/FloorSidebar";
-import RoomLegend from "../../../components/RoomLegend";
 import FloorBookingsView from "../../../components/FloorBookingsView";
 import ConfirmationDialog from "../../../../confirmation";
 import SpecialBlock from "../../../../room/components/SpecialBlock";
+import { getRoomColors, RoomLegend } from "../../../../room/components/useColors";
 
 import {
   HC_NAME,
@@ -49,10 +49,8 @@ export default function HcFloorPage({ params }) {
   const isValid = Number.isFinite(rawFloor) && isValidFloor(rawFloor);
   const floorNum = isValid ? rawFloor : 1;
 
-  // Simple States
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  // To hold backend data
   const [roomsData, setRoomsData] = useState([]);
   const [loading, setLoading] = useState(true);
   const [isBooking, setIsBooking] = useState(false);
@@ -61,33 +59,82 @@ export default function HcFloorPage({ params }) {
   const [currentUser, setCurrentUser] = useState(getStoredSession);
   const sessionLoaded = true;
 
+  // Fetch rooms data
   useEffect(() => {
-            async function fetchRooms() {
-              try {
-                setLoading(true);
-                // Replace with your actual API endpoint
-                const res = await fetch(`/api/rooms?floor=${floorNum}&building=HC`);
-                const data = await res.json();
-                if (data.success) setRoomsData(data.rooms || []);
-              } catch (err) {
-                console.error("Fetch error:", err);
-              } finally {
-                setLoading(false);
+    async function fetchRooms() {
+      try {
+        setLoading(true);
+        const res = await fetch(`/api/rooms?floor=${floorNum}&building=HC`);
+        const data = await res.json();
+        if (data.success) setRoomsData(data.rooms || []);
+      } catch (err) {
+        console.error("Fetch error:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    if (isValid) fetchRooms();
+  }, [floorNum, isValid]);
+
+  // Fetch user's booking using floor-bookings API
+  useEffect(() => {
+    async function fetchUserBooking() {
+      if (!currentUser) return;
+      const studentNumber = currentUser.studentNumber ?? currentUser.phoneNumber ?? currentUser.stdNo;
+      if (!studentNumber) return;
+      try {
+        const params = new URLSearchParams({
+          building: HC_NAME,
+          floor: String(floorNum),
+          studentNumber: String(studentNumber),
+        });
+        const bookingsRes = await fetch(`/api/floor-bookings?${params.toString()}`);
+        const bookingsData = await bookingsRes.json();
+        if (bookingsData.success && bookingsData.rooms) {
+          let userBookedRoom = null;
+          for (const room of bookingsData.rooms) {
+            if (room.students && room.students.length > 0) {
+              const hasUserBooking = room.students.some(student => 
+                student.studentNumber === studentNumber
+              );
+              if (hasUserBooking) {
+                userBookedRoom = room.roomNumber;
+                break;
               }
             }
-            if (isValid) fetchRooms();
-          }, [floorNum, isValid]);
-        
-          const getRoomInfo = (roomNo) => {
-            const fullRoomId = `${HC_NAME}-${roomNo}`;
-            return roomsData.find((r) => {
-              const roomNumber = String(r.roomNumber);
-              return roomNumber === fullRoomId || getNumericRoomNumber(roomNumber) === roomNo;
-            });
-          };
-    
+          }
+          if (userBookedRoom) {
+            setCurrentUser(prev => ({
+              ...prev,
+              bookedRoomNumber: userBookedRoom,
+              hasBooked: true
+            }));
+          } else if (currentUser?.bookedRoomNumber) {
+            setCurrentUser(prev => ({
+              ...prev,
+              bookedRoomNumber: null,
+              hasBooked: false
+            }));
+            const updatedUser = { ...currentUser, bookedRoomNumber: null, hasBooked: false };
+            localStorage.setItem("session", JSON.stringify(updatedUser));
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching user booking:", err);
+      }
+    }
+    if (currentUser && isValid) fetchUserBooking();
+  }, [currentUser?.studentNumber, currentUser?.phoneNumber, currentUser?.stdNo, floorNum, isValid]);
 
-  // Simple redirect logic
+  const getRoomInfo = (roomNo) => {
+    const fullRoomId = `${HC_NAME}-${roomNo}`;
+    return roomsData.find((r) => {
+      const roomNumber = String(r.roomNumber);
+      return roomNumber === fullRoomId || getNumericRoomNumber(roomNumber) === roomNo;
+    });
+  };
+
+  // Redirect if invalid floor
   useEffect(() => {
     if (!isValid) {
       router.replace("/rooms/6/floor/1");
@@ -203,7 +250,7 @@ export default function HcFloorPage({ params }) {
       const result = await res.json();
       if (result.success) {
         showToast(`Room ${fullRoomId} reserved successfully! Details sent to your email.`, "success");
-        const updatedUser = { ...currentUser, hasBooked: true };
+        const updatedUser = { ...currentUser, hasBooked: true, bookedRoomNumber: fullRoomId };
         setCurrentUser(updatedUser);
         localStorage.setItem("session", JSON.stringify(updatedUser));
         setRoomsData((prev) =>
@@ -223,51 +270,34 @@ export default function HcFloorPage({ params }) {
     }
   }
 
-  // Simple Room Block component - no API calls
+  // Room Block component using getRoomColors
   const RoomBlock = ({ room }) => {
     const isSelected = selectedRoom === room;
     const roomInfo = getRoomInfo(room);
+    
     if (!roomInfo) {
-        return (
-          <div className="w-full h-full rounded-xl border border-slate-200 bg-slate-50 animate-pulse flex items-center justify-center">
-            <span className="text-[10px] text-slate-400">Loading...</span>
-          </div>
-        );
-      }
-  
-  // 2. Extract database values
-      const dbValue = roomInfo.isActive ?? roomInfo.is_active;
-      const status = String(roomInfo.status ?? "").toLowerCase().trim();
-      const isRoomActive =
-        dbValue !== false &&
-        String(dbValue).toUpperCase().trim() !== "FALSE" &&
-        !["disabled", "inactive", "maintenance"].includes(status);
-      const occupied = roomInfo.occupied || 0;
-      const capacity = roomInfo.capacity || 3;
-  
-      // 3. Calculate states
-      const isFully = occupied >= capacity;
-      const isPartial = occupied > 0 && occupied < capacity;
-  
-      // 4. Assign dynamic CSS colors
-      const colors = !isRoomActive
-        ? "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed opacity-60"
-        : isFully
-          ? "border-slate-300 bg-slate-100 text-slate-500 cursor-not-allowed opacity-70"
-          : isSelected
-            ? "border-emerald-200 bg-emerald-50 text-emerald-700 ring-2 ring-emerald-300/70"
-            : isPartial
-              ? "border-amber-200 bg-amber-50 text-amber-700 hover:border-amber-300/80 hover:bg-amber-50/80 hover:-translate-y-0.5 hover:shadow-md"
-              : "border-green-700 bg-green-700 text-white hover:border-green-800 hover:bg-green-800 hover:-translate-y-0.5 hover:shadow-md";
+      return (
+        <div className="w-full h-full rounded-xl border border-slate-200 bg-slate-50 animate-pulse flex items-center justify-center">
+          <span className="text-[10px] text-slate-400">Loading...</span>
+        </div>
+      );
+    }
 
+    const { colorClasses, textColorClass, statusText, isDisabled } = getRoomColors(
+      roomInfo,
+      selectedRoom,
+      currentUser,
+      HC_NAME,
+      room
+    );
 
     return (
       <button
-        disabled={!isRoomActive || isFully || loading}
+        disabled={isDisabled || loading}
         onClick={() => setSelectedRoom(room)}
         className={`
           cursor-pointer group relative rounded-xl border shadow-sm transition-all duration-200
-          w-full h-full disabled:shadow-none ${colors}
+          w-full h-full disabled:shadow-none ${colorClasses}
           ${isSelected ? "ring-2 ring-emerald-300" : ""}
         `}
       >
@@ -275,22 +305,14 @@ export default function HcFloorPage({ params }) {
           <span className="text-sm xs:text-base sm:text-base font-semibold tracking-wide">
             {room}
           </span>
-          <span className={`text-[9px] xs:text-[10px] sm:text-[11px] whitespace-nowrap ${!isRoomActive || isFully || isPartial ? "text-slate-700" : "text-white"}`}>
-            {!isRoomActive
-              ? roomInfo.disabledReason || "Inactive"
-              : isFully
-                ? `${capacity}/${capacity} Booked`
-                : isPartial
-                  ? `${occupied}/${capacity} Booked`
-                  : `${capacity - occupied} Available`}
+          <span className={`text-[9px] xs:text-[10px] sm:text-[11px] whitespace-nowrap ${textColorClass}`}>
+            {statusText}
           </span>
         </div>
         <div className="pointer-events-none absolute inset-0 rounded-xl ring-0 transition group-hover:ring-1 group-hover:ring-slate-300/60" />
       </button>
     );
   };
-
-  /* ================= UPDATED LAYOUT ================= */
 
   return (
     <main className="min-h-screen bg-zinc-100 py-4 sm:py-6 md:py-8 text-slate-900 overflow-x-hidden">
@@ -301,14 +323,14 @@ export default function HcFloorPage({ params }) {
           </div>
         )}
 
-        
         <FloorBookingsView
           building={HC_NAME}
           floor={floorNum}
           currentUser={currentUser}
           onDenied={(message) => showToast(message)}
         />
-{/* Mobile hamburger menu button */}
+
+        {/* Mobile header */}
         <div className="md:hidden flex items-center justify-between mb-4">
           <div className="flex items-center text-slate-500">
             <Link
