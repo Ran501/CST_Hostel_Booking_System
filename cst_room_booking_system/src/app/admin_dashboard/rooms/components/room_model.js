@@ -641,7 +641,7 @@ export default function RoomManagement() {
 
             <div className="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-4 mb-5">
               <div className="flex flex-wrap items-center gap-2 md:gap-3 text-[18px] md:text-[20px]">
-                <button className="mr-1"><ArrowLeft className="w-6 h-6" /></button>
+                
 
                 {/* Hostel dropdown */}
                 <div className="relative" data-dropdown>
@@ -934,14 +934,14 @@ export default function RoomManagement() {
       <DeallocateStudents
         isOpen={deallocateOpen}
         onClose={() => setDeallocateOpen(false)}
-        students={selectedStudents}       // ✅ correct prop name
+        students={selectedStudents}    
         onConfirm={async (bookingIds) => {
           // bookingIds is an array of booking IDs the user selected in the modal
           await callAction({ action: "deallocate", bookingIds });
           setDeallocateOpen(false);
           clearSelection();
           await fetchRooms();
-          return true;                     // signal success
+          return true;                     // signal success to modal so it can close and show feedback
         }}
       />
 

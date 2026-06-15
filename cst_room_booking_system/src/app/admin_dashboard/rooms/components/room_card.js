@@ -211,6 +211,10 @@ export default function RoomCard({
             Available: {capacity - occupants.length} beds
           </p>
 
+          <p className="mt-2 text-green-700 font-medium">
+            Year: {capacity - occupants.length} 
+          </p>
+
         </div>
       )}
 
