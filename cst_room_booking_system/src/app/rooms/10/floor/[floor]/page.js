@@ -4,9 +4,9 @@ import Link from "next/link";
 import { use, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import FloorSidebar from "../../../components/FloorSidebar";
-import RoomLegend from "../../../components/RoomLegend";
 import FloorBookingsView from "../../../components/FloorBookingsView";
 import ConfirmationDialog from "../../../../confirmation";
+import { getRoomColors, RoomLegend } from "../../../../room/components/useColors";
 import {
   LHAWANG_NAME,
   LHAWANG_FLOOR_META,
@@ -24,12 +24,6 @@ import {
 } from "../../../data/lhawang";
 
 const FLOORS = [1, 2, 3, 4, 5];
-
-const STATUS = {
-  AVAILABLE: "available",
-  BOOKED: "booked",
-  SELECTED: "selected",
-};
 
 function floorLabel(n) {
   return ["First", "Second", "Third", "Fourth", "Fifth"][n - 1] ?? String(n);
@@ -58,46 +52,30 @@ function getStoredSession() {
   }
 }
 
-const STATUS_STYLES = {
-  [STATUS.AVAILABLE]: {
-    border: "border-green-700",
-    bg:     "bg-green-700",
-    text:   "text-white",
-    ring:   "",
-    label:  "Available",
-  },
-  [STATUS.BOOKED]: {
-    border: "border-slate-300",
-    bg:     "bg-slate-100",
-    text:   "text-slate-500",
-    ring:   "",
-    label:  "Booked",
-  },
-  [STATUS.SELECTED]: {
-    border: "border-emerald-400",
-    bg:     "bg-emerald-50",
-    text:   "text-emerald-600",
-    ring:   "ring-2 ring-emerald-300",
-    label:  "Selected",
-  },
-};
-
 // ─────────────────────────────────────────────────────────────────────────────
 // Shared Primitive Components
 // ─────────────────────────────────────────────────────────────────────────────
 
-function SmallRoom({ room, status, label, onClick }) {
-  const s = STATUS_STYLES[status] ?? STATUS_STYLES[STATUS.AVAILABLE];
-  const clickable = status !== STATUS.BOOKED;
+function SmallRoom({ room, onClick, roomInfo, selectedRoom, currentUser, buildingName, isLoading }) {
+  const { colorClasses, textColorClass, statusText, isDisabled } = getRoomColors(
+    roomInfo,
+    selectedRoom,
+    currentUser,
+    buildingName,
+    room
+  );
+
+  const clickable = !isDisabled;
+
   return (
     <button
-      disabled={!clickable}
+      disabled={!clickable || isLoading}
       onClick={clickable ? onClick : undefined}
       className={`
         relative flex flex-col items-center justify-center w-full h-full
         rounded-lg border-2 shadow-sm transition-all duration-200
-        ${s.border} ${s.bg} ${s.ring}
-        ${clickable
+        ${colorClasses}
+        ${clickable && !isDisabled
           ? "cursor-pointer hover:-translate-y-0.5 hover:shadow-md"
           : "cursor-not-allowed opacity-60"}
       `}
@@ -105,25 +83,33 @@ function SmallRoom({ room, status, label, onClick }) {
       <span className="text-sm xs:text-base sm:text-lg font-semibold tracking-wider text-slate-700">
         {room}
       </span>
-      <span className={`text-[9px] xs:text-[10px] sm:text-[11px] font-medium mt-0.5 ${s.text}`}>
-        {label ?? s.label}
+      <span className={`text-[9px] xs:text-[10px] sm:text-[11px] font-medium mt-0.5 ${textColorClass}`}>
+        {statusText}
       </span>
     </button>
   );
 }
 
-function LargeRoom({ room, status, label, onClick }) {
-  const s = STATUS_STYLES[status] ?? STATUS_STYLES[STATUS.AVAILABLE];
-  const clickable = status !== STATUS.BOOKED;
+function LargeRoom({ room, onClick, roomInfo, selectedRoom, currentUser, buildingName, isLoading }) {
+  const { colorClasses, textColorClass, statusText, isDisabled } = getRoomColors(
+    roomInfo,
+    selectedRoom,
+    currentUser,
+    buildingName,
+    room
+  );
+
+  const clickable = !isDisabled;
+
   return (
     <button
-      disabled={!clickable}
+      disabled={!clickable || isLoading}
       onClick={clickable ? onClick : undefined}
       className={`
         relative flex flex-col items-center justify-center w-full h-full
         rounded-xl border-2 shadow-sm transition-all duration-200
-        ${s.border} ${s.bg} ${s.ring}
-        ${clickable
+        ${colorClasses}
+        ${clickable && !isDisabled
           ? "cursor-pointer hover:-translate-y-0.5 hover:shadow-md"
           : "cursor-not-allowed opacity-60"}
       `}
@@ -131,8 +117,8 @@ function LargeRoom({ room, status, label, onClick }) {
       <span className="text-2xl sm:text-3xl md:text-4xl font-semibold tracking-wider text-slate-700">
         {room}
       </span>
-      <span className={`text-xs sm:text-sm font-medium mt-1 ${s.text}`}>
-        {label ?? s.label}
+      <span className={`text-xs sm:text-sm font-medium mt-1 ${textColorClass}`}>
+        {statusText}
       </span>
     </button>
   );
@@ -178,8 +164,9 @@ function RightArrow() {
     </svg>
   );
 }
+
 /** FLOOR 1 — two large rooms: 102 | Stairs | 101 */
-function Floor1Plan({ getStatus, getRoomLabel, onRoomClick }) {
+function Floor1Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoading, buildingName }) {
   const leftRoom  = floor1LeftRoom();   // 102
   const rightRoom = floor1RightRoom();  // 101
   const RH = "h-[200px] xs:h-[240px] sm:h-[290px] md:h-[350px]";
@@ -187,18 +174,34 @@ function Floor1Plan({ getStatus, getRoomLabel, onRoomClick }) {
   return (
     <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 sm:gap-6 md:gap-10">
       <div className={RH}>
-        <LargeRoom room={leftRoom} status={getStatus(leftRoom)} label={getRoomLabel(leftRoom)} onClick={() => onRoomClick(leftRoom)} />
+        <LargeRoom 
+          room={leftRoom} 
+          roomInfo={getRoomInfo(leftRoom)}
+          selectedRoom={selectedRoom}
+          currentUser={currentUser}
+          buildingName={buildingName}
+          isLoading={isLoading}
+          onClick={() => onRoomClick(leftRoom)}
+        />
       </div>
       <StairsIndicator />
       <div className={RH}>
-        <LargeRoom room={rightRoom} status={getStatus(rightRoom)} label={getRoomLabel(rightRoom)} onClick={() => onRoomClick(rightRoom)} />
+        <LargeRoom 
+          room={rightRoom} 
+          roomInfo={getRoomInfo(rightRoom)}
+          selectedRoom={selectedRoom}
+          currentUser={currentUser}
+          buildingName={buildingName}
+          isLoading={isLoading}
+          onClick={() => onRoomClick(rightRoom)}
+        />
       </div>
     </div>
   );
 }
 
 /** FLOOR 2 — Kitchen 1 + rooms 203/202/201 left | 204→205, 206, Stairs+207 right */
-function Floor2Plan({ getStatus, getRoomLabel, onRoomClick }) {
+function Floor2Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoading, buildingName }) {
   const leftRooms = floor2LeftColumn();                                  // [203, 202, 201]
   const { connectedPair, standaloneRoom, stairsRoom } = floor2RightSection();
   const kitchenLabel = LHAWANG_KITCHEN_LABELS[2];
@@ -212,7 +215,15 @@ function Floor2Plan({ getStatus, getRoomLabel, onRoomClick }) {
         <div className={TH}><KitchenBlock label={kitchenLabel} /></div>
         {leftRooms.map((r) => (
           <div key={r} className={TH}>
-            <SmallRoom room={r} status={getStatus(r)} label={getRoomLabel(r)} onClick={() => onRoomClick(r)} />
+            <SmallRoom 
+              room={r} 
+              roomInfo={getRoomInfo(r)}
+              selectedRoom={selectedRoom}
+              currentUser={currentUser}
+              buildingName={buildingName}
+              isLoading={isLoading}
+              onClick={() => onRoomClick(r)}
+            />
           </div>
         ))}
       </div>
@@ -222,11 +233,27 @@ function Floor2Plan({ getStatus, getRoomLabel, onRoomClick }) {
         {/* Connected pair: 204 → 205 */}
         <div className="flex items-center gap-2 sm:gap-3">
           <div className={`flex-1 ${TH}`}>
-            <SmallRoom room={connectedPair[0]} status={getStatus(connectedPair[0])} label={getRoomLabel(connectedPair[0])} onClick={() => onRoomClick(connectedPair[0])} />
+            <SmallRoom 
+              room={connectedPair[0]} 
+              roomInfo={getRoomInfo(connectedPair[0])}
+              selectedRoom={selectedRoom}
+              currentUser={currentUser}
+              buildingName={buildingName}
+              isLoading={isLoading}
+              onClick={() => onRoomClick(connectedPair[0])}
+            />
           </div>
           <RightArrow />
           <div className={`flex-1 ${TH}`}>
-            <SmallRoom room={connectedPair[1]} status={getStatus(connectedPair[1])} label={getRoomLabel(connectedPair[1])} onClick={() => onRoomClick(connectedPair[1])} />
+            <SmallRoom 
+              room={connectedPair[1]} 
+              roomInfo={getRoomInfo(connectedPair[1])}
+              selectedRoom={selectedRoom}
+              currentUser={currentUser}
+              buildingName={buildingName}
+              isLoading={isLoading}
+              onClick={() => onRoomClick(connectedPair[1])}
+            />
           </div>
         </div>
 
@@ -235,14 +262,30 @@ function Floor2Plan({ getStatus, getRoomLabel, onRoomClick }) {
 
         {/* 206 — right-aligned */}
         <div className={`w-[48%] self-end ${TH}`}>
-          <SmallRoom room={standaloneRoom} status={getStatus(standaloneRoom)} label={getRoomLabel(standaloneRoom)} onClick={() => onRoomClick(standaloneRoom)} />
+          <SmallRoom 
+            room={standaloneRoom} 
+            roomInfo={getRoomInfo(standaloneRoom)}
+            selectedRoom={selectedRoom}
+            currentUser={currentUser}
+            buildingName={buildingName}
+            isLoading={isLoading}
+            onClick={() => onRoomClick(standaloneRoom)}
+          />
         </div>
 
         {/* Stairs + 207 */}
         <div className="flex items-center gap-3 sm:gap-4 pt-1">
           <StairsIndicator />
           <div className={`flex-1 ${TH}`}>
-            <SmallRoom room={stairsRoom} status={getStatus(stairsRoom)} label={getRoomLabel(stairsRoom)} onClick={() => onRoomClick(stairsRoom)} />
+            <SmallRoom 
+              room={stairsRoom} 
+              roomInfo={getRoomInfo(stairsRoom)}
+              selectedRoom={selectedRoom}
+              currentUser={currentUser}
+              buildingName={buildingName}
+              isLoading={isLoading}
+              onClick={() => onRoomClick(stairsRoom)}
+            />
           </div>
         </div>
       </div>
@@ -251,7 +294,7 @@ function Floor2Plan({ getStatus, getRoomLabel, onRoomClick }) {
 }
 
 /** FLOOR 3 — Kitchen 2 + rooms 304–301 left | Enter, 305→306, 307, 308, Stairs+309 right */
-function Floor3Plan({ getStatus, getRoomLabel, onRoomClick }) {
+function Floor3Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoading, buildingName }) {
   const leftRooms = floor3LeftColumn();                                              // [304, 303, 302, 301]
   const { connectedPair, stackedRooms, stairsRoom } = floor3RightSection();
   const kitchenLabel = LHAWANG_KITCHEN_LABELS[3];
@@ -265,7 +308,15 @@ function Floor3Plan({ getStatus, getRoomLabel, onRoomClick }) {
         <div className={TH}><KitchenBlock label={kitchenLabel} /></div>
         {leftRooms.map((r) => (
           <div key={r} className={TH}>
-            <SmallRoom room={r} status={getStatus(r)} label={getRoomLabel(r)} onClick={() => onRoomClick(r)} />
+            <SmallRoom 
+              room={r} 
+              roomInfo={getRoomInfo(r)}
+              selectedRoom={selectedRoom}
+              currentUser={currentUser}
+              buildingName={buildingName}
+              isLoading={isLoading}
+              onClick={() => onRoomClick(r)}
+            />
           </div>
         ))}
       </div>
@@ -280,18 +331,42 @@ function Floor3Plan({ getStatus, getRoomLabel, onRoomClick }) {
         {/* 305 → 306 */}
         <div className="flex items-center gap-2 sm:gap-3">
           <div className={`flex-1 ${TH}`}>
-            <SmallRoom room={connectedPair[0]} status={getStatus(connectedPair[0])} label={getRoomLabel(connectedPair[0])} onClick={() => onRoomClick(connectedPair[0])} />
+            <SmallRoom 
+              room={connectedPair[0]} 
+              roomInfo={getRoomInfo(connectedPair[0])}
+              selectedRoom={selectedRoom}
+              currentUser={currentUser}
+              buildingName={buildingName}
+              isLoading={isLoading}
+              onClick={() => onRoomClick(connectedPair[0])}
+            />
           </div>
           <RightArrow />
           <div className={`flex-1 ${TH}`}>
-            <SmallRoom room={connectedPair[1]} status={getStatus(connectedPair[1])} label={getRoomLabel(connectedPair[1])} onClick={() => onRoomClick(connectedPair[1])} />
+            <SmallRoom 
+              room={connectedPair[1]} 
+              roomInfo={getRoomInfo(connectedPair[1])}
+              selectedRoom={selectedRoom}
+              currentUser={currentUser}
+              buildingName={buildingName}
+              isLoading={isLoading}
+              onClick={() => onRoomClick(connectedPair[1])}
+            />
           </div>
         </div>
 
         {/* 307, 308 — left-aligned */}
         {stackedRooms.map((r) => (
           <div key={r} className={`w-[48%] self-start ${TH}`}>
-            <SmallRoom room={r} status={getStatus(r)} label={getRoomLabel(r)} onClick={() => onRoomClick(r)} />
+            <SmallRoom 
+              room={r} 
+              roomInfo={getRoomInfo(r)}
+              selectedRoom={selectedRoom}
+              currentUser={currentUser}
+              buildingName={buildingName}
+              isLoading={isLoading}
+              onClick={() => onRoomClick(r)}
+            />
           </div>
         ))}
 
@@ -299,7 +374,15 @@ function Floor3Plan({ getStatus, getRoomLabel, onRoomClick }) {
         <div className="flex items-center gap-3 sm:gap-4 pt-1">
           <StairsIndicator />
           <div className={`flex-1 ${TH}`}>
-            <SmallRoom room={stairsRoom} status={getStatus(stairsRoom)} label={getRoomLabel(stairsRoom)} onClick={() => onRoomClick(stairsRoom)} />
+            <SmallRoom 
+              room={stairsRoom} 
+              roomInfo={getRoomInfo(stairsRoom)}
+              selectedRoom={selectedRoom}
+              currentUser={currentUser}
+              buildingName={buildingName}
+              isLoading={isLoading}
+              onClick={() => onRoomClick(stairsRoom)}
+            />
           </div>
         </div>
       </div>
@@ -308,7 +391,7 @@ function Floor3Plan({ getStatus, getRoomLabel, onRoomClick }) {
 }
 
 /** FLOOR 4 — Kitchen 3 + rooms 403–401 left | Enter, 405→out, 407, Stairs+408 right */
-function Floor4Plan({ getStatus, getRoomLabel, onRoomClick }) {
+function Floor4Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoading, buildingName }) {
   const leftRooms = floor4LeftColumn();                                               // [403, 402, 401]
   const { entranceRoom, standaloneRoom, stairsRoom } = floor4RightSection();
   const kitchenLabel = LHAWANG_KITCHEN_LABELS[4];
@@ -322,7 +405,15 @@ function Floor4Plan({ getStatus, getRoomLabel, onRoomClick }) {
         <div className={TH}><KitchenBlock label={kitchenLabel} /></div>
         {leftRooms.map((r) => (
           <div key={r} className={TH}>
-            <SmallRoom room={r} status={getStatus(r)} label={getRoomLabel(r)} onClick={() => onRoomClick(r)} />
+            <SmallRoom 
+              room={r} 
+              roomInfo={getRoomInfo(r)}
+              selectedRoom={selectedRoom}
+              currentUser={currentUser}
+              buildingName={buildingName}
+              isLoading={isLoading}
+              onClick={() => onRoomClick(r)}
+            />
           </div>
         ))}
       </div>
@@ -337,7 +428,15 @@ function Floor4Plan({ getStatus, getRoomLabel, onRoomClick }) {
         {/* 405 → (outward entrance arrow, no room on right) */}
         <div className="flex items-center gap-2 sm:gap-3">
           <div className={`flex-1 ${TH}`}>
-            <SmallRoom room={entranceRoom} status={getStatus(entranceRoom)} label={getRoomLabel(entranceRoom)} onClick={() => onRoomClick(entranceRoom)} />
+            <SmallRoom 
+              room={entranceRoom} 
+              roomInfo={getRoomInfo(entranceRoom)}
+              selectedRoom={selectedRoom}
+              currentUser={currentUser}
+              buildingName={buildingName}
+              isLoading={isLoading}
+              onClick={() => onRoomClick(entranceRoom)}
+            />
           </div>
           <RightArrow />
           <div className="w-8 sm:w-10 flex-shrink-0" /> {/* empty — arrow points outward */}
@@ -345,14 +444,30 @@ function Floor4Plan({ getStatus, getRoomLabel, onRoomClick }) {
 
         {/* 407 — right-aligned */}
         <div className={`w-[48%] self-end ${TH}`}>
-          <SmallRoom room={standaloneRoom} status={getStatus(standaloneRoom)} label={getRoomLabel(standaloneRoom)} onClick={() => onRoomClick(standaloneRoom)} />
+          <SmallRoom 
+            room={standaloneRoom} 
+            roomInfo={getRoomInfo(standaloneRoom)}
+            selectedRoom={selectedRoom}
+            currentUser={currentUser}
+            buildingName={buildingName}
+            isLoading={isLoading}
+            onClick={() => onRoomClick(standaloneRoom)}
+          />
         </div>
 
         {/* Stairs + 408 */}
         <div className="flex items-center gap-3 sm:gap-4 pt-1">
           <StairsIndicator />
           <div className={`flex-1 ${TH}`}>
-            <SmallRoom room={stairsRoom} status={getStatus(stairsRoom)} label={getRoomLabel(stairsRoom)} onClick={() => onRoomClick(stairsRoom)} />
+            <SmallRoom 
+              room={stairsRoom} 
+              roomInfo={getRoomInfo(stairsRoom)}
+              selectedRoom={selectedRoom}
+              currentUser={currentUser}
+              buildingName={buildingName}
+              isLoading={isLoading}
+              onClick={() => onRoomClick(stairsRoom)}
+            />
           </div>
         </div>
       </div>
@@ -361,7 +476,7 @@ function Floor4Plan({ getStatus, getRoomLabel, onRoomClick }) {
 }
 
 /** FLOOR 5 — two large rooms: 502 (left + stairs) | 501 (right + stairs) */
-function Floor5Plan({ getStatus, getRoomLabel, onRoomClick }) {
+function Floor5Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoading, buildingName }) {
   const leftRoom  = floor5LeftRoom();   // 502
   const rightRoom = floor5RightRoom();  // 501
   const RH = "h-[180px] xs:h-[220px] sm:h-[270px] md:h-[330px]";
@@ -370,13 +485,29 @@ function Floor5Plan({ getStatus, getRoomLabel, onRoomClick }) {
     <div className="grid grid-cols-2 gap-4 sm:gap-6 md:gap-10">
       <div className="flex flex-col items-center gap-3">
         <div className={`w-full ${RH}`}>
-          <LargeRoom room={leftRoom} status={getStatus(leftRoom)} label={getRoomLabel(leftRoom)} onClick={() => onRoomClick(leftRoom)} />
+          <LargeRoom 
+            room={leftRoom} 
+            roomInfo={getRoomInfo(leftRoom)}
+            selectedRoom={selectedRoom}
+            currentUser={currentUser}
+            buildingName={buildingName}
+            isLoading={isLoading}
+            onClick={() => onRoomClick(leftRoom)}
+          />
         </div>
         <StairsIndicator />
       </div>
       <div className="flex flex-col items-center gap-3">
         <div className={`w-full ${RH}`}>
-          <LargeRoom room={rightRoom} status={getStatus(rightRoom)} label={getRoomLabel(rightRoom)} onClick={() => onRoomClick(rightRoom)} />
+          <LargeRoom 
+            room={rightRoom} 
+            roomInfo={getRoomInfo(rightRoom)}
+            selectedRoom={selectedRoom}
+            currentUser={currentUser}
+            buildingName={buildingName}
+            isLoading={isLoading}
+            onClick={() => onRoomClick(rightRoom)}
+          />
         </div>
         <StairsIndicator />
       </div>
@@ -395,32 +526,85 @@ export default function LhawangFloorPage({ params }) {
 
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [sidebarOpen,  setSidebarOpen]  = useState(false);
-  // Replace with real API data, e.g.: const [bookedRooms] = useState(new Set([201, 305]));
-  const [bookedRooms] = useState(new Set());
   const [roomsData, setRoomsData] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [isBooking, setIsBooking] = useState(false);
   const [toast, setToast] = useState(null);
   const [toastType, setToastType] = useState("error");
   const [currentUser, setCurrentUser] = useState(getStoredSession);
+  const sessionLoaded = true;
 
   const meta = LHAWANG_FLOOR_META[floorNum] ?? LHAWANG_FLOOR_META[1];
 
+  // Fetch rooms data
   useEffect(() => {
     async function fetchRooms() {
       try {
+        setLoading(true);
         const res = await fetch(`/api/rooms?floor=${floorNum}&building=Lhawang`);
         const data = await res.json();
         if (data.success) setRoomsData(data.rooms || []);
       } catch (err) {
         console.error("Fetch error:", err);
+      } finally {
+        setLoading(false);
       }
     }
-
     fetchRooms();
   }, [floorNum]);
 
+  // Fetch user's booking using floor-bookings API
+  useEffect(() => {
+    async function fetchUserBooking() {
+      if (!currentUser) return;
+      const studentNumber = currentUser.studentNumber ?? currentUser.phoneNumber ?? currentUser.stdNo;
+      if (!studentNumber) return;
+      try {
+        const params = new URLSearchParams({
+          building: LHAWANG_NAME,
+          floor: String(floorNum),
+          studentNumber: String(studentNumber),
+        });
+        const bookingsRes = await fetch(`/api/floor-bookings?${params.toString()}`);
+        const bookingsData = await bookingsRes.json();
+        if (bookingsData.success && bookingsData.rooms) {
+          let userBookedRoom = null;
+          for (const room of bookingsData.rooms) {
+            if (room.students && room.students.length > 0) {
+              const hasUserBooking = room.students.some(student => 
+                student.studentNumber === studentNumber
+              );
+              if (hasUserBooking) {
+                userBookedRoom = room.roomNumber;
+                break;
+              }
+            }
+          }
+          if (userBookedRoom) {
+            setCurrentUser(prev => ({
+              ...prev,
+              bookedRoomNumber: userBookedRoom,
+              hasBooked: true
+            }));
+          } else if (currentUser?.bookedRoomNumber) {
+            setCurrentUser(prev => ({
+              ...prev,
+              bookedRoomNumber: null,
+              hasBooked: false
+            }));
+            const updatedUser = { ...currentUser, bookedRoomNumber: null, hasBooked: false };
+            localStorage.setItem("session", JSON.stringify(updatedUser));
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching user booking:", err);
+      }
+    }
+    if (currentUser) fetchUserBooking();
+  }, [currentUser?.studentNumber, currentUser?.phoneNumber, currentUser?.stdNo, floorNum]);
+
   const getRoomInfo = (roomNo) => {
-    const fullRoomId = `LH-${roomNo}`;
+    const fullRoomId = `${LHAWANG_NAME}-${roomNo}`;
     const roomDigits = getNumericRoomNumber(roomNo);
     return roomsData.find((r) => {
       const roomNumber = String(r.roomNumber);
@@ -429,35 +613,8 @@ export default function LhawangFloorPage({ params }) {
         getNumericRoomNumber(roomNumber) === roomNo ||
         (roomDigits !== null && getNumericRoomNumber(roomNumber) === roomDigits)
       );
-    });
+    }) || { roomNumber: fullRoomId, isActive: true, occupied: 0, capacity: 3 };
   };
-
-  function getStatus(room) {
-    if (room === selectedRoom)  return STATUS.SELECTED;
-    if (bookedRooms.has(room))  return STATUS.BOOKED;
-    const roomInfo = getRoomInfo(room);
-    if (!roomInfo) return STATUS.AVAILABLE;
-    if (!roomInfo.isActive || (roomInfo.occupied || 0) >= (roomInfo.capacity || 0)) {
-      return STATUS.BOOKED;
-    }
-    return STATUS.AVAILABLE;
-  }
-
-  function getRoomLabel(room) {
-    const status = getStatus(room);
-    if (status === STATUS.SELECTED) return STATUS_STYLES[STATUS.SELECTED].label;
-
-    const roomInfo = getRoomInfo(room);
-    if (!roomInfo) return STATUS_STYLES[status]?.label ?? STATUS_STYLES[STATUS.AVAILABLE].label;
-    if (!roomInfo.isActive) return roomInfo.disabledReason || "Inactive";
-
-    const occupied = roomInfo.occupied || 0;
-    const capacity = roomInfo.capacity || 0;
-    if (!capacity) return STATUS_STYLES[status]?.label ?? STATUS_STYLES[STATUS.AVAILABLE].label;
-    if (occupied >= capacity) return `${capacity}/${capacity} Booked`;
-    if (occupied > 0) return `${occupied}/${capacity} Booked`;
-    return `${capacity - occupied} Available`;
-  }
 
   function handleRoomClick(room) {
     setSelectedRoom((prev) => (prev === room ? null : room));
@@ -519,6 +676,11 @@ export default function LhawangFloorPage({ params }) {
   async function handleConfirmBooking() {
     if (selectedRoom === null) return;
 
+    if (!sessionLoaded) {
+      showToast("Session is still loading, please wait.");
+      return;
+    }
+
     if (!currentUser) {
       showToast("You must be logged in to book a room.");
       router.push("/login");
@@ -539,7 +701,7 @@ export default function LhawangFloorPage({ params }) {
     }
 
     const roomInfo = getRoomInfo(selectedRoom);
-    const fullRoomId = roomInfo?.roomNumber ?? `LH-${selectedRoom}`;
+    const fullRoomId = roomInfo?.roomNumber ?? `${LHAWANG_NAME}-${selectedRoom}`;
 
     try {
       setIsBooking(true);
@@ -557,7 +719,7 @@ export default function LhawangFloorPage({ params }) {
       const result = await res.json();
       if (result.success) {
         showToast(`Room ${fullRoomId} reserved successfully! Details sent to your email.`, "success");
-        const updatedUser = { ...currentUser, hasBooked: true };
+        const updatedUser = { ...currentUser, hasBooked: true, bookedRoomNumber: fullRoomId };
         setCurrentUser(updatedUser);
         localStorage.setItem("session", JSON.stringify(updatedUser));
         setRoomsData((prev) =>
@@ -577,7 +739,14 @@ export default function LhawangFloorPage({ params }) {
     }
   }
 
-  const floorPlanProps = { getStatus, getRoomLabel, onRoomClick: handleRoomClick };
+  const floorPlanProps = { 
+    getRoomInfo, 
+    selectedRoom, 
+    currentUser, 
+    onRoomClick: handleRoomClick, 
+    isLoading: loading || isBooking,
+    buildingName: LHAWANG_NAME
+  };
 
   const PLANS = {
     1: <Floor1Plan {...floorPlanProps} />,
@@ -604,14 +773,14 @@ export default function LhawangFloorPage({ params }) {
           </div>
         )}
 
-        
         <FloorBookingsView
           building={LHAWANG_NAME}
           floor={floorNum}
           currentUser={currentUser}
           onDenied={(message) => showToast(message)}
         />
-{/* ── Mobile header ── */}
+
+        {/* ── Mobile header ── */}
         <div className="md:hidden flex items-center justify-between mb-4">
           <BackArrow />
           <h1 className="flex-1 text-center text-base xs:text-lg font-semibold tracking-wide">

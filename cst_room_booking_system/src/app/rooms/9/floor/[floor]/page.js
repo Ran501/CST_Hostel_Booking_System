@@ -3,10 +3,10 @@
 import Link from "next/link";
 import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
-import RoomLegend from "../../../components/RoomLegend";
 import FloorBookingsView from "../../../components/FloorBookingsView";
 import FloorSidebar from "../../../components/FloorSidebar";
 import ConfirmationDialog from "../../../../confirmation";
+import { getRoomColors, RoomLegend } from "../../../../room/components/useColors";
 import {
   HE_NAME,
   HE_FLOORS,
@@ -52,56 +52,31 @@ function getStoredSession() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Room Status
-// ─────────────────────────────────────────────────────────────────────────────
-const STATUS = {
-  AVAILABLE: "available",
-  BOOKED:    "booked",
-  SELECTED:  "selected",
-};
-
-const STATUS_STYLES = {
-  [STATUS.AVAILABLE]: {
-    border: "border-green-700",
-    bg:     "bg-green-700",
-    text:   "text-white",
-    ring:   "",
-    label:  "Available",
-  },
-  [STATUS.BOOKED]: {
-    border: "border-slate-300",
-    bg:     "bg-slate-100",
-    text:   "text-slate-500",
-    ring:   "",
-    label:  "Booked",
-  },
-  [STATUS.SELECTED]: {
-    border: "border-emerald-400",
-    bg:     "bg-emerald-50",
-    text:   "text-emerald-600",
-    ring:   "ring-2 ring-emerald-300",
-    label:  "Selected",
-  },
-};
-
-// ─────────────────────────────────────────────────────────────────────────────
 // Shared Primitive Components
 // ─────────────────────────────────────────────────────────────────────────────
 
 /** Standard room tile — portrait orientation matching the floor plan */
-function RoomBlock({ room, status, label, onClick }) {
-  const s = STATUS_STYLES[status] ?? STATUS_STYLES[STATUS.AVAILABLE];
-  const clickable = status !== STATUS.BOOKED;
+function RoomBlock({ room, onClick, roomInfo, selectedRoom, currentUser, buildingName, isLoading }) {
+  const { colorClasses, textColorClass, statusText, isDisabled } = getRoomColors(
+    roomInfo,
+    selectedRoom,
+    currentUser,
+    buildingName,
+    room
+  );
+
+  const clickable = !isDisabled;
+
   return (
     <button
-      disabled={!clickable}
+      disabled={!clickable || isLoading}
       onClick={clickable ? onClick : undefined}
       className={`
         relative flex flex-col items-center justify-center
         rounded-lg border-2 shadow-sm transition-all duration-200
         w-full h-full
-        ${s.border} ${s.bg} ${s.ring}
-        ${clickable
+        ${colorClasses}
+        ${clickable && !isDisabled
           ? "cursor-pointer hover:-translate-y-0.5 hover:shadow-md"
           : "cursor-not-allowed opacity-60"}
       `}
@@ -109,8 +84,8 @@ function RoomBlock({ room, status, label, onClick }) {
       <span className="text-[11px] xs:text-sm sm:text-base font-semibold tracking-wider text-slate-700">
         {room}
       </span>
-      <span className={`text-[8px] xs:text-[9px] sm:text-[10px] font-medium mt-0.5 ${s.text}`}>
-        {label ?? s.label}
+      <span className={`text-[8px] xs:text-[9px] sm:text-[10px] font-medium mt-0.5 ${textColorClass}`}>
+        {statusText}
       </span>
     </button>
   );
@@ -153,8 +128,9 @@ function StairLabel({ direction = "up", label = "Stair" }) {
     </div>
   );
 }
+
 // FLOOR 1 Plan
-function Floor1Plan({ getStatus, getRoomLabel, onRoomClick }) {
+function Floor1Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoading, buildingName }) {
   const topRow    = floor1TopRow();    // [101..106]
   const bottomRow = floor1BottomRow(); // [112..107]
 
@@ -190,7 +166,15 @@ function Floor1Plan({ getStatus, getRoomLabel, onRoomClick }) {
             <div className="flex flex-wrap gap-1.5 xs:gap-2 sm:gap-2.5 md:gap-3">
               {topRow.map((r) => (
                 <div key={r} className={`${RW} ${RH}`}>
-                  <RoomBlock room={r} status={getStatus(r)} label={getRoomLabel(r)} onClick={() => onRoomClick(r)} />
+                  <RoomBlock 
+                    room={r} 
+                    roomInfo={getRoomInfo(r)}
+                    selectedRoom={selectedRoom}
+                    currentUser={currentUser}
+                    buildingName={buildingName}
+                    isLoading={isLoading}
+                    onClick={() => onRoomClick(r)}
+                  />
                 </div>
               ))}
             </div>
@@ -203,7 +187,15 @@ function Floor1Plan({ getStatus, getRoomLabel, onRoomClick }) {
           <div className="flex flex-wrap gap-1.5 xs:gap-2 sm:gap-2.5 md:gap-3 pl-8 xs:pl-9 sm:pl-10">
             {bottomRow.map((r) => (
               <div key={r} className={`${RW} ${RH}`}>
-                <RoomBlock room={r} status={getStatus(r)} label={getRoomLabel(r)} onClick={() => onRoomClick(r)} />
+                <RoomBlock 
+                  room={r} 
+                  roomInfo={getRoomInfo(r)}
+                  selectedRoom={selectedRoom}
+                  currentUser={currentUser}
+                  buildingName={buildingName}
+                  isLoading={isLoading}
+                  onClick={() => onRoomClick(r)}
+                />
               </div>
             ))}
           </div>
@@ -227,7 +219,15 @@ function Floor1Plan({ getStatus, getRoomLabel, onRoomClick }) {
             <div className="text-center text-xs font-medium text-slate-600 mb-1">Left Side</div>
             {topRow.map((r) => (
               <div key={r} className={`${RW} ${RH}`}>
-                <RoomBlock room={r} status={getStatus(r)} label={getRoomLabel(r)} onClick={() => onRoomClick(r)} />
+                <RoomBlock 
+                  room={r} 
+                  roomInfo={getRoomInfo(r)}
+                  selectedRoom={selectedRoom}
+                  currentUser={currentUser}
+                  buildingName={buildingName}
+                  isLoading={isLoading}
+                  onClick={() => onRoomClick(r)}
+                />
               </div>
             ))}
           </div>
@@ -237,7 +237,15 @@ function Floor1Plan({ getStatus, getRoomLabel, onRoomClick }) {
             <div className="text-center text-xs font-medium text-slate-600 mb-1">Right Side</div>
             {bottomRow.map((r) => (
               <div key={r} className={`${RW} ${RH}`}>
-                <RoomBlock room={r} status={getStatus(r)} label={getRoomLabel(r)} onClick={() => onRoomClick(r)} />
+                <RoomBlock 
+                  room={r} 
+                  roomInfo={getRoomInfo(r)}
+                  selectedRoom={selectedRoom}
+                  currentUser={currentUser}
+                  buildingName={buildingName}
+                  isLoading={isLoading}
+                  onClick={() => onRoomClick(r)}
+                />
               </div>
             ))}
           </div>
@@ -246,8 +254,9 @@ function Floor1Plan({ getStatus, getRoomLabel, onRoomClick }) {
     </div>
   );
 }
+
 // FLOOR 2 Plan
-function Floor2Plan({ getStatus, getRoomLabel, onRoomClick }) {
+function Floor2Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoading, buildingName }) {
   const topA    = floor2TopRowGroupA();    // [224..228]
   const topB    = floor2TopRowGroupB();    // [229..233]
   const topC    = floor2TopRowGroupC();    // [201..206]
@@ -263,7 +272,15 @@ function Floor2Plan({ getStatus, getRoomLabel, onRoomClick }) {
     <div className="flex gap-1 xs:gap-1.5 sm:gap-2">
       {rooms.map((r) => (
         <div key={r} className={`${RW} ${RH}`}>
-          <RoomBlock room={r} status={getStatus(r)} label={getRoomLabel(r)} onClick={() => onRoomClick(r)} />
+          <RoomBlock 
+            room={r} 
+            roomInfo={getRoomInfo(r)}
+            selectedRoom={selectedRoom}
+            currentUser={currentUser}
+            buildingName={buildingName}
+            isLoading={isLoading}
+            onClick={() => onRoomClick(r)}
+          />
         </div>
       ))}
     </div>
@@ -358,7 +375,15 @@ function Floor2Plan({ getStatus, getRoomLabel, onRoomClick }) {
             <div className="flex flex-col gap-1">
               {topA.map((r) => (
                 <div key={r} className={`${RW} ${RH}`}>
-                  <RoomBlock room={r} status={getStatus(r)} label={getRoomLabel(r)} onClick={() => onRoomClick(r)} />
+                  <RoomBlock 
+                    room={r} 
+                    roomInfo={getRoomInfo(r)}
+                    selectedRoom={selectedRoom}
+                    currentUser={currentUser}
+                    buildingName={buildingName}
+                    isLoading={isLoading}
+                    onClick={() => onRoomClick(r)}
+                  />
                 </div>
               ))}
             </div>
@@ -367,7 +392,15 @@ function Floor2Plan({ getStatus, getRoomLabel, onRoomClick }) {
             <div className="flex flex-col gap-1">
               {botA.map((r) => (
                 <div key={r} className={`${RW} ${RH}`}>
-                  <RoomBlock room={r} status={getStatus(r)} label={getRoomLabel(r)} onClick={() => onRoomClick(r)} />
+                  <RoomBlock 
+                    room={r} 
+                    roomInfo={getRoomInfo(r)}
+                    selectedRoom={selectedRoom}
+                    currentUser={currentUser}
+                    buildingName={buildingName}
+                    isLoading={isLoading}
+                    onClick={() => onRoomClick(r)}
+                  />
                 </div>
               ))}
             </div>
@@ -379,7 +412,15 @@ function Floor2Plan({ getStatus, getRoomLabel, onRoomClick }) {
             <div className="flex flex-col gap-1">
               {topB.map((r) => (
                 <div key={r} className={`${RW} ${RH}`}>
-                  <RoomBlock room={r} status={getStatus(r)} label={getRoomLabel(r)} onClick={() => onRoomClick(r)} />
+                  <RoomBlock 
+                    room={r} 
+                    roomInfo={getRoomInfo(r)}
+                    selectedRoom={selectedRoom}
+                    currentUser={currentUser}
+                    buildingName={buildingName}
+                    isLoading={isLoading}
+                    onClick={() => onRoomClick(r)}
+                  />
                 </div>
               ))}
             </div>
@@ -388,7 +429,15 @@ function Floor2Plan({ getStatus, getRoomLabel, onRoomClick }) {
             <div className="flex flex-col gap-1">
               {botB.map((r) => (
                 <div key={r} className={`${RW} ${RH}`}>
-                  <RoomBlock room={r} status={getStatus(r)} label={getRoomLabel(r)} onClick={() => onRoomClick(r)} />
+                  <RoomBlock 
+                    room={r} 
+                    roomInfo={getRoomInfo(r)}
+                    selectedRoom={selectedRoom}
+                    currentUser={currentUser}
+                    buildingName={buildingName}
+                    isLoading={isLoading}
+                    onClick={() => onRoomClick(r)}
+                  />
                 </div>
               ))}
             </div>
@@ -402,14 +451,30 @@ function Floor2Plan({ getStatus, getRoomLabel, onRoomClick }) {
             <div className="flex flex-col gap-1">
               {topC.map((r) => (
                 <div key={r} className={`${RW} ${RH}`}>
-                  <RoomBlock room={r} status={getStatus(r)} label={getRoomLabel(r)} onClick={() => onRoomClick(r)} />
+                  <RoomBlock 
+                    room={r} 
+                    roomInfo={getRoomInfo(r)}
+                    selectedRoom={selectedRoom}
+                    currentUser={currentUser}
+                    buildingName={buildingName}
+                    isLoading={isLoading}
+                    onClick={() => onRoomClick(r)}
+                  />
                 </div>
               ))}
             </div>
             <div className="flex flex-col gap-1">
               {botC.map((r) => (
                 <div key={r} className={`${RW} ${RH}`}>
-                  <RoomBlock room={r} status={getStatus(r)} label={getRoomLabel(r)} onClick={() => onRoomClick(r)} />
+                  <RoomBlock 
+                    room={r} 
+                    roomInfo={getRoomInfo(r)}
+                    selectedRoom={selectedRoom}
+                    currentUser={currentUser}
+                    buildingName={buildingName}
+                    isLoading={isLoading}
+                    onClick={() => onRoomClick(r)}
+                  />
                 </div>
               ))}
             </div>
@@ -438,64 +503,90 @@ export default function HeFloorPage({ params }) {
 
   const [selectedRoom, setSelectedRoom] = useState(null);
   const [sidebarOpen,  setSidebarOpen]  = useState(false);
-  // Swap with real API data: e.g. const [bookedRooms] = useState(new Set([101, 205]));
-  const [bookedRooms] = useState(new Set());
   const [roomsData, setRoomsData] = useState([]);
+  const [loading, setLoading] = useState(true);
   const [isBooking, setIsBooking] = useState(false);
   const [toast, setToast] = useState(null);
   const [toastType, setToastType] = useState("error");
   const [currentUser, setCurrentUser] = useState(getStoredSession);
+  const sessionLoaded = true;
 
   const meta = HE_FLOOR_META[floorNum] ?? HE_FLOOR_META[1];
 
+  // Fetch rooms data
   useEffect(() => {
     async function fetchRooms() {
       try {
+        setLoading(true);
         const res = await fetch(`/api/rooms?floor=${floorNum}&building=HE`);
         const data = await res.json();
         if (data.success) setRoomsData(data.rooms || []);
       } catch (err) {
         console.error("Fetch error:", err);
+      } finally {
+        setLoading(false);
       }
     }
-
     fetchRooms();
   }, [floorNum]);
+
+  // Fetch user's booking using floor-bookings API
+  useEffect(() => {
+    async function fetchUserBooking() {
+      if (!currentUser) return;
+      const studentNumber = currentUser.studentNumber ?? currentUser.phoneNumber ?? currentUser.stdNo;
+      if (!studentNumber) return;
+      try {
+        const params = new URLSearchParams({
+          building: HE_NAME,
+          floor: String(floorNum),
+          studentNumber: String(studentNumber),
+        });
+        const bookingsRes = await fetch(`/api/floor-bookings?${params.toString()}`);
+        const bookingsData = await bookingsRes.json();
+        if (bookingsData.success && bookingsData.rooms) {
+          let userBookedRoom = null;
+          for (const room of bookingsData.rooms) {
+            if (room.students && room.students.length > 0) {
+              const hasUserBooking = room.students.some(student => 
+                student.studentNumber === studentNumber
+              );
+              if (hasUserBooking) {
+                userBookedRoom = room.roomNumber;
+                break;
+              }
+            }
+          }
+          if (userBookedRoom) {
+            setCurrentUser(prev => ({
+              ...prev,
+              bookedRoomNumber: userBookedRoom,
+              hasBooked: true
+            }));
+          } else if (currentUser?.bookedRoomNumber) {
+            setCurrentUser(prev => ({
+              ...prev,
+              bookedRoomNumber: null,
+              hasBooked: false
+            }));
+            const updatedUser = { ...currentUser, bookedRoomNumber: null, hasBooked: false };
+            localStorage.setItem("session", JSON.stringify(updatedUser));
+          }
+        }
+      } catch (err) {
+        console.error("Error fetching user booking:", err);
+      }
+    }
+    if (currentUser) fetchUserBooking();
+  }, [currentUser?.studentNumber, currentUser?.phoneNumber, currentUser?.stdNo, floorNum]);
 
   const getRoomInfo = (roomNo) => {
     const fullRoomId = `${HE_NAME}-${roomNo}`;
     return roomsData.find((r) => {
       const roomNumber = String(r.roomNumber);
       return roomNumber === fullRoomId || getNumericRoomNumber(roomNumber) === roomNo;
-    });
+    }) || { roomNumber: fullRoomId, isActive: true, occupied: 0, capacity: 3 };
   };
-
-  function getStatus(room) {
-    if (room === selectedRoom)  return STATUS.SELECTED;
-    if (bookedRooms.has(room))  return STATUS.BOOKED;
-    const roomInfo = getRoomInfo(room);
-    if (!roomInfo) return STATUS.AVAILABLE;
-    if (!roomInfo.isActive || (roomInfo.occupied || 0) >= (roomInfo.capacity || 0)) {
-      return STATUS.BOOKED;
-    }
-    return STATUS.AVAILABLE;
-  }
-
-  function getRoomLabel(room) {
-    const status = getStatus(room);
-    if (status === STATUS.SELECTED) return STATUS_STYLES[STATUS.SELECTED].label;
-
-    const roomInfo = getRoomInfo(room);
-    if (!roomInfo) return STATUS_STYLES[status]?.label ?? STATUS_STYLES[STATUS.AVAILABLE].label;
-    if (!roomInfo.isActive) return roomInfo.disabledReason || "Inactive";
-
-    const occupied = roomInfo.occupied || 0;
-    const capacity = roomInfo.capacity || 0;
-    if (!capacity) return STATUS_STYLES[status]?.label ?? STATUS_STYLES[STATUS.AVAILABLE].label;
-    if (occupied >= capacity) return `${capacity}/${capacity} Booked`;
-    if (occupied > 0) return `${occupied}/${capacity} Booked`;
-    return `${capacity - occupied} Available`;
-  }
 
   function handleRoomClick(room) {
     setSelectedRoom((prev) => (prev === room ? null : room));
@@ -557,6 +648,11 @@ export default function HeFloorPage({ params }) {
   async function handleConfirmBooking() {
     if (selectedRoom === null) return;
 
+    if (!sessionLoaded) {
+      showToast("Session is still loading, please wait.");
+      return;
+    }
+
     if (!currentUser) {
       showToast("You must be logged in to book a room.");
       router.push("/login");
@@ -594,7 +690,7 @@ export default function HeFloorPage({ params }) {
       const result = await res.json();
       if (result.success) {
         showToast(`Room ${fullRoomId} reserved successfully! Details sent to your email.`, "success");
-        const updatedUser = { ...currentUser, hasBooked: true };
+        const updatedUser = { ...currentUser, hasBooked: true, bookedRoomNumber: fullRoomId };
         setCurrentUser(updatedUser);
         localStorage.setItem("session", JSON.stringify(updatedUser));
         setRoomsData((prev) =>
@@ -614,7 +710,14 @@ export default function HeFloorPage({ params }) {
     }
   }
 
-  const floorPlanProps = { getStatus, getRoomLabel, onRoomClick: handleRoomClick };
+  const floorPlanProps = { 
+    getRoomInfo, 
+    selectedRoom, 
+    currentUser, 
+    onRoomClick: handleRoomClick, 
+    isLoading: loading || isBooking,
+    buildingName: HE_NAME
+  };
 
   const PLANS = {
     1: <Floor1Plan {...floorPlanProps} />,
@@ -645,23 +748,19 @@ export default function HeFloorPage({ params }) {
           </div>
         )}
 
-        
         <FloorBookingsView
           building={HE_NAME}
           floor={floorNum}
           currentUser={currentUser}
           onDenied={(message) => showToast(message)}
         />
-{/* ══════════════════════════════════════════════
-            MOBILE HEADER
-        ══════════════════════════════════════════════ */}
+
+        {/* MOBILE HEADER */}
         <div className="md:hidden flex items-center justify-between mb-4">
           <BackArrow />
-
           <h1 className="flex-1 text-center text-base xs:text-lg font-semibold tracking-wide">
             {HE_NAME} {floorLabel(floorNum)} floor
           </h1>
-
           <button
             onClick={() => setSidebarOpen((o) => !o)}
             className="cursor-pointer px-3 py-1 bg-white border border-slate-200 rounded-full shadow-sm flex items-center gap-0.5 text-xs"
@@ -678,9 +777,7 @@ export default function HeFloorPage({ params }) {
           </button>
         </div>
 
-        {/* ══════════════════════════════════════════════
-            MOBILE SIDEBAR DRAWER
-        ══════════════════════════════════════════════ */}
+        {/* MOBILE SIDEBAR DRAWER */}
         {sidebarOpen && (
           <div
             className="md:hidden fixed inset-0 z-50 bg-black/50"
@@ -699,9 +796,7 @@ export default function HeFloorPage({ params }) {
           </div>
         )}
 
-        {/* ══════════════════════════════════════════════
-            DESKTOP HEADER
-        ══════════════════════════════════════════════ */}
+        {/* DESKTOP HEADER */}
         <div className="hidden md:flex items-center mb-4 sm:mb-5 lg:mb-6">
           <BackArrow />
           <div className="text-center flex-1">
@@ -719,11 +814,8 @@ export default function HeFloorPage({ params }) {
           </div>
         </div>
 
-        {/* ══════════════════════════════════════════════
-            BODY: SIDEBAR + FLOOR PLAN
-        ══════════════════════════════════════════════ */}
+        {/* BODY: SIDEBAR + FLOOR PLAN */}
         <div className="flex flex-col md:flex-row gap-4 lg:gap-6">
-
           {/* Desktop sidebar */}
           <div className="hidden md:block w-48 lg:w-56 flex-shrink-0">
             <FloorSidebar
@@ -744,6 +836,7 @@ export default function HeFloorPage({ params }) {
             </div>
           </div>
         </div>
+        
         {selectedRoom !== null && (
           <ConfirmationDialog
             message={`Do you want to book a bed from Room ${HE_NAME}-${selectedRoom}?`}

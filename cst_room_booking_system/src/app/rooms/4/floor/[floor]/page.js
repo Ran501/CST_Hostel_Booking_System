@@ -4,10 +4,10 @@ import Link from "next/link";
 import { use, useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import FloorSidebar from "../../../components/FloorSidebar";
-import RoomLegend from "../../../components/RoomLegend";
 import FloorBookingsView from "../../../components/FloorBookingsView";
 import ConfirmationDialog from "../../../../confirmation";
 import SpecialBlock from "../../../../room/components/SpecialBlock";
+import { getRoomColors, RoomLegend } from "../../../../room/components/useColors";
 
 import {
   HA_NAME,
@@ -30,10 +30,8 @@ function getNumericRoomNumber(roomNumber) {
 
 function getStoredSession() {
   if (typeof window === "undefined") return null;
-
   const session = window.localStorage.getItem("session");
   if (!session) return null;
-
   try {
     return JSON.parse(session);
   } catch {
@@ -49,12 +47,9 @@ export default function HaFloorPage({ params }) {
   const isValid = Number.isFinite(rawFloor) && isValidFloor(rawFloor);
   const floorNum = isValid ? rawFloor : 1;
 
-  // Simple States
   const [selectedRoom, setSelectedRoom] = useState(null);
-  // To hold backend data
   const [roomsData, setRoomsData] = useState([]);
   const [loading, setLoading] = useState(true);
-  // Simple States
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [isBooking, setIsBooking] = useState(false);
   const [toast, setToast] = useState(null);
@@ -62,32 +57,82 @@ export default function HaFloorPage({ params }) {
   const [currentUser, setCurrentUser] = useState(getStoredSession);
   const sessionLoaded = true;
 
+  // Fetch rooms data
   useEffect(() => {
-        async function fetchRooms() {
-          try {
-            setLoading(true);
-            // Replace with your actual API endpoint
-            const res = await fetch(`/api/rooms?floor=${floorNum}&building=HA`);
-            const data = await res.json();
-            if (data.success) setRoomsData(data.rooms || []);
-          } catch (err) {
-            console.error("Fetch error:", err);
-          } finally {
-            setLoading(false);
+    async function fetchRooms() {
+      try {
+        setLoading(true);
+        const res = await fetch(`/api/rooms?floor=${floorNum}&building=HA`);
+        const data = await res.json();
+        if (data.success) setRoomsData(data.rooms || []);
+      } catch (err) {
+        console.error("Fetch error:", err);
+      } finally {
+        setLoading(false);
+      }
+    }
+    if (isValid) fetchRooms();
+  }, [floorNum, isValid]);
+
+  // Fetch user's booking using floor-bookings API
+  useEffect(() => {
+    async function fetchUserBooking() {
+      if (!currentUser) return;
+      const studentNumber = currentUser.studentNumber ?? currentUser.phoneNumber ?? currentUser.stdNo;
+      if (!studentNumber) return;
+      try {
+        const params = new URLSearchParams({
+          building: HA_NAME,
+          floor: String(floorNum),
+          studentNumber: String(studentNumber),
+        });
+        const bookingsRes = await fetch(`/api/floor-bookings?${params.toString()}`);
+        const bookingsData = await bookingsRes.json();
+        if (bookingsData.success && bookingsData.rooms) {
+          let userBookedRoom = null;
+          for (const room of bookingsData.rooms) {
+            if (room.students && room.students.length > 0) {
+              const hasUserBooking = room.students.some(student => 
+                student.studentNumber === studentNumber
+              );
+              if (hasUserBooking) {
+                userBookedRoom = room.roomNumber;
+                break;
+              }
+            }
+          }
+          if (userBookedRoom) {
+            setCurrentUser(prev => ({
+              ...prev,
+              bookedRoomNumber: userBookedRoom,
+              hasBooked: true
+            }));
+          } else if (currentUser?.bookedRoomNumber) {
+            setCurrentUser(prev => ({
+              ...prev,
+              bookedRoomNumber: null,
+              hasBooked: false
+            }));
+            const updatedUser = { ...currentUser, bookedRoomNumber: null, hasBooked: false };
+            localStorage.setItem("session", JSON.stringify(updatedUser));
           }
         }
-        if (isValid) fetchRooms();
-      }, [floorNum, isValid]);
-    
-      const getRoomInfo = (roomNo) => {
-        const fullRoomId = `${HA_NAME}-${roomNo}`;
-        return roomsData.find((r) => {
-          const roomNumber = String(r.roomNumber);
-          return roomNumber === fullRoomId || getNumericRoomNumber(roomNumber) === roomNo;
-        });
-      };
+      } catch (err) {
+        console.error("Error fetching user booking:", err);
+      }
+    }
+    if (currentUser && isValid) fetchUserBooking();
+  }, [currentUser?.studentNumber, currentUser?.phoneNumber, currentUser?.stdNo, floorNum, isValid]);
 
-  // Simple redirect logic
+  const getRoomInfo = (roomNo) => {
+    const fullRoomId = `${HA_NAME}-${roomNo}`;
+    return roomsData.find((r) => {
+      const roomNumber = String(r.roomNumber);
+      return roomNumber === fullRoomId || getNumericRoomNumber(roomNumber) === roomNo;
+    });
+  };
+
+  // Redirect if invalid floor
   useEffect(() => {
     if (!isValid) router.replace("/rooms/4/floor/1");
   }, [isValid, router]);
@@ -104,16 +149,13 @@ export default function HaFloorPage({ params }) {
       showToast("Student year not found. Please log in again.");
       return false;
     }
-
     try {
       const res = await fetch(`/api/floor-allocation?building=HA&floor=${floorNum}`);
       const data = await res.json();
-
       if (data.success && data.allocatedYear && data.allocatedYear != currentUser.year) {
         showToast(`Access Denied: This floor is reserved for Year ${data.allocatedYear} students.`);
         return false;
       }
-
       return true;
     } catch (err) {
       console.error("Floor validation error:", err);
@@ -123,16 +165,13 @@ export default function HaFloorPage({ params }) {
 
   const validateGender = (roomNo) => {
     const roomInfo = getRoomInfo(roomNo);
-
     if (!roomInfo) return true;
     if (!currentUser) {
       showToast("Please log in to book a room.");
       return false;
     }
-
     const roomGender = (roomInfo.forGender || "").toLowerCase().trim();
     const userGender = (currentUser.gender || "").toLowerCase().trim();
-
     if (roomGender && userGender && roomGender !== userGender) {
       showToast(
         `Access Denied: This room is for ${
@@ -141,136 +180,95 @@ export default function HaFloorPage({ params }) {
       );
       return false;
     }
-
     return true;
   };
 
   async function handleConfirmBooking() {
-  if (selectedRoom === null) return;
-
-  if (!sessionLoaded) {
-    showToast("Session is still loading, please wait.");
-    return;
-  }
-
-  if (!currentUser) {
-    showToast("You must be logged in to book a room.");
-    router.push("/login");
-    return;
-  }
-
-  const isCorrectYear = await validateFloorYear();
-  if (!isCorrectYear) return;
-
-  const isCorrectGender = validateGender(selectedRoom);
-  if (!isCorrectGender) return;
-
-  const studentNumber = currentUser.studentNumber ?? currentUser.phoneNumber ?? currentUser.stdNo;
-
-  if (!studentNumber) {
-    showToast("Student number not found in session. Please log in again.");
-    return;
-  }
-
-  const fullRoomId = `${HA_NAME}-${selectedRoom}`;
-
-  try {
-    setIsBooking(true);
-    const res = await fetch("/api/booking", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        roomNumber: fullRoomId,
-        studentNumber: String(studentNumber),
-        email: currentUser.email,
-        checkIn: new Date().toISOString(),
-        checkOut: new Date(
-          new Date().setMonth(new Date().getMonth() + 6),
-        ).toISOString(),
-      }),
-    });
-
-    const result = await res.json();
-    if (result.success) {
-      showToast(`Room ${fullRoomId} reserved successfully! Details sent to your email.`, "success");
-      const updatedUser = { ...currentUser, hasBooked: true };
-      setCurrentUser(updatedUser);
-      localStorage.setItem("session", JSON.stringify(updatedUser));
-      setRoomsData((prev) =>
-        prev.map((r) =>
-          r.roomNumber === fullRoomId
-            ? { ...r, occupied: (r.occupied || 0) + 1 }
-            : r,
-        ),
-      );
-    } else {
-      showToast("Error: " + (result.error || "Could not book"));
+    if (selectedRoom === null) return;
+    if (!sessionLoaded) {
+      showToast("Session is still loading, please wait.");
+      return;
     }
-  } catch (err) {
-    console.error("Booking error:", err);
-    showToast("Connection failed.");
-  } finally {
-    setIsBooking(false);
-    setSelectedRoom(null);
-  }
-} 
-
-  // --- SPATIAL DATA ---
-  const leftRooms = useMemo(
-    () => haLeftRoomsForFloor(floorNum),
-    [floorNum]
-  );
-  const rightRooms = useMemo(
-    () => haRightRoomsForFloor(floorNum),
-    [floorNum]
-  );
-
-  const filteredRightRooms = useMemo(() => {
-    if (floorNum === 1) return rightRooms.filter((r) => r !== 109);
-    return rightRooms;
-  }, [floorNum, rightRooms]);
-
-  // Simple Room Block component - no API calls
-  const RoomBlock = ({ room }) => {
-    const isSelected = selectedRoom === room;
-    const roomInfo = getRoomInfo(room);
-    if (!roomInfo) {
-        return (
-          <div className="w-full h-full rounded-xl border border-slate-200 bg-slate-50 animate-pulse flex items-center justify-center">
-            <span className="text-[10px] text-slate-400">Loading...</span>
-          </div>
+    if (!currentUser) {
+      showToast("You must be logged in to book a room.");
+      router.push("/login");
+      return;
+    }
+    const isCorrectYear = await validateFloorYear();
+    if (!isCorrectYear) return;
+    const isCorrectGender = validateGender(selectedRoom);
+    if (!isCorrectGender) return;
+    const studentNumber = currentUser.studentNumber ?? currentUser.phoneNumber ?? currentUser.stdNo;
+    if (!studentNumber) {
+      showToast("Student number not found in session. Please log in again.");
+      return;
+    }
+    const fullRoomId = `${HA_NAME}-${selectedRoom}`;
+    try {
+      setIsBooking(true);
+      const res = await fetch("/api/booking", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          roomNumber: fullRoomId,
+          studentNumber: String(studentNumber),
+          email: currentUser.email,
+          checkIn: new Date().toISOString(),
+          checkOut: new Date(
+            new Date().setMonth(new Date().getMonth() + 6),
+          ).toISOString(),
+        }),
+      });
+      const result = await res.json();
+      if (result.success) {
+        showToast(`Room ${fullRoomId} reserved successfully! Details sent to your email.`, "success");
+        const updatedUser = { ...currentUser, hasBooked: true, bookedRoomNumber: fullRoomId };
+        setCurrentUser(updatedUser);
+        localStorage.setItem("session", JSON.stringify(updatedUser));
+        setRoomsData((prev) =>
+          prev.map((r) =>
+            r.roomNumber === fullRoomId
+              ? { ...r, occupied: (r.occupied || 0) + 1 }
+              : r,
+          ),
         );
+      } else {
+        showToast("Error: " + (result.error || "Could not book"));
       }
-    // 2. Extract database values
-      const dbValue = roomInfo.isActive ?? roomInfo.is_active;
-      const status = String(roomInfo.status ?? "").toLowerCase().trim();
-      const isRoomActive =
-        dbValue !== false &&
-        String(dbValue).toUpperCase().trim() !== "FALSE" &&
-        !["disabled", "inactive", "maintenance"].includes(status);
-      const occupied = roomInfo.occupied || 0;
-      const capacity = roomInfo.capacity || 3;
-  
-      // 3. Calculate states
-      const isFully = occupied >= capacity;
-      const isPartial = occupied > 0 && occupied < capacity;
-  
-      // 4. Assign dynamic CSS colors
-      const colors = !isRoomActive
-        ? "border-slate-200 bg-slate-100 text-slate-400 cursor-not-allowed opacity-60"
-        : isFully
-          ? "border-slate-300 bg-slate-100 text-slate-500 cursor-not-allowed opacity-70"
-          : isSelected
-            ? "border-emerald-200 bg-emerald-50 text-emerald-700 ring-2 ring-emerald-300/70"
-            : isPartial
-              ? "border-amber-200 bg-amber-50 text-amber-700 hover:border-amber-300/80 hover:bg-amber-50/80 hover:-translate-y-0.5 hover:shadow-md"
-              : "border-green-700 bg-green-700 text-white hover:border-green-800 hover:bg-green-800 hover:-translate-y-0.5 hover:shadow-md";
+    } catch (err) {
+      console.error("Booking error:", err);
+      showToast("Connection failed.");
+    } finally {
+      setIsBooking(false);
+      setSelectedRoom(null);
+    }
+  }
 
+  // Room Block component using getRoomColors
+  const RoomBlock = ({ room }) => {
+    const roomInfo = getRoomInfo(room);
+    const isSelected = selectedRoom === room;
+    
+    if (!roomInfo) {
+      return (
+        <div className="w-full h-full rounded-xl border border-slate-200 bg-slate-50 animate-pulse flex items-center justify-center">
+          <span className="text-[10px] text-slate-400">Loading...</span>
+        </div>
+      );
+    }
+
+    const { colorClasses, textColorClass, statusText, isDisabled } = getRoomColors(
+      roomInfo,
+      selectedRoom,
+      currentUser,
+      HA_NAME,
+      room
+    );
 
     return (
       <button
-        disabled={!isRoomActive || isFully || loading}
-        className={`group relative rounded-xl border shadow-sm transition-all duration-200 w-full h-full flex flex-col items-center justify-center p-1 disabled:shadow-none ${colors} ${
+        disabled={isDisabled || loading}
+        className={`group relative rounded-xl border shadow-sm transition-all duration-200 w-full h-full flex flex-col items-center justify-center p-1 disabled:shadow-none ${colorClasses} ${
           isSelected ? "ring-2 ring-emerald-300" : ""
         }`}
         onClick={() => setSelectedRoom(room)}
@@ -278,31 +276,26 @@ export default function HaFloorPage({ params }) {
         <span className="text-[11px] font-bold tracking-tight">
           {room}
         </span>
-        <span className={`text-[9px] xs:text-[10px] sm:text-[11px] whitespace-nowrap ${!isRoomActive || isFully || isPartial ? "text-slate-700" : "text-white"}`}>
-            {!isRoomActive
-              ? roomInfo.disabledReason || "Inactive"
-              : isFully
-                ? `${capacity}/${capacity} Booked`
-                : isPartial
-                  ? `${occupied}/${capacity} Booked`
-                  : `${capacity - occupied} Available`}
-          </span>
+        <span className={`text-[9px] xs:text-[10px] sm:text-[11px] whitespace-nowrap ${textColorClass}`}>
+          {statusText}
+        </span>
       </button>
     );
   };
 
-  const leftTopRooms =
-    floorNum === 1 ? leftRooms.slice(0, 4) : leftRooms.slice(0, 3);
-  const leftBottomRooms =
-    floorNum === 1 ? leftRooms.slice(4) : leftRooms.slice(3);
-  const rightTopRooms =
-    floorNum === 1
-      ? [109, ...filteredRightRooms.slice(0, 2)]
-      : filteredRightRooms.slice(0, 3);
-  const rightBottomRooms =
-    floorNum === 1
-      ? filteredRightRooms.slice(2, 4)
-      : filteredRightRooms.slice(3, 5);
+  // SPATIAL DATA
+  const leftRooms = useMemo(() => haLeftRoomsForFloor(floorNum), [floorNum]);
+  const rightRooms = useMemo(() => haRightRoomsForFloor(floorNum), [floorNum]);
+
+  const filteredRightRooms = useMemo(() => {
+    if (floorNum === 1) return rightRooms.filter((r) => r !== 109);
+    return rightRooms;
+  }, [floorNum, rightRooms]);
+
+  const leftTopRooms = floorNum === 1 ? leftRooms.slice(0, 4) : leftRooms.slice(0, 3);
+  const leftBottomRooms = floorNum === 1 ? leftRooms.slice(4) : leftRooms.slice(3);
+  const rightTopRooms = floorNum === 1 ? [109, ...filteredRightRooms.slice(0, 2)] : filteredRightRooms.slice(0, 3);
+  const rightBottomRooms = floorNum === 1 ? filteredRightRooms.slice(2, 4) : filteredRightRooms.slice(3, 5);
 
   return (
     <main className="min-h-screen bg-zinc-100 py-4 sm:py-6 md:py-8 text-slate-900 overflow-x-hidden">
@@ -313,31 +306,17 @@ export default function HaFloorPage({ params }) {
           </div>
         )}
 
-        
         <FloorBookingsView
           building={HA_NAME}
           floor={floorNum}
           currentUser={currentUser}
           onDenied={(message) => showToast(message)}
         />
-<div className="mb-4 flex items-center text-slate-500">
-          <Link
-            href="/"
-            className="inline-flex items-center hover:text-slate-700"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M19 12H5m7-7l-7 7 7 7"
-              />
+
+        <div className="mb-4 flex items-center text-slate-500">
+          <Link href="/" className="inline-flex items-center hover:text-slate-700">
+            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+              <path strokeLinecap="round" strokeLinejoin="round" d="M19 12H5m7-7l-7 7 7 7" />
             </svg>
           </Link>
         </div>
@@ -363,10 +342,7 @@ export default function HaFloorPage({ params }) {
                 <div className="grid grid-cols-[1fr_auto_1fr] gap-4 sm:gap-6 pt-10 pb-12">
                   <div className="flex flex-col items-center gap-3">
                     {leftTopRooms.map((r) => (
-                      <div
-                        key={r}
-                        className="w-full max-w-[140px] h-[40px] md:h-[46px]"
-                      >
+                      <div key={r} className="w-full max-w-[140px] h-[40px] md:h-[46px]">
                         <RoomBlock room={r} />
                       </div>
                     ))}
@@ -376,10 +352,7 @@ export default function HaFloorPage({ params }) {
                       </div>
                     )}
                     {leftBottomRooms.map((r) => (
-                      <div
-                        key={r}
-                        className="w-full max-w-[140px] h-[40px] md:h-[46px]"
-                      >
+                      <div key={r} className="w-full max-w-[140px] h-[40px] md:h-[46px]">
                         <RoomBlock room={r} />
                       </div>
                     ))}
@@ -392,10 +365,7 @@ export default function HaFloorPage({ params }) {
                   <div className="flex flex-col items-center gap-3">
                     <SpecialBlock text="🚿 Washroom" type="washroom" />
                     {rightTopRooms.map((r) => (
-                      <div
-                        key={r}
-                        className="w-full max-w-[140px] h-[40px] md:h-[46px]"
-                      >
+                      <div key={r} className="w-full max-w-[140px] h-[40px] md:h-[46px]">
                         <RoomBlock room={r} />
                       </div>
                     ))}
@@ -407,10 +377,7 @@ export default function HaFloorPage({ params }) {
                       <div className="h-4" />
                     )}
                     {rightBottomRooms.map((r) => (
-                      <div
-                        key={r}
-                        className="w-full max-w-[140px] h-[40px] md:h-[46px]"
-                      >
+                      <div key={r} className="w-full max-w-[140px] h-[40px] md:h-[46px]">
                         <RoomBlock room={r} />
                       </div>
                     ))}

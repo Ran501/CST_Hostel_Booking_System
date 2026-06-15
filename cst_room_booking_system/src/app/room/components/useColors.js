@@ -21,38 +21,38 @@ export const getRoomColors = (roomInfo, selectedRoom, currentUser, buildingName,
   let legendColorClass = "";
 
   if (!isRoomActive) {
-    colorClasses = "border-gray-300 bg-gray-100 cursor-not-allowed opacity-60";
+    colorClasses = "border-gray-100 bg-gray-100 bg-opacity-100 cursor-not-allowed";
     textColorClass = "text-gray-400";
-    statusText = roomInfo.disabledReason || "Inactive";
-    legendColorClass = "bg-gray-400";
+    statusText = roomInfo.disabledReason || "INACTIVE";
+    legendColorClass = "bg-gray-300";
   } 
   else if (isYourBooking) {
-    colorClasses = "border-green-500 bg-green-50 hover:bg-green-100";
+    colorClasses = "border-green-500 bg-green-100 hover:bg-green-200";
     textColorClass = "text-green-700";
     statusText = "Your Booking";
     legendColorClass = "bg-green-500";
   }
   else if (isFully) {
-    colorClasses = "border-red-400 bg-red-50 cursor-not-allowed opacity-75";
-    textColorClass = "text-red-600";
+    colorClasses = "border-red-900 bg-red-300 cursor-not-allowed opacity-80";
+    textColorClass = "text-red-900";
     statusText = `${capacity}/${capacity} Booked`;
-    legendColorClass = "bg-red-400";
+    legendColorClass = "bg-red-800";
   }
   else if (isSelected) {
-    colorClasses = "border-indigo-500 bg-indigo-50";
-    textColorClass = "text-indigo-600";
+    colorClasses = "border-indigo-500 bg-indigo-100";
+    textColorClass = "text-indigo-700";
     statusText = `${capacity - occupied} Available`;
     legendColorClass = "bg-indigo-500";
   }
   else if (isPartial) {
-    colorClasses = "border-amber-400 bg-amber-50 hover:border-amber-500 hover:bg-amber-100 hover:-translate-y-0.5 hover:shadow-md";
-    textColorClass = "text-amber-600";
+    colorClasses = "border-yellow-500 bg-yellow-100 hover:border-yellow-600 hover:bg-yellow-200 hover:-translate-y-0.5 hover:shadow-md";
+    textColorClass = "text-yellow-700";
     statusText = `${occupied}/${capacity} Booked`;
-    legendColorClass = "bg-amber-400";
+    legendColorClass = "bg-yellow-500";
   }
   else {
-    colorClasses = "border-gray-400 bg-gray-50 hover:border-gray-500 hover:bg-gray-100 hover:-translate-y-0.5 hover:shadow-md";
-    textColorClass = "text-gray-600";
+    colorClasses = "border-gray-400 bg-gray-100 hover:border-gray-500 hover:bg-gray-200 hover:-translate-y-0.5 hover:shadow-md";
+    textColorClass = "text-gray-700";
     statusText = `${capacity - occupied} Available`;
     legendColorClass = "bg-gray-400";
   }
@@ -70,10 +70,10 @@ export const getRoomColors = (roomInfo, selectedRoom, currentUser, buildingName,
 export const RoomLegend = () => {
   const legendItems = [
     { key: "available", label: "Available", colorClass: "bg-gray-400" },
-    { key: "partiallyBooked", label: "Partially Booked", colorClass: "bg-amber-400" },
-    { key: "fullyBooked", label: "Fully Booked", colorClass: "bg-red-400" },
+    { key: "partiallyBooked", label: "Partially Booked", colorClass: "bg-yellow-500" },
+    { key: "fullyBooked", label: "Fully Booked", colorClass: "bg-red-800" },
     { key: "yourBooking", label: "Your Booking", colorClass: "bg-green-500" },
-    { key: "inactive", label: "Inactive", colorClass: "bg-gray-400" }
+    { key: "inactive", label: "Inactive", colorClass: "bg-gray-300" }
   ];
 
   return (
