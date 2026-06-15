@@ -136,50 +136,67 @@ export default function HostelPage() {
 
       {/* Detail modal */}
       {selectedHostel && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
-          <div className="w-full max-w-lg rounded-2xl overflow-hidden shadow-2xl bg-white text-black">
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-3 sm:px-4 py-4">
+          
+          <div className="
+            w-full 
+            max-w-lg 
+            sm:max-w-xl 
+            md:max-w-2xl 
+            max-h-[90vh] 
+            overflow-hidden 
+            rounded-2xl 
+            shadow-2xl 
+            bg-white 
+            text-black
+            flex 
+            flex-col
+          ">
 
-            {/* Modal header */}
-            <div className="relative bg-blue-600 text-white px-6 py-6 text-center">
+            {/* Header */}
+            <div className="relative bg-blue-600 text-white px-4 sm:px-6 py-5 text-center">
               <button
                 onClick={() => setSelectedHostel(null)}
-                className="absolute top-4 right-4 text-white/80 hover:text-white"
+                className="absolute top-3 right-3 sm:top-4 sm:right-4 text-white/80 hover:text-white"
               >
                 <X size={18} />
               </button>
-              <h2 className="text-xl font-semibold">{selectedHostel.hostelName}</h2>
-              <p className="text-sm text-blue-100 mt-1">Manage hostel details</p>
+
+              <h2 className="text-lg sm:text-xl font-semibold">
+                {selectedHostel.hostelName}
+              </h2>
+
+              <p className="text-xs sm:text-sm text-blue-100 mt-1">
+                Manage hostel details
+              </p>
             </div>
 
-            {/* Modal body */}
-            <div className="px-6 py-6 space-y-5 bg-gray-50 text-black">
+            {/* Body (scrollable) */}
+            <div className="flex-1 overflow-y-auto px-4 sm:px-6 py-5 space-y-5 bg-gray-50">
 
               {/* Stats */}
-              <div className="grid grid-cols-3 gap-4 text-center">
-                <div className="bg-white rounded-xl p-4 shadow-sm">
-                  <p className="text-xs text-gray-500">Total Rooms</p>
-                  <p className="text-2xl font-bold text-black">
-                    {selectedHostel.roomCount ?? 0}
-                  </p>
-                </div>
-                <div className="bg-white rounded-xl p-4 shadow-sm">
-                  <p className="text-xs text-gray-500">Capacity</p>
-                  <p className="text-2xl font-bold text-black">
-                    {selectedHostel.capacity ?? 0}
-                  </p>
-                </div>
-                <div className="bg-white rounded-xl p-4 shadow-sm">
-                  <p className="text-xs text-gray-500">Floors</p>
-                  <p className="text-2xl font-bold text-black">
-                    {selectedHostel.numberOfFloor ?? 0}
-                  </p>
-                </div>
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4 text-center">
+                {[
+                  { label: "Total Rooms", value: selectedHostel.roomCount ?? 0 },
+                  { label: "Capacity", value: selectedHostel.capacity ?? 0 },
+                  { label: "Floors", value: selectedHostel.numberOfFloor ?? 0 },
+                ].map((item, i) => (
+                  <div key={i} className="bg-white rounded-xl p-4 shadow-sm">
+                    <p className="text-xs text-gray-500">{item.label}</p>
+                    <p className="text-xl sm:text-2xl font-bold text-black">
+                      {item.value}
+                    </p>
+                  </div>
+                ))}
               </div>
 
               {/* Floor allocations */}
               {selectedHostel.floorAllocations?.length > 0 && (
                 <div className="bg-white rounded-xl p-4 shadow-sm">
-                  <p className="text-sm font-medium text-black mb-3">Floor Allocations</p>
+                  <p className="text-sm font-medium text-black mb-3">
+                    Floor Allocations
+                  </p>
+
                   <div className="space-y-2">
                     {selectedHostel.floorAllocations.map((fa) => (
                       <div
@@ -187,7 +204,9 @@ export default function HostelPage() {
                         className="flex justify-between items-center text-sm text-gray-700 border-b border-gray-100 pb-1 last:border-0 last:pb-0"
                       >
                         <span>Floor {fa.floor}</span>
-                        <span className="text-blue-600 font-medium">Year {fa.studentYear}</span>
+                        <span className="text-blue-600 font-medium">
+                          Year {fa.studentYear}
+                        </span>
                       </div>
                     ))}
                   </div>
@@ -196,12 +215,16 @@ export default function HostelPage() {
 
               {/* Gender */}
               <div className="bg-white rounded-xl p-4 shadow-sm">
-                <label className="block mb-2 font-medium text-black">Gender</label>
+                <label className="block mb-2 font-medium text-black">
+                  Gender
+                </label>
+
                 <select
                   value={selectedHostel.gender ?? ""}
                   onChange={(e) => {
                     const nextGender = e.target.value;
                     if (nextGender === (selectedHostel.gender ?? "")) return;
+
                     requestHostelUpdate(
                       { ...selectedHostel, gender: nextGender },
                       `Change ${selectedHostel.hostelName}'s gender restriction to "${nextGender || "not set"}"?`
@@ -215,17 +238,26 @@ export default function HostelPage() {
                 </select>
               </div>
 
-              {/* Active status toggle */}
-              <div className="flex justify-between items-center bg-white p-4 rounded-xl shadow-sm">
-                <div>
+              {/* Active toggle */}
+              <div className="flex items-center justify-between gap-3 bg-white p-4 rounded-xl shadow-sm">
+
+                {/* Left content */}
+                <div className="min-w-0">
                   <span className="text-black font-medium">Active Status</span>
-                  <p className="text-xs text-gray-500 mt-0.5">
-                    {selectedHostel.status === "active" ? "Hostel is currently active" : "Hostel is inactive"}
+
+                  <p className="text-xs text-gray-500 mt-0.5 break-words">
+                    {selectedHostel.status === "active"
+                      ? "Hostel is currently active"
+                      : "Hostel is inactive"}
                   </p>
                 </div>
+
+                {/* Right toggle (ALWAYS RIGHT) */}
                 <button
                   onClick={() => {
-                    const nextStatus = selectedHostel.status === "active" ? "inactive" : "active";
+                    const nextStatus =
+                      selectedHostel.status === "active" ? "inactive" : "active";
+
                     requestHostelUpdate(
                       {
                         ...selectedHostel,
@@ -234,18 +266,22 @@ export default function HostelPage() {
                       `${nextStatus === "active" ? "Activate" : "Deactivate"} ${selectedHostel.hostelName}?`
                     );
                   }}
-                  className={`relative w-14 h-7 rounded-full transition-colors duration-200 ${
-                    selectedHostel.status === "active" ? "bg-green-500" : "bg-gray-300"
+                  className={`relative flex-shrink-0 inline-flex h-7 w-14 items-center rounded-full transition-colors duration-300 focus:outline-none focus:ring-2 focus:ring-offset-2 ${
+                    selectedHostel.status === "active"
+                      ? "bg-green-500"
+                      : "bg-gray-300"
                   }`}
                 >
                   <span
-                    className={`absolute top-0.5 w-6 h-6 bg-white rounded-full shadow transition-transform duration-200 ${
-                      selectedHostel.status === "active" ? "translate-x-7" : "translate-x-0.5"
+                    className={`inline-block h-6 w-6 transform rounded-full bg-white shadow-md transition-transform duration-300 ${
+                      selectedHostel.status === "active"
+                        ? "translate-x-7"
+                        : "translate-x-1"
                     }`}
                   />
                 </button>
-              </div>
 
+              </div>
             </div>
           </div>
         </div>

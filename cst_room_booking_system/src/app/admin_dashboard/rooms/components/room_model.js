@@ -5,7 +5,6 @@ import { ChevronDown, ArrowLeft, Eye, Download, X, AlertTriangle } from "lucide-
 import RoomCard from "./room_card";
 import EditRoomsModal from "./room_edit";
 import AllocateStudents from "./room_allocate";
-import DeallocateStudents from "./room_deallocate";
 import { useConfirmation } from "../../components/useConfirmation";
 
 function Badge({ children, color }) {
@@ -131,7 +130,6 @@ function PreviewModal({ isOpen, onClose, hostelId, hostelName }) {
 }
 
 // ── Disable Guard Modal ───────────────────────────────────────────────────────
-// Shown when user tries to disable rooms that are occupied or already disabled.
 function DisableGuardModal({ isOpen, onClose, occupiedRooms, alreadyDisabledRooms }) {
   if (!isOpen) return null;
 
@@ -198,16 +196,14 @@ export default function RoomManagement() {
   const [error,   setError]   = useState(null);
 
   const [selectedRooms, setSelectedRooms] = useState([]);
-  const [selectionMode, setSelectionMode] = useState(false);
+  const [actionsOpen,   setActionsOpen]   = useState(false);
 
   const [editModalOpen,     setEditModalOpen]     = useState(false);
-  const [deallocateOpen,    setDeallocateOpen]    = useState(false);
   const [allocateOpen,      setAllocateOpen]      = useState(false);
   const [disableReasonOpen, setDisableReasonOpen] = useState(false);
   const [disableGuardOpen,  setDisableGuardOpen]  = useState(false);
   const [previewOpen,       setPreviewOpen]       = useState(false);
 
-  // Rooms that failed the disable guard check
   const [guardOccupied,  setGuardOccupied]  = useState([]);
   const [guardDisabled,  setGuardDisabled]  = useState([]);
 
@@ -237,16 +233,16 @@ export default function RoomManagement() {
     }))
   );
 
-  const selectableRoomIds = rooms.filter((r) => r.status !== "disabled").map((r) => r.id);
-  const isAllSelected     = selectedRooms.length > 0 && selectedRooms.length === selectableRoomIds.length;
+  const selectionMode         = selectedRooms.length > 0;
+  const selectedRoomDetails   = rooms.filter((r) => selectedRooms.includes(r.id));
+  const selectedOccupantCount = students.filter((s) => selectedRooms.includes(s.roomId)).length;
 
   const totalRooms    = rooms.length;
   const totalCapacity = rooms.reduce((s, r) => s + r.capacity, 0);
   const occupiedBeds  = rooms.reduce((s, r) => s + (r.occupants?.length ?? 0), 0);
   const disabledCount = rooms.filter((r) => r.status === "disabled").length;
 
-  // ── FIX 3: Persist selected hostel in sessionStorage ─────────────────────
-  // On mount: load hostels, then restore last-selected hostel from session.
+  // ── Persist selected hostel in sessionStorage ─────────────────────────────
   useEffect(() => {
     const load = async () => {
       try {
@@ -261,11 +257,9 @@ export default function RoomManagement() {
 
         if (list.length === 0) return;
 
-        // Restore previously selected hostel from sessionStorage
         const savedId   = sessionStorage.getItem(SESSION_KEY);
         const restored  = savedId ? list.find((h) => h.id === savedId) : null;
 
-        // Fall back to first hostel if nothing saved or saved hostel no longer exists
         setHostel(restored ?? list[0]);
       } catch (err) {
         console.error("Failed to load hostels:", err);
@@ -274,7 +268,6 @@ export default function RoomManagement() {
     load();
   }, []);
 
-  // Whenever the user picks a different hostel, save it to sessionStorage
   const handleSetHostel = (item) => {
     setHostel(item);
     setFloorIndex(1);
@@ -301,9 +294,18 @@ export default function RoomManagement() {
   }, [hostelId, floorIndex]);
 
   useEffect(() => {
-    fetchRooms();
-    setSelectedRooms([]);
-    setSelectionMode(false);
+    let cancelled = false;
+
+    queueMicrotask(() => {
+      if (cancelled) return;
+      setSelectedRooms([]);
+      setActionsOpen(false);
+      fetchRooms();
+    });
+
+    return () => {
+      cancelled = true;
+    };
   }, [fetchRooms]);
 
   // Close dropdowns when clicking outside
@@ -312,6 +314,7 @@ export default function RoomManagement() {
       if (!e.target.closest("[data-dropdown]")) {
         setHostelOpen(false);
         setFloorOpen(false);
+        setActionsOpen(false);
       }
     };
     document.addEventListener("mousedown", close);
@@ -331,30 +334,73 @@ export default function RoomManagement() {
   }, []);
 
   // ── Selection ─────────────────────────────────────────────────────────────
-  const handleSelectAll = useCallback(() => {
-    if (isAllSelected) { setSelectedRooms([]); setSelectionMode(false); }
-    else { setSelectionMode(true); setSelectedRooms(selectableRoomIds); }
-  }, [isAllSelected, selectableRoomIds]);
+  const clearSelection = useCallback(() => {
+    setSelectedRooms([]);
+    setActionsOpen(false);
+  }, []);
+
+  const selectAllRooms = useCallback(() => {
+    const roomIds = rooms.map((r) => r.id);
+    if (roomIds.length === 0) return;
+    setSelectedRooms(roomIds);
+  }, [rooms]);
 
   const toggleRoomSelection = (roomId) => {
+    setActionsOpen(false);
     setSelectedRooms((prev) =>
       prev.includes(roomId) ? prev.filter((id) => id !== roomId) : [...prev, roomId]
     );
   };
 
-  // ── FIX 4: Disable guard — check before opening disable modal ────────────
-  const handleBulkAction = (type) => {
+  // ── Handle bulk actions ──────────────────────────────────────────────────
+  const handleBulkAction = useCallback((type) => {
     if (selectedRooms.length === 0) return;
+    setActionsOpen(false);
+
+    if (type === "enable") {
+      const ids = [...selectedRooms];
+      confirm({
+        message: `Enable ${ids.length} selected room${ids.length !== 1 ? "s" : ""}?`,
+        confirmText: "Enable",
+        onConfirm: async () => {
+          setRooms((prev) => prev.map((r) => ids.includes(r.id) ? { ...r, status: "empty" } : r));
+          try {
+            await callAction({ action: "enable", roomIds: ids });
+            await fetchRooms();
+          } catch (err) {
+            await fetchRooms();
+            throw err;
+          }
+        },
+      }).then((confirmed) => {
+        if (confirmed) clearSelection();
+      });
+      return;
+    }
+
+    if (type === "deallocate") {
+      if (selectedOccupantCount === 0) return;
+      const ids = [...selectedRooms];
+
+      confirm({
+        message: `Deallocate ${selectedOccupantCount} student${selectedOccupantCount !== 1 ? "s" : ""} from ${ids.length} selected room${ids.length !== 1 ? "s" : ""}?`,
+        confirmText: "Deallocate",
+        onConfirm: async () => {
+          await callAction({ action: "deallocate", roomIds: ids });
+          clearSelection();
+          await fetchRooms();
+        },
+      });
+      return;
+    }
 
     if (type === "disable") {
       const selected = rooms.filter((r) => selectedRooms.includes(r.id));
 
-      // Rooms that are already disabled
       const alreadyDisabled = selected
         .filter((r) => r.status === "disabled")
         .map((r) => r.room);
 
-      // Rooms that have occupants (occupied / partial / full all have occupants)
       const occupied = selected
         .filter((r) => r.status !== "disabled" && (r.occupants?.length ?? 0) > 0)
         .map((r) => r.room);
@@ -366,14 +412,12 @@ export default function RoomManagement() {
         return;
       }
 
-      // All clear — open the reason modal
       setDisableReasonOpen(true);
       return;
     }
 
-    if (type === "edit")       setEditModalOpen(true);
-    if (type === "deallocate") setDeallocateOpen(true);
-  };
+    if (type === "edit") setEditModalOpen(true);
+  }, [callAction, clearSelection, confirm, fetchRooms, rooms, selectedOccupantCount, selectedRooms]);
 
   // ── Room card click ───────────────────────────────────────────────────────
   const handleRoomClickWrapper = (roomId) => {
@@ -388,6 +432,7 @@ export default function RoomManagement() {
     setRooms((prev) => prev.map((r) => roomIds.includes(r.id) ? { ...r, status: "empty" } : r));
     try {
       await callAction({ action: "enable", roomIds });
+      await fetchRooms();
     } catch (err) {
       await fetchRooms();
       throw err;
@@ -416,7 +461,7 @@ export default function RoomManagement() {
         try {
           await callAction({ action: "disable", roomIds: ids, reason: reasonText });
           setDisableReasonOpen(false);
-          setSelectedRooms([]);
+          clearSelection();
           setReason("");
         } catch (err) {
           await fetchRooms();
@@ -426,7 +471,7 @@ export default function RoomManagement() {
     });
   };
 
-  // ── FIX 1: Edit — also send year so it's persisted ───────────────────────
+  // ── Edit save ─────────────────────────────────────────────────────────────
   const handleEditSave = (data) => {
     const ids = [...selectedRooms];
 
@@ -437,12 +482,11 @@ export default function RoomManagement() {
         await callAction({
           action:   "edit",
           roomIds:  ids,
-          // Pass both fields; service ignores undefined ones
           ...(data.capacity !== undefined && { capacity: data.capacity }),
           ...(data.year     !== undefined && { year:     data.year     }),
         });
         setEditModalOpen(false);
-        setSelectedRooms([]);
+        clearSelection();
         await fetchRooms();
       },
     });
@@ -465,26 +509,6 @@ export default function RoomManagement() {
         });
         setAllocateOpen(false);
         setAllocateRoom(null);
-        await fetchRooms();
-      },
-    });
-  };
-
-  const handleDeallocateConfirm = (selectedBookingIds) => {
-    const bookingIds = selectedBookingIds ?? [];
-    const roomIds = [...selectedRooms];
-    const count = bookingIds.length || students.filter((s) => roomIds.includes(s.roomId)).length;
-
-    return confirm({
-      message: `Remove ${count} student${count !== 1 ? "s" : ""} from selected room${roomIds.length !== 1 ? "s" : ""}?`,
-      confirmText: "Remove",
-      onConfirm: async () => {
-        if (bookingIds.length)
-          await callAction({ action: "deallocate", bookingIds });
-        else
-          await callAction({ action: "deallocate", roomIds });
-        setDeallocateOpen(false);
-        setSelectedRooms([]);
         await fetchRooms();
       },
     });
@@ -548,40 +572,68 @@ export default function RoomManagement() {
 
   // ── Keyboard shortcuts ────────────────────────────────────────────────────
   useEffect(() => {
+    const isTypingTarget = (target) => {
+      if (!(target instanceof HTMLElement)) return false;
+      const tag = target.tagName.toLowerCase();
+      return tag === "input" || tag === "textarea" || tag === "select" || target.isContentEditable;
+    };
+
     const onKey = (e) => {
-      if (e.ctrlKey && e.key.toLowerCase() === "a") {
-        e.preventDefault(); handleSelectAll();
-      }
-      if (e.ctrlKey && e.key.toLowerCase() === "l") {
+      const key = e.key.toLowerCase();
+      const modalOpen = editModalOpen || allocateOpen || disableReasonOpen || disableGuardOpen || previewOpen;
+
+      if (modalOpen || isTypingTarget(e.target)) return;
+
+      if (e.ctrlKey && key === "a") {
         e.preventDefault();
-        setSelectionMode((prev) => { if (prev) setSelectedRooms([]); return !prev; });
+        selectAllRooms();
+        return;
       }
-      if (e.ctrlKey && e.key.toLowerCase() === "e") {
+
+      if (e.key === "Escape" && selectedRooms.length > 0) {
         e.preventDefault();
-        const disabledIds = rooms.filter((r) => r.status === "disabled").map((r) => r.id);
-        if (!disabledIds.length) return;
-        requestEnableRooms(
-          disabledIds,
-          `Enable all ${disabledIds.length} disabled room${disabledIds.length !== 1 ? "s" : ""}?`
-        ).then((confirmed) => {
-          if (confirmed) {
-            setSelectedRooms([]);
-            setSelectionMode(false);
-          }
-        });
+        clearSelection();
+        return;
       }
-      if (selectionMode && e.key === "Tab") {
+
+      if (selectedRooms.length === 0 || !e.ctrlKey) return;
+
+      if (key === "n") {
         e.preventDefault();
-        const selectable = rooms.filter((r) => r.status !== "disabled");
-        if (!selectable.length) return;
-        const idx  = selectable.findIndex((r) => selectedRooms.includes(r.id));
-        const next = idx === -1 || idx === selectable.length - 1 ? 0 : idx + 1;
-        setSelectedRooms([selectable[next].id]);
+        handleBulkAction("enable");
+        return;
+      }
+
+      if (key === "d") {
+        e.preventDefault();
+        handleBulkAction("disable");
+        return;
+      }
+
+      if (key === "e") {
+        e.preventDefault();
+        handleBulkAction("edit");
+        return;
+      }
+
+      if (key === "r") {
+        e.preventDefault();
+        handleBulkAction("deallocate");
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
-  }, [rooms, selectedRooms, selectionMode, handleSelectAll, requestEnableRooms]);
+  }, [
+    allocateOpen,
+    clearSelection,
+    disableGuardOpen,
+    disableReasonOpen,
+    editModalOpen,
+    handleBulkAction,
+    previewOpen,
+    selectAllRooms,
+    selectedRooms.length,
+  ]);
 
   // ─────────────────────────────────────────────────────────────────────────
   return (
@@ -703,7 +755,7 @@ export default function RoomManagement() {
                       {selectedRooms.length} selected
                     </span>
                     <button
-                      onClick={() => { setSelectedRooms([]); setSelectionMode(false); }}
+                      onClick={clearSelection}
                       className="text-sm text-gray-400 hover:text-gray-600 underline transition"
                     >
                       Clear
@@ -712,25 +764,66 @@ export default function RoomManagement() {
                 )}
               </div>
 
-              <div className="flex flex-wrap gap-4 text-[18px] md:text-[20px]">
-                <button
-                  onClick={() => handleBulkAction("edit")}
-                  className={`transition ${selectedRooms.length > 0 ? "text-blue-600 hover:text-blue-800" : "text-gray-400 hover:text-gray-600"}`}
-                >
-                  Edit
-                </button>
-                <button
-                  onClick={() => handleBulkAction("deallocate")}
-                  className={`transition ${selectedRooms.length > 0 ? "text-blue-600 hover:text-blue-800" : "text-gray-400 hover:text-gray-600"}`}
-                >
-                  Deallocate
-                </button>
-                <button
-                  onClick={() => handleBulkAction("disable")}
-                  className={`transition ${selectedRooms.length > 0 ? "text-red-500 hover:text-red-700" : "text-gray-400 hover:text-gray-600"}`}
-                >
-                  Disable
-                </button>
+              <div className="flex flex-wrap items-center justify-start lg:justify-end gap-3">
+                {selectedRooms.length > 0 && (
+                  <div className="relative" data-dropdown>
+                    <button
+                      type="button"
+                      onClick={() => setActionsOpen((p) => !p)}
+                      aria-haspopup="menu"
+                      aria-expanded={actionsOpen}
+                      className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-base font-medium text-white shadow-sm transition hover:bg-blue-700"
+                    >
+                      Actions
+                      <ChevronDown size={16} />
+                    </button>
+
+                    {actionsOpen && (
+                      <div
+                        role="menu"
+                        className="absolute right-0 top-full z-50 mt-2 w-60 max-w-[calc(100vw-2rem)] overflow-hidden rounded-xl border border-gray-200 bg-white py-1 text-sm shadow-xl"
+                      >
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={() => handleBulkAction("edit")}
+                          className="w-full px-4 py-2.5 text-left text-gray-700 transition hover:bg-blue-50 hover:text-blue-700"
+                        >
+                          Edit Selected Rooms
+                        </button>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={() => handleBulkAction("disable")}
+                          className="w-full px-4 py-2.5 text-left text-gray-700 transition hover:bg-red-50 hover:text-red-600"
+                        >
+                          Disable Selected Rooms
+                        </button>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={() => handleBulkAction("enable")}
+                          className="w-full px-4 py-2.5 text-left text-gray-700 transition hover:bg-green-50 hover:text-green-700"
+                        >
+                          Enable Selected Rooms
+                        </button>
+                        <button
+                          type="button"
+                          role="menuitem"
+                          onClick={() => handleBulkAction("deallocate")}
+                          disabled={selectedOccupantCount === 0}
+                          className={`w-full px-4 py-2.5 text-left transition ${
+                            selectedOccupantCount > 0
+                              ? "text-gray-700 hover:bg-amber-50 hover:text-amber-700"
+                              : "cursor-not-allowed text-gray-300"
+                          }`}
+                        >
+                          Deallocate Students
+                        </button>
+                      </div>
+                    )}
+                  </div>
+                )}
               </div>
             </div>
           </div>
@@ -752,6 +845,7 @@ export default function RoomManagement() {
                   <RoomCard
                     key={r.id}
                     room={r.room}
+                    floor={`Floor ${r.floor}`}
                     status={r.status}
                     capacity={r.capacity}
                     occupants={r.occupants?.map((o) => `${o.studentNumber}  ${o.name}`)}
@@ -819,7 +913,7 @@ export default function RoomManagement() {
         isOpen={editModalOpen}
         onClose={() => setEditModalOpen(false)}
         selectedCount={selectedRooms.length}
-        rooms={rooms.filter((r) => selectedRooms.includes(r.id))}
+        rooms={selectedRoomDetails}
         onSave={handleEditSave}
       />
 
@@ -830,13 +924,6 @@ export default function RoomManagement() {
         hostel={{ id: hostelId, gender: hostelGender, allowedYears: allowedYear ? [allowedYear] : [] }}
         selectedRooms={[allocateRoom]}
         onNext={handleAllocateSave}
-      />
-
-      <DeallocateStudents
-        isOpen={deallocateOpen}
-        onClose={() => setDeallocateOpen(false)}
-        students={students.filter((s) => selectedRooms.includes(s.roomId))}
-        onConfirm={handleDeallocateConfirm}
       />
 
       <PreviewModal
