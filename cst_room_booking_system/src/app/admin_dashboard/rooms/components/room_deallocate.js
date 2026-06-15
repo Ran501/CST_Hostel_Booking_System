@@ -13,8 +13,8 @@ export default function DeallocateStudents({
 
   // Reset selection when modal opens or student list changes
   useEffect(() => {
-    if (isOpen) setSelected([]);
-  }, [isOpen, students]);
+  if (isOpen) setSelected([]);
+}, [isOpen]); 
 
   if (!isOpen) return null;
 

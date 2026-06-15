@@ -5,6 +5,7 @@ import { ChevronDown, ArrowLeft, Eye, Download, X, AlertTriangle } from "lucide-
 import RoomCard from "./room_card";
 import EditRoomsModal from "./room_edit";
 import AllocateStudents from "./room_allocate";
+import DeallocateStudents from "./room_deallocate";
 import { useConfirmation } from "../../components/useConfirmation";
 
 function Badge({ children, color }) {
@@ -200,6 +201,7 @@ export default function RoomManagement() {
 
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [allocateOpen, setAllocateOpen] = useState(false);
+  const [deallocateOpen, setDeallocateOpen] = useState(false);
   const [disableReasonOpen, setDisableReasonOpen] = useState(false);
   const [disableGuardOpen, setDisableGuardOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
@@ -380,17 +382,7 @@ export default function RoomManagement() {
 
     if (type === "deallocate") {
       if (selectedOccupantCount === 0) return;
-      const ids = [...selectedRooms];
-
-      confirm({
-        message: `Deallocate ${selectedOccupantCount} student${selectedOccupantCount !== 1 ? "s" : ""} from ${ids.length} selected room${ids.length !== 1 ? "s" : ""}?`,
-        confirmText: "Deallocate",
-        onConfirm: async () => {
-          await callAction({ action: "deallocate", roomIds: ids });
-          clearSelection();
-          await fetchRooms();
-        },
-      });
+      setDeallocateOpen(true);   // open dedicated modal
       return;
     }
 
@@ -569,6 +561,9 @@ export default function RoomManagement() {
       setDownloading(false);
     }
   };
+
+  // Add this computed value (after the existing `students` definition)
+  const selectedStudents = students.filter((s) => selectedRooms.includes(s.roomId));
 
   // ── Keyboard shortcuts ────────────────────────────────────────────────────
   useEffect(() => {
@@ -934,6 +929,20 @@ export default function RoomManagement() {
         hostel={{ id: hostelId, gender: hostelGender, allowedYears: allowedYear ? [allowedYear] : [] }}
         selectedRooms={[allocateRoom]}
         onNext={handleAllocateSave}
+      />
+
+      <DeallocateStudents
+        isOpen={deallocateOpen}
+        onClose={() => setDeallocateOpen(false)}
+        students={selectedStudents}       // ✅ correct prop name
+        onConfirm={async (bookingIds) => {
+          // bookingIds is an array of booking IDs the user selected in the modal
+          await callAction({ action: "deallocate", bookingIds });
+          setDeallocateOpen(false);
+          clearSelection();
+          await fetchRooms();
+          return true;                     // signal success
+        }}
       />
 
       <PreviewModal
