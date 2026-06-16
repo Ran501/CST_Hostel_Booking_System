@@ -8,6 +8,7 @@ import FloorBookingsView from "../../../components/FloorBookingsView";
 import ConfirmationDialog from "../../../../confirmation";
 import { getRoomColors, RoomLegend } from "../../../../room/components/useColors";
 import {
+  LHAWANG_HOSTEL_NAME, 
   LHAWANG_NAME,
   LHAWANG_FLOOR_META,
   LHAWANG_KITCHEN_LABELS,
@@ -65,6 +66,7 @@ function SmallRoom({ room, onClick, roomInfo, selectedRoom, currentUser, buildin
     room
   );
 
+  const isYourBooking = currentUser?.bookedRoomNumber === `${buildingName}-${room}`;
   const clickable = !isDisabled;
 
   return (
@@ -534,6 +536,10 @@ export default function LhawangFloorPage({ params }) {
   const [currentUser, setCurrentUser] = useState(getStoredSession);
   const sessionLoaded = true;
 
+  const [canUnbook, setCanUnbook] = useState(false);
+  const [isUnbooking, setIsUnbooking] = useState(false);
+  const [showUnbookConfirm, setShowUnbookConfirm] = useState(false);
+
   const meta = LHAWANG_FLOOR_META[floorNum] ?? LHAWANG_FLOOR_META[1];
 
   // Fetch rooms data
@@ -541,7 +547,7 @@ export default function LhawangFloorPage({ params }) {
     async function fetchRooms() {
       try {
         setLoading(true);
-        const res = await fetch(`/api/rooms?floor=${floorNum}&building=Lhawang`);
+        const res = await fetch(`/api/rooms?floor=${floorNum}&building=${LHAWANG_HOSTEL_NAME}`);
         const data = await res.json();
         if (data.success) setRoomsData(data.rooms || []);
       } catch (err) {
@@ -553,6 +559,21 @@ export default function LhawangFloorPage({ params }) {
     fetchRooms();
   }, [floorNum]);
 
+  useEffect(() => {
+    async function fetchBookingPeriod() {
+      try {
+        const res = await fetch("/api/booking-period");
+        const data = await res.json();
+        if (data.success) {
+          setCanUnbook(data.period);
+        }
+      } catch (err) {
+        console.error("Error fetching booking period:", err);
+      }
+    }
+    fetchBookingPeriod();
+  }, []);
+
   // Fetch user's booking using floor-bookings API
   useEffect(() => {
     async function fetchUserBooking() {
@@ -561,7 +582,7 @@ export default function LhawangFloorPage({ params }) {
       if (!studentNumber) return;
       try {
         const params = new URLSearchParams({
-          building: LHAWANG_NAME,
+          building: LHAWANG_HOSTEL_NAME,
           floor: String(floorNum),
           studentNumber: String(studentNumber),
         });
@@ -602,6 +623,7 @@ export default function LhawangFloorPage({ params }) {
     }
     if (currentUser) fetchUserBooking();
   }, [currentUser?.studentNumber, currentUser?.phoneNumber, currentUser?.stdNo, floorNum]);
+  
 
   const getRoomInfo = (roomNo) => {
     const fullRoomId = `${LHAWANG_NAME}-${roomNo}`;
@@ -617,8 +639,23 @@ export default function LhawangFloorPage({ params }) {
   };
 
   function handleRoomClick(room) {
-    setSelectedRoom((prev) => (prev === room ? null : room));
-  }
+      const fullRoomId = `${LHAWANG_NAME}-${room}`;
+      const isYourBooking = 
+        currentUser?.bookedRoomNumber === room || 
+        currentUser?.bookedRoomNumber === fullRoomId;
+
+      if (isYourBooking) {
+        if (canUnbook) {
+          setShowUnbookConfirm(true);          // ✅ only set the unbook flag
+          // Do NOT set selectedRoom – we'll use currentUser.bookedRoomNumber for unbooking
+        } else {
+          showToast("Unbooking is not allowed at this time.", "error");
+        }
+      } else {
+        // Standard booking toggle
+        setSelectedRoom((prev) => (prev === room ? null : room));
+      }
+    }
 
   function showToast(msg, type = "error") {
     setSelectedRoom(null);
@@ -735,6 +772,57 @@ export default function LhawangFloorPage({ params }) {
     }
   }
 
+  async function handleUnbook() {
+    const studentNumber = currentUser.studentNumber ?? currentUser.phoneNumber ?? currentUser.stdNo;
+    if (!studentNumber) {
+      showToast("Student context not found. Please log in again.", "error");
+      return;
+    }
+
+    // Use the room number already stored in the user session
+    const bookedRoom = currentUser.bookedRoomNumber;
+    if (!bookedRoom) {
+      showToast("No active booking found.", "error");
+      return;
+    }
+
+    try {
+      setIsUnbooking(true);
+      const res = await fetch("/api/booking", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ studentNumber: String(studentNumber) }),
+      });
+
+      const result = await res.json();
+      if (result.success) {
+        showToast(`Your booking for Room ${bookedRoom} has been cancelled.`, "success");
+
+        // Reset user state
+        const updatedUser = { ...currentUser, hasBooked: false, bookedRoomNumber: null };
+        setCurrentUser(updatedUser);
+        localStorage.setItem("session", JSON.stringify(updatedUser));
+
+        // Decrease occupied count for that room
+        setRoomsData((prev) =>
+          prev.map((r) =>
+            r.roomNumber === bookedRoom
+              ? { ...r, occupied: Math.max((r.occupied || 1) - 1, 0) }
+              : r
+          )
+        );
+      } else {
+        showToast("Error: " + (result.error || "Could not cancel booking."));
+      }
+    } catch (err) {
+      console.error("Unbooking error:", err);
+      showToast("Connection failed. Please try again.", "error");
+    } finally {
+      setIsUnbooking(false);
+      setShowUnbookConfirm(false);
+    }
+  }
+
   const floorPlanProps = { 
     getRoomInfo, 
     selectedRoom, 
@@ -770,7 +858,7 @@ export default function LhawangFloorPage({ params }) {
         )}
 
         <FloorBookingsView
-          building={LHAWANG_NAME}
+          building={LHAWANG_HOSTEL_NAME}
           floor={floorNum}
           currentUser={currentUser}
           onDenied={(message) => showToast(message)}
@@ -859,12 +947,22 @@ export default function LhawangFloorPage({ params }) {
         </div>
 
         {/* ── Confirmation dialog ── */}
-        {selectedRoom !== null && (
+        {selectedRoom !== null && !showUnbookConfirm && (
           <ConfirmationDialog
             message={`Do you want to book a bed from Room ${LHAWANG_NAME}-${selectedRoom}?`}
             isLoading={isBooking}
             onCancel={() => !isBooking && setSelectedRoom(null)}
             onConfirm={handleConfirmBooking}
+          />
+        )}
+
+        {/* Unbooking confirmation – uses the stored booked room number */}
+        {showUnbookConfirm && (
+          <ConfirmationDialog
+            message={`Are you sure you want to unbook Room ${currentUser?.bookedRoomNumber ?? ''}?`}
+            isLoading={isUnbooking}
+            onCancel={() => !isUnbooking && setShowUnbookConfirm(false)}
+            onConfirm={handleUnbook}
           />
         )}
       </div>

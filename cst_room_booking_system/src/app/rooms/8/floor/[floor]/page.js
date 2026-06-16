@@ -335,7 +335,7 @@ export default function HfFloorPage({ params }) {
       roomInfo, selectedRoom, currentUser, HF_NAME, room
     );
 
-    const isYourBooking = currentUser?.bookedRoomNumber === `${HC_NAME}-${room}`;
+    const isYourBooking = currentUser?.bookedRoomNumber === `${HF_NAME}-${room}`;
 
     return (
       <button
@@ -360,7 +360,7 @@ export default function HfFloorPage({ params }) {
             {room}
           </span>
           <span className={`text-[9px] xs:text-[10px] sm:text-[11px] whitespace-nowrap ${textColorClass}`}>
-            {isYourBooking ? (canUnbook ? "Tap to Unbook" : "Your Booking") : statusText}
+            {isYourBooking ? (canUnbook ? "Your Room" : "Your Room") : statusText}
           </span>
         </div>
         <div className="pointer-events-none absolute inset-0 rounded-xl ring-0 transition group-hover:ring-1 group-hover:ring-slate-300/60" />

@@ -82,7 +82,7 @@ function RoomBlock({ room, onClick, roomInfo, selectedRoom, currentUser, buildin
         {room}
       </span>
       <span className={`text-[8px] xs:text-[9px] sm:text-[10px] font-medium mt-0.5 ${textColorClass}`}>
-        {isYourBooking ? "Tap to Unbook" : statusText}
+        {isYourBooking ? "Your Room" : "Your Room"}
       </span>
     </button>
   );

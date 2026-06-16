@@ -332,7 +332,7 @@ export default function HaFloorPage({ params }) {
           {room}
         </span>
         <span className={`text-[9px] xs:text-[10px] sm:text-[11px] whitespace-nowrap ${textColorClass}`}>
-          {isYourBooking ? (canUnbook ? "Tap to Unbook" : "Your Booking") : statusText}
+          {isYourBooking ? (canUnbook ? "Your Room" : "Your Room") : statusText}
         </span>
       </button>
     );
