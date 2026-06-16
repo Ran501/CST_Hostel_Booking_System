@@ -12,8 +12,8 @@ import {
   NK_NAME,
   nkLeftRoomsForFloor,
   nkRightRoomsForFloor,
-  LEFT_KITCHEN,
-  RIGHT_KITCHEN,
+  getLeftKitchen,
+  getRightKitchen,
 } from "../../../data/nk";
 
 // Add this custom hook for responsive layout
@@ -66,9 +66,9 @@ function getStoredSession() {
 // LAYOUT POSITION MAPS
 const mobileLayout = {
   leftWashroom: { top: "80%", left: "15%" },
-  rightWashroom: { top: "80%", right: "12%" },
-  leftKitchen: { top: "75%", left: "35%" },
-  rightKitchen: { top: "75%", right: "35%" },
+  rightWashroom: { top: "80%", left: "80%" },  // Changed from right: "12%" to left: "80%"
+  leftKitchen: { top: "75%", left: "40%" },    // K101 - Left wing
+  rightKitchen: { top: "75%", left: "60%" },
   rooms: {
     left: [
       { top: "58%", left: "20%" },
@@ -86,10 +86,10 @@ const mobileLayout = {
 };
 
 const midLayout = {
-  washroomLeft: { top: "70%", left: "8%" },
-  washroomRight: { top: "70%", right: "6%" },
-  kitchenLeft: { top: "78%", left: "20%" },
-  kitchenRight: { top: "78%", right: "18%" },
+ washroomLeft: { top: "70%", left: "8%" },
+  washroomRight: { top: "70%", left: "86%" },  // Changed from right: "6%" to left: "86%"
+  kitchenLeft: { top: "78%", left: "33%" },    // K101 - aligned with left wing rooms (between 20% and 32%)
+  kitchenRight: { top: "78%", left: "70%" },
   rooms: [
     { top: "56%", left: "8%" },
     { top: "40%", left: "20%" },
@@ -108,9 +108,9 @@ const midLayout = {
 
 const desktopLayout = {
   washroomLeft: { top: "68%", left: "8%" },
-  washroomRight: { top: "68%", right: "6%" },
-  kitchenLeft: { top: "84%", left: "20%" },
-  kitchenRight: { top: "84%", right: "18%" },
+  washroomRight: { top: "68%", left: "86%" },  // Changed from right: "6%" to left: "86%"
+  kitchenLeft: { top: "84%", left: "33%" },    // K101 - aligned with left wing rooms
+  kitchenRight: { top: "84%", left: "70%" },   
   rooms: [
     { top: "53%", left: "8%" },
     { top: "37%", left: "20%" },
@@ -166,8 +166,9 @@ export default function NkFloorPage({ params }) {
   const [currentUser, setCurrentUser] = useState(getStoredSession);
   const sessionLoaded = true;
 
-  const kitchenLeftLabel = `Kitchen`;
-  const kitchenRightLabel = `Kitchen`;
+  // Get dynamic kitchen names for current floor
+  const leftKitchen = getLeftKitchen(floorNum);
+  const rightKitchen = getRightKitchen(floorNum);
 
   // Fetch rooms data
   useEffect(() => {
@@ -373,7 +374,7 @@ export default function NkFloorPage({ params }) {
   const allRooms = useMemo(() => {
     const l = nkLeftRoomsForFloor(floorNum);
     const r = nkRightRoomsForFloor(floorNum);
-    return [...l,  ...r];
+    return [...l, ...r];
   }, [floorNum]);
 
   return (
@@ -458,23 +459,29 @@ export default function NkFloorPage({ params }) {
                     <span className="text-lg">🚻</span>
                   </div>
                   {/* Bookable Kitchen Room - Left */}
-                  <RoomCard room={LEFT_KITCHEN} top={mobileLayout.leftKitchen.top} left={mobileLayout.leftKitchen.left} />
+                  <RoomCard room={leftKitchen} top={mobileLayout.leftKitchen.top} left={mobileLayout.leftKitchen.left} />
                   {leftRooms.map((room, index) => (
                     <RoomCard key={room} room={room} top={mobileLayout.rooms.left[index].top} left={mobileLayout.rooms.left[index].left} />
                   ))}
-                  </>
+                </>
               )}
               {mobileCarouselPage === 2 && (
-                <>
-                  <div className="absolute flex items-center justify-center rounded-lg sm:rounded-xl shadow px-2 py-1 border-2 border-dashed border-blue-400 bg-blue-50 text-blue-700" style={mobileLayout.rightWashroom}>
-                    <span className="text-lg">🚻</span>
-                  </div>
-                  {/* Bookable Kitchen Room - Right */}
-                  <RoomCard room={RIGHT_KITCHEN} top={mobileLayout.rightKitchen.top} left={mobileLayout.rightKitchen.left} />
-                  {rightRooms.map((room, index) => (
-                    <RoomCard key={room} room={room} top={mobileLayout.rooms.right[index + 1]?.top || "31%"} left={mobileLayout.rooms.right[index + 1]?.left || "35%"} />
-                  ))}</>
-              )}
+              <>
+                <div className="absolute flex items-center justify-center rounded-lg sm:rounded-xl shadow px-2 py-1 border-2 border-dashed border-blue-400 bg-blue-50 text-blue-700" style={mobileLayout.rightWashroom}>
+                  <span className="text-lg">🚻</span>
+                </div>
+                {/* Bookable Kitchen Room - Right */}
+                <RoomCard room={rightKitchen} top={mobileLayout.rightKitchen.top} left={mobileLayout.rightKitchen.left} />
+                {rightRooms.map((room, index) => (
+                  <RoomCard 
+                    key={room} 
+                    room={room} 
+                    top={mobileLayout.rooms.right[index].top} 
+                    left={mobileLayout.rooms.right[index].left} 
+                  />
+                ))}
+              </>
+            )}
             </div>
             <div className="mt-3 xs:mt-4 text-center text-[10px] xs:text-xs text-slate-500">
               {mobileCarouselPage === 1 ? "Showing: Rooms 101-104 with facilities" : "Showing: Rooms 105-108 with facilities"}
@@ -501,14 +508,13 @@ export default function NkFloorPage({ params }) {
                     <span className="text-[10px] sm:text-xs font-medium">Restroom</span>
                   </div>
                   {/* Bookable Kitchen Rooms */}
-                  <RoomCard room={LEFT_KITCHEN} top={isMid ? midLayout.kitchenLeft.top : desktopLayout.kitchenLeft.top} left={isMid ? midLayout.kitchenLeft.left : desktopLayout.kitchenLeft.left} />
-                  <RoomCard room={RIGHT_KITCHEN} top={isMid ? midLayout.kitchenRight.top : desktopLayout.kitchenRight.top} left={isMid ? midLayout.kitchenRight.left : desktopLayout.kitchenRight.left} />
+                  <RoomCard room={leftKitchen} top={isMid ? midLayout.kitchenLeft.top : desktopLayout.kitchenLeft.top} left={isMid ? midLayout.kitchenLeft.left : desktopLayout.kitchenLeft.left} />
+                  <RoomCard room={rightKitchen} top={isMid ? midLayout.kitchenRight.top : desktopLayout.kitchenRight.top} left={isMid ? midLayout.kitchenRight.left : desktopLayout.kitchenRight.left} />
                   {/* Rooms */}
                   {allRooms.map((room, index) => {
                     const pos = isMid ? midLayout.rooms[index] : desktopLayout.rooms[index];
                     return <RoomCard key={room} room={room} top={pos.top} left={pos.left} />;
                   })}
-                  {/* Arrows under middle rooms */}
                 </div>
               </section>
             </div>
