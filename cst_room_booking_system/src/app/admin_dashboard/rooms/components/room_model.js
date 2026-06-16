@@ -231,7 +231,7 @@ export default function RoomManagement() {
       id: occ.bookingId ?? occ.studentNumber,
       room: r.room,
       roomId: r.id,
-      year: "N/A",
+      year: r.year,
     }))
   );
 
@@ -256,7 +256,6 @@ export default function RoomManagement() {
               : [];
 
         setHostels(list);
-
         if (list.length === 0) return;
 
         const savedId = sessionStorage.getItem(SESSION_KEY);
@@ -403,7 +402,6 @@ export default function RoomManagement() {
         setDisableGuardOpen(true);
         return;
       }
-
       setDisableReasonOpen(true);
       return;
     }
@@ -420,6 +418,7 @@ export default function RoomManagement() {
     else { setAllocateRoom(roomId); setAllocateOpen(true); }
   };
 
+  // ── Enable ────────────────────────────────────────────────────────────────
   const enableRooms = useCallback(async (roomIds) => {
     setRooms((prev) => prev.map((r) => roomIds.includes(r.id) ? { ...r, status: "empty" } : r));
     try {
@@ -433,7 +432,6 @@ export default function RoomManagement() {
 
   const requestEnableRooms = useCallback((roomIds, message) => {
     if (!roomIds.length) return false;
-
     return confirm({
       message,
       confirmText: "Enable",
@@ -441,8 +439,9 @@ export default function RoomManagement() {
     });
   }, [confirm, enableRooms]);
 
+  // ── Disable ───────────────────────────────────────────────────────────────
   const confirmDisable = () => {
-    const ids = [...selectedRooms];
+    const ids        = [...selectedRooms];
     const reasonText = reason;
 
     confirm({
@@ -466,7 +465,6 @@ export default function RoomManagement() {
   // ── Edit save ─────────────────────────────────────────────────────────────
   const handleEditSave = (data) => {
     const ids = [...selectedRooms];
-
     return confirm({
       message: `Save changes to ${ids.length} selected room${ids.length !== 1 ? "s" : ""}?`,
       confirmText: "Save",
@@ -484,9 +482,10 @@ export default function RoomManagement() {
     });
   };
 
+  // ── Allocate ──────────────────────────────────────────────────────────────
   const handleAllocateSave = (data) => {
     const roomId = allocateRoom;
-    const room = rooms.find((r) => r.id === roomId);
+    const room   = rooms.find((r) => r.id === roomId);
 
     return confirm({
       message: `Allocate ${data.studentNumbers.length} student${data.studentNumbers.length !== 1 ? "s" : ""} to room ${room?.room ?? ""}?`,
@@ -630,6 +629,15 @@ export default function RoomManagement() {
     selectedRooms.length,
   ]);
 
+  // ── Resolve allowedYears for the allocate modal ───────────────────────────
+  // Room-level year takes priority over the floor allocation year.
+  const getAllowedYears = (roomId) => {
+    const room = rooms.find((r) => r.id === roomId);
+    if (room?.year)  return [room.year];
+    if (allowedYear) return [allowedYear];
+    return [];
+  };
+
   // ─────────────────────────────────────────────────────────────────────────
   return (
     <div className="min-h-screen bg-[#ececec]">
@@ -725,11 +733,11 @@ export default function RoomManagement() {
                               }`}
                           >
                             <span>Floor {num}</span>
-                            {alloc && (
+                            {/* {alloc && (
                               <span className="text-xs text-gray-400 bg-gray-100 px-2 py-0.5 rounded-full">
                                 Yr {alloc.studentYear}
                               </span>
-                            )}
+                            )} */}
                           </button>
                         );
                       })}
@@ -858,6 +866,7 @@ export default function RoomManagement() {
                   selected={selectedRooms.includes(r.id)}
                   onSelect={() => toggleRoomSelection(r.id)}
                   onClickRoom={() => handleRoomClickWrapper(r.id)}
+                  year={r.year}
                 />
               ))}
           </div>
@@ -922,11 +931,16 @@ export default function RoomManagement() {
         onSave={handleEditSave}
       />
 
+      {/* Room-level year takes priority over floor allocation year */}
       <AllocateStudents
         isOpen={allocateOpen}
         onClose={() => { setAllocateOpen(false); setAllocateRoom(null); }}
         rooms={rooms.filter((r) => r.id === allocateRoom)}
-        hostel={{ id: hostelId, gender: hostelGender, allowedYears: allowedYear ? [allowedYear] : [] }}
+        hostel={{
+          id:           hostelId,
+          gender:       hostelGender,
+          allowedYears: getAllowedYears(allocateRoom),
+        }}
         selectedRooms={[allocateRoom]}
         onNext={handleAllocateSave}
       />
