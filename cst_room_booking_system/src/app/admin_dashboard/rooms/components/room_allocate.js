@@ -159,7 +159,7 @@ export default function AllocateStudents({
           </div>
 
           {/* Student list */}
-          <div className="space-y-3 max-h-96 overflow-y-auto pr-1">
+          <div className="text-black space-y-3 max-h-96 overflow-y-auto pr-1">
             {loading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <div key={i} className="bg-white rounded-xl p-4 animate-pulse border border-gray-200">

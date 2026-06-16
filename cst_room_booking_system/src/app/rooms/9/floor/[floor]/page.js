@@ -58,13 +58,10 @@ function getStoredSession() {
 /** Standard room tile — portrait orientation matching the floor plan */
 function RoomBlock({ room, onClick, roomInfo, selectedRoom, currentUser, buildingName, isLoading }) {
   const { colorClasses, textColorClass, statusText, isDisabled } = getRoomColors(
-    roomInfo,
-    selectedRoom,
-    currentUser,
-    buildingName,
-    room
+    roomInfo, selectedRoom, currentUser, buildingName, room
   );
 
+  const isYourBooking = currentUser?.bookedRoomNumber === `${buildingName}-${room}`;
   const clickable = !isDisabled;
 
   return (
@@ -85,7 +82,7 @@ function RoomBlock({ room, onClick, roomInfo, selectedRoom, currentUser, buildin
         {room}
       </span>
       <span className={`text-[8px] xs:text-[9px] sm:text-[10px] font-medium mt-0.5 ${textColorClass}`}>
-        {statusText}
+        {isYourBooking ? "Tap to Unbook" : statusText}
       </span>
     </button>
   );
@@ -511,6 +508,10 @@ export default function HeFloorPage({ params }) {
   const [currentUser, setCurrentUser] = useState(getStoredSession);
   const sessionLoaded = true;
 
+  const [isUnbooking, setIsUnbooking] = useState(false);
+  const [showUnbookConfirm, setShowUnbookConfirm] = useState(false);
+  const [bookingPeriod, setBookingPeriod] = useState(null);
+
   const meta = HE_FLOOR_META[floorNum] ?? HE_FLOOR_META[1];
 
   // Fetch rooms data
@@ -529,6 +530,15 @@ export default function HeFloorPage({ params }) {
     }
     fetchRooms();
   }, [floorNum]);
+
+  useEffect(() => {
+    fetch("/api/booking-period")
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) setBookingPeriod(data.period);
+      })
+      .catch(err => console.error("Period fetch error:", err));
+  }, []);
 
   // Fetch user's booking using floor-bookings API
   useEffect(() => {
@@ -588,8 +598,16 @@ export default function HeFloorPage({ params }) {
     }) || { roomNumber: fullRoomId, isActive: true, occupied: 0, capacity: 3 };
   };
 
-  function handleRoomClick(room) {
-    setSelectedRoom((prev) => (prev === room ? null : room));
+ function handleRoomClick(room) {
+  const isYourBooking = currentUser?.bookedRoomNumber === `${HE_NAME}-${room}`;
+  
+  if (isYourBooking && canUnbook) {
+      setShowUnbookConfirm(true);
+    } else if (isYourBooking && !canUnbook) {
+      showToast("Unbooking is not allowed at this time.");
+    } else {
+      setSelectedRoom((prev) => (prev === room ? null : room));
+    }
   }
 
   function showToast(msg, type = "error") {
@@ -597,6 +615,42 @@ export default function HeFloorPage({ params }) {
     setToastType(type);
     setToast(msg);
     setTimeout(() => setToast(null), 4000);
+  }
+
+  const canUnbook = bookingPeriod !== null && bookingPeriod.isActive === true;
+
+  async function handleUnbook() {
+    const studentNumber = currentUser?.studentNumber ?? currentUser?.phoneNumber ?? currentUser?.stdNo;
+    if (!studentNumber) return;
+    try {
+      setIsUnbooking(true);
+      const res = await fetch("/api/booking", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ studentNumber: String(studentNumber) }),
+      });
+      const result = await res.json();
+      if (result.success) {
+        showToast("Room unbooked successfully!", "success");
+        const updatedUser = { ...currentUser, hasBooked: false, bookedRoomNumber: null };
+        setCurrentUser(updatedUser);
+        localStorage.setItem("session", JSON.stringify(updatedUser));
+        setRoomsData((prev) =>
+          prev.map((r) =>
+            r.roomNumber === currentUser.bookedRoomNumber
+              ? { ...r, occupied: Math.max((r.occupied || 1) - 1, 0) }
+              : r
+          )
+        );
+      } else {
+        showToast(result.error || "Could not unbook.");
+      }
+    } catch (err) {
+      showToast("Connection failed. Please try again.");
+    } finally {
+      setIsUnbooking(false);
+      setShowUnbookConfirm(false);
+    }
   }
 
   const validateFloorYear = async () => {
@@ -845,6 +899,15 @@ export default function HeFloorPage({ params }) {
             onConfirm={handleConfirmBooking}
           />
         )}
+
+        {showUnbookConfirm && (
+        <ConfirmationDialog
+          message={`Do you want to unbook Room ${currentUser?.bookedRoomNumber}?`}
+          isLoading={isUnbooking}
+          onCancel={() => !isUnbooking && setShowUnbookConfirm(false)}
+          onConfirm={handleUnbook}
+        />
+      )}
       </div>
     </main>
   );

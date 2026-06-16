@@ -43,6 +43,10 @@ export default function RkbFloorPage({ params }) {
     const [roomsData, setRoomsData] = useState([]);
     const [loading, setLoading] = useState(true);
 
+    const [isUnbooking, setIsUnbooking] = useState(false);
+    const [showUnbookConfirm, setShowUnbookConfirm] = useState(false);
+    const [bookingPeriod, setBookingPeriod] = useState(null);
+
     // Load session from localStorage
     useEffect(() => {
       const session = localStorage.getItem("session");
@@ -54,85 +58,93 @@ export default function RkbFloorPage({ params }) {
           console.error("Invalid session data");
         }
       }
-      setSessionLoaded(true); // FIX 3: mark session as loaded regardless
+      setSessionLoaded(true);
+
+      // ✅ Add this
+      fetch("/api/booking-period")
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) setBookingPeriod(data.period);
+        })
+        .catch(err => console.error("Period fetch error:", err));
     }, []);
 
   
     // Fetch rooms and find user booking in one go
-// Fetch rooms and find user booking in one go
-useEffect(() => {
-  async function fetchData() {
-    try {
-      setLoading(true);
-      
-      // Fetch rooms data
-      const roomsRes = await fetch(`/api/rooms?floor=${floorNum}&building=RKB`);
-      const roomsData = await roomsRes.json();
-      
-      if (roomsData.success) {
-        setRoomsData(roomsData.rooms || []);
-      }
-      
-      // Fetch user's booking using floor-bookings API
-      if (currentUser) {
-        const studentNumber = currentUser.studentNumber ?? currentUser.phoneNumber ?? currentUser.stdNo;
-        
-        if (studentNumber) {
-          const params = new URLSearchParams({
-            building: RKB_NAME,
-            floor: String(floorNum),
-            studentNumber: String(studentNumber),
-          });
-          
-          const bookingsRes = await fetch(`/api/floor-bookings?${params.toString()}`);
-          const bookingsData = await bookingsRes.json();
-          
-          if (bookingsData.success && bookingsData.rooms) {
-            let userBookedRoom = null;
+      // Fetch rooms and find user booking in one go
+      useEffect(() => {
+        async function fetchData() {
+          try {
+            setLoading(true);
             
-            for (const room of bookingsData.rooms) {
-              if (room.students && room.students.length > 0) {
-                const hasUserBooking = room.students.some(student => 
-                  student.studentNumber === studentNumber
-                );
+            // Fetch rooms data
+            const roomsRes = await fetch(`/api/rooms?floor=${floorNum}&building=RKB`);
+            const roomsData = await roomsRes.json();
+            
+            if (roomsData.success) {
+              setRoomsData(roomsData.rooms || []);
+            }
+            
+            // Fetch user's booking using floor-bookings API
+            if (currentUser) {
+              const studentNumber = currentUser.studentNumber ?? currentUser.phoneNumber ?? currentUser.stdNo;
+              
+              if (studentNumber) {
+                const params = new URLSearchParams({
+                  building: RKB_NAME,
+                  floor: String(floorNum),
+                  studentNumber: String(studentNumber),
+                });
                 
-                if (hasUserBooking) {
-                  userBookedRoom = room.roomNumber;
-                  break;
+                const bookingsRes = await fetch(`/api/floor-bookings?${params.toString()}`);
+                const bookingsData = await bookingsRes.json();
+                
+                if (bookingsData.success && bookingsData.rooms) {
+                  let userBookedRoom = null;
+                  
+                  for (const room of bookingsData.rooms) {
+                    if (room.students && room.students.length > 0) {
+                      const hasUserBooking = room.students.some(student => 
+                        student.studentNumber === studentNumber
+                      );
+                      
+                      if (hasUserBooking) {
+                        userBookedRoom = room.roomNumber;
+                        break;
+                      }
+                    }
+                  }
+                  
+                  if (userBookedRoom) {
+                    setCurrentUser(prev => ({
+                      ...prev,
+                      bookedRoomNumber: userBookedRoom,
+                      hasBooked: true
+                    }));
+                  } else {
+                    // Clear booking if not found in database
+                    if (currentUser?.bookedRoomNumber) {
+                      setCurrentUser(prev => ({
+                        ...prev,
+                        bookedRoomNumber: null,
+                        hasBooked: false
+                      }));
+                      const updatedUser = { ...currentUser, bookedRoomNumber: null, hasBooked: false };
+                      localStorage.setItem("session", JSON.stringify(updatedUser));
+                    }
+                  }
                 }
               }
             }
-            
-            if (userBookedRoom) {
-              setCurrentUser(prev => ({
-                ...prev,
-                bookedRoomNumber: userBookedRoom,
-                hasBooked: true
-              }));
-            } else {
-              // Clear booking if not found in database
-              if (currentUser?.bookedRoomNumber) {
-                setCurrentUser(prev => ({
-                  ...prev,
-                  bookedRoomNumber: null,
-                  hasBooked: false
-                }));
-                const updatedUser = { ...currentUser, bookedRoomNumber: null, hasBooked: false };
-                localStorage.setItem("session", JSON.stringify(updatedUser));
-              }
-            }
+          } catch (err) {
+            console.error("Fetch error:", err);
+          } finally {
+            setLoading(false);
           }
         }
-      }
-    } catch (err) {
-      console.error("Fetch error:", err);
-    } finally {
-      setLoading(false);
-    }
-  }
   
-  if (isValid) fetchData();
-}, [floorNum, isValid, currentUser?.studentNumber, currentUser?.phoneNumber, currentUser?.stdNo]);
+        if (isValid) fetchData();
+      }, [floorNum, isValid, currentUser?.studentNumber, currentUser?.phoneNumber, currentUser?.stdNo]);
 
     const getRoomInfo = (roomNo) => {
       const fullRoomId = `${RKB_NAME}-${roomNo}`;
@@ -155,11 +167,14 @@ useEffect(() => {
     );
   
     function showToast(msg, type = "error") {
-    setSelectedRoom(null);
-    setToastType(type);
-    setToast(msg);
-    setTimeout(() => setToast(null), 4000);
-  }
+      setSelectedRoom(null);
+      setToastType(type);
+      setToast(msg);
+      setTimeout(() => setToast(null), 4000);
+    }
+
+    const canUnbook = bookingPeriod !== null && bookingPeriod.isActive === true;
+
 
     const validateFloorYear = async () => {
       if (!currentUser?.year) {
@@ -290,11 +305,50 @@ useEffect(() => {
         setSelectedRoom(null);
       }
     }
-  
+
+  async function handleUnbook() {
+      const studentNumber = currentUser?.studentNumber ?? currentUser?.phoneNumber ?? currentUser?.stdNo;
+      if (!studentNumber) return;
+
+      try {
+        setIsUnbooking(true);
+        const res = await fetch("/api/booking", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ studentNumber: String(studentNumber) }),
+        });
+
+        const result = await res.json();
+
+        if (result.success) {
+          showToast("Room unbooked successfully!", "success");
+          const updatedUser = { ...currentUser, hasBooked: false, bookedRoomNumber: null };
+          setCurrentUser(updatedUser);
+          localStorage.setItem("session", JSON.stringify(updatedUser));
+
+          // Update room occupancy locally
+          setRoomsData((prev) =>
+            prev.map((r) =>
+              r.roomNumber === currentUser.bookedRoomNumber
+                ? { ...r, occupied: Math.max((r.occupied || 1) - 1, 0) }
+                : r
+            )
+          );
+        } else {
+          showToast(result.error || "Could not unbook.");
+        }
+      } catch (err) {
+        showToast("Connection failed. Please try again.");
+      } finally {
+        setIsUnbooking(false);
+        setShowUnbookConfirm(false);
+      }
+    }
+      
     // Simple Room Block component - no API calls
     const RoomBlock = ({ room }) => {
       const roomInfo = getRoomInfo(room);
-      // 1. Fallback for when data is loading
+
       if (!roomInfo) {
         return (
           <div className="w-full h-full rounded-xl border border-slate-200 bg-slate-50 animate-pulse flex items-center justify-center">
@@ -302,33 +356,39 @@ useEffect(() => {
           </div>
         );
       }
-      
-       const { colorClasses, textColorClass, statusText, isDisabled } = getRoomColors(
-    roomInfo,
-    selectedRoom,
-    currentUser,
-    RKB_NAME,  // Change this to your hostel name constant
-    room
-  );
 
-     return (
-    <button
-      disabled={isDisabled || loading}
-      className={`cursor-pointer group relative rounded-xl border shadow-sm transition-all duration-200 w-full h-full disabled:opacity-60 disabled:shadow-none ${colorClasses}`}
-      onClick={() => setSelectedRoom(room)}
-    >
-      <div className="flex h-full flex-col items-center justify-center leading-tight px-1 sm:px-2">
-        <span className="text-sm xs:text-base sm:text-lg font-semibold tracking-wider">
-          {room}
-        </span>
-        <span className={`text-[9px] xs:text-[10px] sm:text-[11px] whitespace-nowrap ${textColorClass}`}>
-          {statusText}
-        </span>
-      </div>
-      <div className="pointer-events-none absolute inset-0 rounded-xl ring-0 transition group-hover:ring-1 group-hover:ring-gray-300/60" />
-    </button>
-  );
-};
+      const { colorClasses, textColorClass, statusText, isDisabled } = getRoomColors(
+        roomInfo, selectedRoom, currentUser, RKB_NAME, room
+      );
+
+      const isYourBooking = currentUser?.bookedRoomNumber === `${RKB_NAME}-${room}`;
+
+      return (
+        <button
+          disabled={isDisabled || loading}
+          className={`cursor-pointer group relative rounded-xl border shadow-sm transition-all duration-200 w-full h-full disabled:opacity-60 disabled:shadow-none ${colorClasses}`}
+          onClick={() => {
+            if (isYourBooking && canUnbook) {
+              setShowUnbookConfirm(true);
+            } else if (isYourBooking && !canUnbook) {
+              showToast("Unbooking is not allowed at this time.");
+            } else {
+              setSelectedRoom(room);
+            }
+          }}
+        >
+          <div className="flex h-full flex-col items-center justify-center leading-tight px-1 sm:px-2">
+            <span className="text-sm xs:text-base sm:text-lg font-semibold tracking-wider">
+              {room}
+            </span>
+            <span className={`text-[9px] xs:text-[10px] sm:text-[11px] whitespace-nowrap ${textColorClass}`}>
+              {isYourBooking ? (canUnbook ? "Your Room" : "Your Room") : statusText}
+            </span>
+          </div>
+          <div className="pointer-events-none absolute inset-0 rounded-xl ring-0 transition group-hover:ring-1 group-hover:ring-gray-300/60" />
+        </button>
+      );
+    };
 
   return (
     <main className="min-h-screen bg-zinc-100 py-4 sm:py-6 md:py-8 text-slate-900 overflow-x-hidden">
@@ -526,6 +586,15 @@ useEffect(() => {
             isLoading={isBooking}
             onCancel={() => !isBooking && setSelectedRoom(null)}
             onConfirm={handleConfirmBooking}
+          />
+        )}
+
+        {showUnbookConfirm && (
+          <ConfirmationDialog
+            message={`Do you want to unbook Room ${currentUser?.bookedRoomNumber}?`}
+            isLoading={isUnbooking}
+            onCancel={() => !isUnbooking && setShowUnbookConfirm(false)}
+            onConfirm={handleUnbook}
           />
         )}
       </div>

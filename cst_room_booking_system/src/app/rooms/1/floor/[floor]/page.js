@@ -44,6 +44,10 @@
     const [roomsData, setRoomsData] = useState([]);
     const [loading, setLoading] = useState(true);
 
+    const [isUnbooking, setIsUnbooking] = useState(false);
+    const [showUnbookConfirm, setShowUnbookConfirm] = useState(false);
+    const [bookingPeriod, setBookingPeriod] = useState(null);
+
     // Load session from localStorage
     useEffect(() => {
       const session = localStorage.getItem("session");
@@ -55,7 +59,15 @@
           console.error("Invalid session data");
         }
       }
-      setSessionLoaded(true); // FIX 3: mark session as loaded regardless
+      setSessionLoaded(true);
+
+      // ✅ Add this
+      fetch("/api/booking-period")
+        .then(res => res.json())
+        .then(data => {
+          if (data.success) setBookingPeriod(data.period);
+        })
+        .catch(err => console.error("Period fetch error:", err));
     }, []);
 
     useEffect(() => {
@@ -280,6 +292,7 @@
           }),
         });
 
+        
         // FIX 6: handle non-JSON responses gracefully
         let result;
         try {
@@ -318,6 +331,47 @@
       }
     }
 
+        const canUnbook = bookingPeriod !== null && bookingPeriod.isActive === true;
+        
+        async function handleUnbook() {
+          const studentNumber = currentUser?.studentNumber ?? currentUser?.phoneNumber ?? currentUser?.stdNo;
+          if (!studentNumber) return;
+
+          try {
+            setIsUnbooking(true);
+            const res = await fetch("/api/booking", {
+              method: "DELETE",
+              headers: { "Content-Type": "application/json" },
+              body: JSON.stringify({ studentNumber: String(studentNumber) }),
+            });
+
+            const result = await res.json();
+
+            if (result.success) {
+              showToast("Room unbooked successfully!", "success");
+              const updatedUser = { ...currentUser, hasBooked: false, bookedRoomNumber: null };
+              setCurrentUser(updatedUser);
+              localStorage.setItem("session", JSON.stringify(updatedUser));
+
+              setRoomsData((prev) =>
+                prev.map((r) =>
+                  r.roomNumber === currentUser.bookedRoomNumber
+                    ? { ...r, occupied: Math.max((r.occupied || 1) - 1, 0) }
+                    : r
+                )
+              );
+            } else {
+              showToast(result.error || "Could not unbook.");
+            }
+          } catch (err) {
+            showToast("Connection failed. Please try again.");
+          } finally {
+            setIsUnbooking(false);
+            setShowUnbookConfirm(false);
+          }
+        }
+
+
     const RoomBlock = ({ room }) => {
     const roomInfo = getRoomInfo(room);
 
@@ -336,25 +390,35 @@
       RKA_NAME,      // building name (RKA)
       room           // room number
     );
+
+    const isYourBooking = currentUser?.bookedRoomNumber === `${RKA_NAME}-${room}`;
     
     return (
       <button
         disabled={isDisabled || loading}
         className={`cursor-pointer group relative rounded-xl border shadow-sm transition-all duration-200 w-full h-full disabled:opacity-60 disabled:shadow-none ${colorClasses}`}
-        onClick={() => setSelectedRoom(room)}
+        onClick={() => {
+          if (isYourBooking && canUnbook) {
+            setShowUnbookConfirm(true);
+          } else if (isYourBooking && !canUnbook) {
+            showToast("Unbooking is no longer allowed. The booking period has closed.");
+          } else {
+            setSelectedRoom(room);
+          }
+        }}
       >
         <div className="flex h-full flex-col items-center justify-center leading-tight px-1 sm:px-2">
           <span className="text-sm xs:text-base sm:text-lg font-semibold tracking-wider">
             {room}
           </span>
           <span className={`text-[9px] xs:text-[10px] sm:text-[11px] whitespace-nowrap ${textColorClass}`}>
-            {statusText}
+            {isYourBooking ? (canUnbook ? "Your Room" : "Your Room") : statusText}
           </span>
         </div>
         <div className="pointer-events-none absolute inset-0 rounded-xl ring-0 transition group-hover:ring-1 group-hover:ring-gray-300/60" />
       </button>
     );
-  };
+  }
 
     return (
       <main className="min-h-screen bg-zinc-100 py-4 sm:py-6 md:py-8 text-slate-900 overflow-x-hidden">
@@ -498,6 +562,15 @@
               onConfirm={handleConfirmBooking}
             />
           )}
+
+          {showUnbookConfirm && (
+          <ConfirmationDialog
+            message={`Do you want to unbook Room ${currentUser?.bookedRoomNumber}?`}
+            isLoading={isUnbooking}
+            onCancel={() => !isUnbooking && setShowUnbookConfirm(false)}
+            onConfirm={handleUnbook}
+          />
+          )}  
         </div>
       </main>
     );

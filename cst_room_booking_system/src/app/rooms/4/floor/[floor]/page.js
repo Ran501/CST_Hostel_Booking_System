@@ -57,6 +57,10 @@ export default function HaFloorPage({ params }) {
   const [currentUser, setCurrentUser] = useState(getStoredSession);
   const sessionLoaded = true;
 
+  const [isUnbooking, setIsUnbooking] = useState(false);
+  const [showUnbookConfirm, setShowUnbookConfirm] = useState(false);
+  const [bookingPeriod, setBookingPeriod] = useState(null);
+
   // Fetch rooms data
   useEffect(() => {
     async function fetchRooms() {
@@ -73,6 +77,15 @@ export default function HaFloorPage({ params }) {
     }
     if (isValid) fetchRooms();
   }, [floorNum, isValid]);
+
+  useEffect(() => {
+    fetch("/api/booking-period")
+      .then(res => res.json())
+      .then(data => {
+        if (data.success) setBookingPeriod(data.period);
+      })
+      .catch(err => console.error("Period fetch error:", err));
+  }, []);
 
   // Fetch user's booking using floor-bookings API
   useEffect(() => {
@@ -142,6 +155,42 @@ export default function HaFloorPage({ params }) {
     setToastType(type);
     setToast(msg);
     setTimeout(() => setToast(null), 4000);
+  }
+
+  const canUnbook = bookingPeriod !== null && bookingPeriod.isActive === true;
+
+  async function handleUnbook() {
+    const studentNumber = currentUser?.studentNumber ?? currentUser?.phoneNumber ?? currentUser?.stdNo;
+    if (!studentNumber) return;
+    try {
+      setIsUnbooking(true);
+      const res = await fetch("/api/booking", {
+        method: "DELETE",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ studentNumber: String(studentNumber) }),
+      });
+      const result = await res.json();
+      if (result.success) {
+        showToast("Room unbooked successfully!", "success");
+        const updatedUser = { ...currentUser, hasBooked: false, bookedRoomNumber: null };
+        setCurrentUser(updatedUser);
+        localStorage.setItem("session", JSON.stringify(updatedUser));
+        setRoomsData((prev) =>
+          prev.map((r) =>
+            r.roomNumber === currentUser.bookedRoomNumber
+              ? { ...r, occupied: Math.max((r.occupied || 1) - 1, 0) }
+              : r
+          )
+        );
+      } else {
+        showToast(result.error || "Could not unbook.");
+      }
+    } catch (err) {
+      showToast("Connection failed. Please try again.");
+    } finally {
+      setIsUnbooking(false);
+      setShowUnbookConfirm(false);
+    }
   }
 
   const validateFloorYear = async () => {
@@ -258,12 +307,10 @@ export default function HaFloorPage({ params }) {
     }
 
     const { colorClasses, textColorClass, statusText, isDisabled } = getRoomColors(
-      roomInfo,
-      selectedRoom,
-      currentUser,
-      HA_NAME,
-      room
+      roomInfo, selectedRoom, currentUser, HA_NAME, room
     );
+
+    const isYourBooking = currentUser?.bookedRoomNumber === `${HA_NAME}-${room}`;
 
     return (
       <button
@@ -271,13 +318,21 @@ export default function HaFloorPage({ params }) {
         className={`group relative rounded-xl border shadow-sm transition-all duration-200 w-full h-full flex flex-col items-center justify-center p-1 disabled:shadow-none ${colorClasses} ${
           isSelected ? "ring-2 ring-emerald-300" : ""
         }`}
-        onClick={() => setSelectedRoom(room)}
+        onClick={() => {
+          if (isYourBooking && canUnbook) {
+            setShowUnbookConfirm(true);
+          } else if (isYourBooking && !canUnbook) {
+            showToast("Unbooking is not allowed at this time.");
+          } else {
+            setSelectedRoom(room);
+          }
+        }}
       >
         <span className="text-[11px] font-bold tracking-tight">
           {room}
         </span>
         <span className={`text-[9px] xs:text-[10px] sm:text-[11px] whitespace-nowrap ${textColorClass}`}>
-          {statusText}
+          {isYourBooking ? (canUnbook ? "Tap to Unbook" : "Your Booking") : statusText}
         </span>
       </button>
     );
@@ -400,6 +455,15 @@ export default function HaFloorPage({ params }) {
             onConfirm={handleConfirmBooking}
           />
         )}
+
+        {showUnbookConfirm && (
+        <ConfirmationDialog
+          message={`Do you want to unbook Room ${currentUser?.bookedRoomNumber}?`}
+          isLoading={isUnbooking}
+          onCancel={() => !isUnbooking && setShowUnbookConfirm(false)}
+          onConfirm={handleUnbook}
+        />
+      )}
       </div>
     </main>
   );

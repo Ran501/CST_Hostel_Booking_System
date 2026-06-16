@@ -93,6 +93,34 @@ export async function POST(request) {
       );
     }
 
+    // ✅ Check booking period
+    const period = await prisma.bookingPeriod.findFirst({
+      where: { isActive: true },
+      select: { startDate: true, endDate: true },
+    });
+
+    if (!period) {
+      return Response.json(
+        { success: false, error: "Booking has not opended yet." },
+        { status: 403 }
+      );
+    }
+
+    const now = new Date();
+    if (now < period.startDate) {
+      return Response.json(
+        { success: false, error: "Booking has not opened yet." },
+        { status: 403 }
+      );
+    }
+
+    if (now > period.endDate) {
+      return Response.json(
+        { success: false, error: "Booking period has closed." },
+        { status: 403 }
+      );
+    }
+
     const result = await prisma.$transaction(async (tx) => {
       const room = await tx.room.findFirst({
         where: { roomNumber: String(roomNumber) },

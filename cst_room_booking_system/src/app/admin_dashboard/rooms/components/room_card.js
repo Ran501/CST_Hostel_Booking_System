@@ -5,6 +5,7 @@ export default function RoomCard({
   floor,
   status,
   capacity,
+  year,
   occupants = [],
   disabledReason = "",
   selectionMode,
@@ -136,9 +137,12 @@ export default function RoomCard({
             {room}
           </h2>
 
-          <p className="text-sm text-gray-500">
+          {/* <p className="text-sm text-gray-500">
             {floor}
-          </p>
+          </p> */}
+          {/* <p className="text-xs text-gray-400">
+            Year: {year}
+          </p> */}
         </div>
 
         <span
@@ -209,6 +213,10 @@ export default function RoomCard({
 
           <p className="mt-2 text-green-700 font-medium">
             Available: {capacity - occupants.length} beds
+          </p>
+
+          <p className="mt-2 text-green-700 font-medium">
+            Year: {year} 
           </p>
 
         </div>
