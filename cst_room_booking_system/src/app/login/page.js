@@ -167,12 +167,12 @@ export default function LoginModal({ open = true, onClose, onSuccess }) {
 
       // Admin redirect
       if (user.role === "admin") {
-        router.push("/admin_dashboard");
+        window.location.href = "/admin_dashboard";
         return;
       }
 
       // Redirect regular users to homecontent
-      router.push("/homecontent");
+      window.location.href = "/homecontent";
       return;
       
     } catch {

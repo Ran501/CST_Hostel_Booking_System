@@ -53,9 +53,10 @@ export default function Navbar() {
     setUserMenuOpen(false);
   };
 
-  const handleLogout = () => {
+  const handleLogout = async () => {
     localStorage.removeItem("session");
-    window.location.href = "/";
+    await fetch("/api/logout", { method: "POST" }).catch(() => {});
+    window.location.href = "/login";
   };
 
 //   useEffect(() => {

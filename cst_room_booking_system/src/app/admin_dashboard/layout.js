@@ -1,14 +1,15 @@
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
+import { verifyJWT } from "../lib/jwt";
 
 export default async function AdminLayout({ children }) {
   const cookieStore = await cookies();
-  const raw = cookieStore.get("session")?.value;
+  const token = cookieStore.get("session")?.value;
 
-  if (!raw) redirect("/login");
+  if (!token) redirect("/login");
 
   try {
-    const session = JSON.parse(raw);
+    const session = await verifyJWT(token);
     if (session?.role !== "admin") redirect("/homecontent");
   } catch {
     redirect("/login");
