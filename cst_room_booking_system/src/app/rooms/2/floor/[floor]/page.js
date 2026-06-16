@@ -176,26 +176,22 @@ export default function RkbFloorPage({ params }) {
     const canUnbook = bookingPeriod !== null && bookingPeriod.isActive === true;
 
 
-    const validateFloorYear = async () => {
+    const validateFloorYear = (roomNo) => {
       if (!currentUser?.year) {
         showToast("Student year not found. Please log in again.");
         return false;
       }
 
-      try {
-        const res = await fetch(`/api/floor-allocation?building=RKB&floor=${floorNum}`);
-        const data = await res.json();
+      const roomInfo = getRoomInfo(roomNo);
+      if (!roomInfo) return true; // no room info found, allow fallback
 
-        if (data.success && data.allocatedYear && data.allocatedYear != currentUser.year) {
-          showToast(`Access Denied: This floor is reserved for Year ${data.allocatedYear} students.`);
-          return false;
-        }
-
-        return true;
-      } catch (err) {
-        console.error("Floor validation error:", err);
-        return true;
+      // Safe string conversion comparison to avoid type issues (e.g., "2" vs 2)
+      if (roomInfo.year && String(roomInfo.year).trim() !== String(currentUser.year).trim()) {
+        showToast(`Access Denied: This room is reserved for Year ${roomInfo.year} students.`);
+        return false;
       }
+
+      return true;
     };
 
     const validateGender = (roomNo) => {
@@ -238,7 +234,7 @@ export default function RkbFloorPage({ params }) {
         return;
       }
 
-      const isCorrectYear = await validateFloorYear();
+      const isCorrectYear = validateFloorYear(selectedRoom); // ✅ Pass selectedRoom synchronously
       if (!isCorrectYear) return;
 
       const isCorrectGender = validateGender(selectedRoom);

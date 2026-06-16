@@ -653,26 +653,22 @@ export default function HeFloorPage({ params }) {
     }
   }
 
-  const validateFloorYear = async () => {
+  const validateFloorYear = (roomNo) => {
     if (!currentUser?.year) {
       showToast("Student year not found. Please log in again.");
       return false;
     }
 
-    try {
-      const res = await fetch(`/api/floor-allocation?building=HE&floor=${floorNum}`);
-      const data = await res.json();
+    const roomInfo = getRoomInfo(roomNo);
+    if (!roomInfo) return true; // fallback if no specific information is stored
 
-      if (data.success && data.allocatedYear && data.allocatedYear != currentUser.year) {
-        showToast(`Access Denied: This floor is reserved for Year ${data.allocatedYear} students.`);
-        return false;
-      }
-
-      return true;
-    } catch (err) {
-      console.error("Floor validation error:", err);
-      return true;
+    // Safe string conversion comparison to avoid type mismatches (e.g., "2" vs 2)
+    if (roomInfo.year && String(roomInfo.year).trim() !== String(currentUser.year).trim()) {
+      showToast(`Access Denied: This room is reserved for Year ${roomInfo.year} students.`);
+      return false;
     }
+
+    return true;
   };
 
   const validateGender = (roomNo) => {
@@ -713,7 +709,7 @@ export default function HeFloorPage({ params }) {
       return;
     }
 
-    const isCorrectYear = await validateFloorYear();
+    const isCorrectYear = validateFloorYear(selectedRoom);
     if (!isCorrectYear) return;
 
     const isCorrectGender = validateGender(selectedRoom);

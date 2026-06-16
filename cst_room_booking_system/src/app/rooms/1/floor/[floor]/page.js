@@ -192,30 +192,21 @@
       setTimeout(() => setToast(null), 4000);
     }
 
-    const validateFloorYear = async () => {
+    const validateFloorYear = (roomNo) => {
       if (!currentUser?.year) {
         showToast("Student year not found. Please log in again.");
         return false;
       }
 
-      try {
-        // You'll need an endpoint that returns the allowed year for this floor
-        const res = await fetch(`/api/floor-allocation?building=RKA&floor=${floorNum}`);
-        const data = await res.json();
+      const roomInfo = getRoomInfo(roomNo);
+      if (!roomInfo) return true; // no room info, allow
 
-        if (data.success) {
-          // Compare the floor's allocated year with the user's year
-          // Using == for flexible string/number comparison
-          if (data.allocatedYear && data.allocatedYear != currentUser.year) {
-            showToast(`Access Denied: This floor is reserved for Year ${data.allocatedYear} students.`);
-            return false;
-          }
-        }
-        return true;
-      } catch (err) {
-        console.error("Floor validation error:", err);
-        return true; // Fallback or handle as error
+      if (roomInfo.year && roomInfo.year != currentUser.year) {
+        showToast(`Access Denied: This room is reserved for Year ${roomInfo.year} students.`);
+        return false;
       }
+
+      return true;
     };
 
 
@@ -258,7 +249,7 @@
       }
 
       // 2. NEW: Floor Allocation Check
-    const isCorrectYear = await validateFloorYear();
+    const isCorrectYear = validateFloorYear(selectedRoom); // ✅ no await, pass room
     if (!isCorrectYear) return; 
 
     // 3. Existing Gender Check (Refactored to be used here if needed)

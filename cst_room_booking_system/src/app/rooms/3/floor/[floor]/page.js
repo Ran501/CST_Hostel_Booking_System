@@ -264,23 +264,23 @@ export default function NkFloorPage({ params }) {
     setTimeout(() => setToast(null), 4000);
   }
 
-  const validateFloorYear = async () => {
+  // ✅ CHANGED: Removed async/fetch, now takes roomNo to validate specific room year requirements
+const validateFloorYear = (roomNo) => {
     if (!currentUser?.year) {
       showToast("Student year not found. Please log in again.");
       return false;
     }
-    try {
-      const res = await fetch(`/api/floor-allocation?building=NK&floor=${floorNum}`);
-      const data = await res.json();
-      if (data.success && data.allocatedYear && data.allocatedYear != currentUser.year) {
-        showToast(`Access Denied: This floor is reserved for Year ${data.allocatedYear} students.`);
-        return false;
-      }
-      return true;
-    } catch (err) {
-      console.error("Floor validation error:", err);
-      return true;
+
+    const roomInfo = getRoomInfo(roomNo);
+    if (!roomInfo) return true; // fallback if no specific information is stored
+
+    // Safe string conversion comparison to avoid type mismatches (e.g., "2" vs 2)
+    if (roomInfo.year && String(roomInfo.year).trim() !== String(currentUser.year).trim()) {
+      showToast(`Access Denied: This room is reserved for Year ${roomInfo.year} students.`);
+      return false;
     }
+
+    return true;
   };
 
   const validateGender = (roomNo) => {
@@ -310,8 +310,9 @@ export default function NkFloorPage({ params }) {
       router.push("/login");
       return;
     }
-    const isCorrectYear = await validateFloorYear();
+    const isCorrectYear = validateFloorYear(selectedRoom); // ✅ Pass selectedRoom synchronously
     if (!isCorrectYear) return;
+
     const isCorrectGender = validateGender(selectedRoom);
     if (!isCorrectGender) return;
     const studentNumber = currentUser.studentNumber ?? currentUser.phoneNumber ?? currentUser.stdNo;

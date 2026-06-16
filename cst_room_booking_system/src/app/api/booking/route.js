@@ -48,18 +48,16 @@ export async function DELETE(request) {
       return Response.json({ success: false, error: "Missing studentNumber" }, { status: 400 });
     }
 
-    // Check active booking period
+    // ✅ CHANGED: Only check if booking period is active, ignore dates
     const period = await prisma.bookingPeriod.findFirst({
       where: { isActive: true },
-      select: { endDate: true },
     });
 
     if (!period) {
-      return Response.json({ success: false, error: "No active booking period found." }, { status: 400 });
-    }
-
-    if (new Date() > period.endDate) {
-      return Response.json({ success: false, error: "Unbooking is no longer allowed. The booking period has closed." }, { status: 403 });
+      return Response.json(
+        { success: false, error: "Unbooking is no longer allowed. The booking period has closed." }, 
+        { status: 403 }
+      );
     }
 
     const booking = await prisma.booking.findFirst({
@@ -80,7 +78,7 @@ export async function DELETE(request) {
   }
 }
 
-// POST - Book a room (unchanged)
+// POST - Book a room
 export async function POST(request) {
   try {
     const body = await request.json();
@@ -93,30 +91,14 @@ export async function POST(request) {
       );
     }
 
-    // ✅ Check booking period
+    // ✅ CHANGED: Only look for an explicitly active booking period
     const period = await prisma.bookingPeriod.findFirst({
       where: { isActive: true },
-      select: { startDate: true, endDate: true },
     });
 
     if (!period) {
       return Response.json(
-        { success: false, error: "Booking has not opended yet." },
-        { status: 403 }
-      );
-    }
-
-    const now = new Date();
-    if (now < period.startDate) {
-      return Response.json(
-        { success: false, error: "Booking has not opened yet." },
-        { status: 403 }
-      );
-    }
-
-    if (now > period.endDate) {
-      return Response.json(
-        { success: false, error: "Booking period has closed." },
+        { success: false, error: "Booking is currently closed or has not opened yet." },
         { status: 403 }
       );
     }
@@ -160,20 +142,12 @@ export async function POST(request) {
         );
       }
 
-      const floorAllocation = await tx.floorAllocation.findUnique({
-        where: {
-          hostelId_floor: {
-            hostelId: lockedRoom.hostel_id,
-            floor: lockedRoom.floor,
-          },
-        },
-      });
-
-      if (floorAllocation && floorAllocation.studentYear !== user.year) {
+      // Room-Level Year Allocation Validation
+      if (lockedRoom.year && String(lockedRoom.year).trim() !== String(user.year).trim()) {
         return bookingResponse(
           {
             success: false,
-            error: `This floor is reserved for Year ${floorAllocation.studentYear} students`,
+            error: `Access Denied: This room is exclusively reserved for Year ${lockedRoom.year} students.`,
           },
           403,
         );
