@@ -398,60 +398,62 @@ export default function HeFloorPage({ params }) {
 
   const canUnbook = bookingPeriod !== null && bookingPeriod.isActive === true;
 
-  async function handleUnbook() {
-    const studentNumber = currentUser?.studentNumber ?? currentUser?.phoneNumber ?? currentUser?.stdNo;
-    if (!studentNumber) return;
-    try {
-      setIsUnbooking(true);
-      const res = await fetch("/api/booking", {
-        method: "DELETE",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ studentNumber: String(studentNumber) }),
-      });
-      const result = await res.json();
-      if (result.success) {
-        showToast("Room unbooked successfully!", "success");
-        const updatedUser = { ...currentUser, hasBooked: false, bookedRoomNumber: null };
-        setCurrentUser(updatedUser);
-        localStorage.setItem("session", JSON.stringify(updatedUser));
-        setRoomsData((prev) =>
-          prev.map((r) =>
-            r.roomNumber === currentUser.bookedRoomNumber
-              ? { ...r, occupied: Math.max((r.occupied || 1) - 1, 0) }
-              : r
-          )
-        );
+    async function handleUnbook() {
+      const studentNumber = currentUser?.studentNumber ?? currentUser?.phoneNumber ?? currentUser?.stdNo;
+      if (!studentNumber) return;
+      try {
+        setIsUnbooking(true);
+        const res = await fetch("/api/booking", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ studentNumber: String(studentNumber) }),
+        });
+        const result = await res.json();
+        if (result.success) {
+          showToast("Room unbooked successfully!", "success");
+          const updatedUser = { ...currentUser, hasBooked: false, bookedRoomNumber: null };
+          setCurrentUser(updatedUser);
+          localStorage.setItem("session", JSON.stringify(updatedUser));
+          setRoomsData((prev) =>
+            prev.map((r) =>
+              r.roomNumber === currentUser.bookedRoomNumber
+                ? { ...r, occupied: Math.max((r.occupied || 1) - 1, 0) }
+                : r
+            )
+          );
+        } else {
+          showToast(result.error || "Could not unbook.");
+        }
+      } catch (err) {
+        showToast("Connection failed. Please try again.");
+      } finally {
+        setIsUnbooking(false);
+        setShowUnbookConfirm(false);
       }
-    } catch (err) {
-      console.error("Unbook error:", err);
-      showToast("Connection failed. Please try again.", "error");
-    } finally {
-      setIsUnbooking(false);
-      setShowUnbookConfirm(false);
-    }
-  }
-
-  const validateGender = (roomNo) => {
-    const roomInfo = getRoomInfo(roomNo);
-    if (!roomInfo) return true;
-    if (!currentUser) {
-      showToast("Please log in to book a room.");
-      return false;
     }
 
-    const roomGender = (roomInfo.forGender || "").toLowerCase().trim();
-    const userGender = (currentUser.gender || "").toLowerCase().trim();
 
-    if (roomGender && userGender && roomGender !== userGender) {
-      showToast(
-        `Access Denied: This room is for ${
-          roomGender.charAt(0).toUpperCase() + roomGender.slice(1)
-        } only!`,
-      );
-      return false;
-    }
-    return true;
-  };
+    const validateGender = (roomNo) => {
+      const roomInfo = getRoomInfo(roomNo);
+
+      if (!roomInfo) return true;
+      if (!currentUser) {
+        showToast("Please log in to book a room.");
+        return false;
+      }
+
+      const roomGender = (roomInfo.forGender || "").toLowerCase().trim();
+      const userGender = (currentUser.gender || "").toLowerCase().trim();
+
+      if (roomGender && userGender && roomGender !== userGender) {
+        showToast(
+          `Access Denied: This room is for ${
+            roomGender.charAt(0).toUpperCase() + roomGender.slice(1)
+          } only!`,
+        );
+        return false;
+      }
+    } 
 
   const validateRoomYear = (roomNo) => {
     if (!currentUser?.year) {
@@ -479,7 +481,6 @@ export default function HeFloorPage({ params }) {
       showToast(`Access Denied: This room is reserved for Year ${roomYear} students.`);
       return false;
     }
-
     return true;
   };
 
