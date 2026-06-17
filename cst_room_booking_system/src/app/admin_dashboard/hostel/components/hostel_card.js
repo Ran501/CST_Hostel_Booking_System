@@ -10,15 +10,25 @@ export default function HostelCard({
   capacity    = 0,
   numberOfFloor = 0,
   onClick,
+  isClickable = true,   // default true for admin; false for counselor
 }) {
   const isActive = status === "active";
 
+  const handleClick = () => {
+    if (isClickable && onClick) {
+      onClick();
+    }
+  };
+
   return (
     <div
-      onClick={onClick}
-      className={`relative h-64 w-full rounded-xl overflow-hidden shadow-lg cursor-pointer transition-all duration-300 hover:scale-[1.02] hover:shadow-xl ${
-        !isActive ? "opacity-70 grayscale" : ""
-      }`}
+      onClick={handleClick}
+      className={`
+        relative h-64 w-full rounded-xl overflow-hidden shadow-lg
+        transition-all duration-300
+        ${isClickable ? "cursor-pointer hover:scale-[1.02] hover:shadow-xl" : "cursor-default"}
+        ${!isActive ? "opacity-70 grayscale" : ""}
+      `}
       style={{
         backgroundImage: `url(/rkahostel.jpeg)`,
         backgroundSize:     "cover",
