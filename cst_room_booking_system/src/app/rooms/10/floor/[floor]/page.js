@@ -178,7 +178,7 @@ function Floor2Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoa
       {/* Left column */}
       <div className="flex flex-col gap-3">
         <div className={TH}>
-          <SmallRoom 
+          <RoomBlock 
             room={kitchenRoom}
             roomInfo={getRoomInfo(kitchenRoom)}
             selectedRoom={selectedRoom}
@@ -284,7 +284,7 @@ function Floor3Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoa
       {/* Left column */}
       <div className="flex flex-col gap-3">
         <div className={TH}>
-          <SmallRoom 
+          <RoomBlock 
             room={kitchenRoom}
             roomInfo={getRoomInfo(kitchenRoom)}
             selectedRoom={selectedRoom}
@@ -393,7 +393,7 @@ function Floor4Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoa
       {/* Left column */}
       <div className="flex flex-col gap-3">
         <div className={TH}>
-          <SmallRoom 
+          <RoomBlock 
             room={kitchenRoom}
             roomInfo={getRoomInfo(kitchenRoom)}
             selectedRoom={selectedRoom}
