@@ -18,13 +18,13 @@ model User {
   gender         String
   phoneNumber    String     @unique
   department     String
-  isActive       Boolean    @default(false)
   hasSetPassword Boolean    @default(false)
-  otpHash        String?
+  isActive       Boolean    @default(false)
   otpExpiresAt   DateTime?
+  otpHash        String?
+  createdAt      DateTime   @default(now())
   bookings       Booking[]
   counselor      Counselor?
-  createdAt      DateTime   @default(now())
 
   @@index([email])
   @@index([year])
@@ -39,9 +39,9 @@ model Hostel {
   status           String            @default("active")
   year             Int
   capacity         Int
+  counselor        Counselor?
   floorAllocations FloorAllocation[]
   rooms            Room[]
-  counselor        Counselor?
 
   @@index([status])
   @@index([year])
@@ -51,9 +51,9 @@ model Counselor {
   id        String   @id @default(uuid())
   userId    String   @unique
   hostelId  String   @unique
-  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  hostel    Hostel   @relation(fields: [hostelId], references: [id], onDelete: Cascade)
   createdAt DateTime @default(now())
+  hostel    Hostel   @relation(fields: [hostelId], references: [id], onDelete: Cascade)
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
   @@index([hostelId])
@@ -65,9 +65,9 @@ model Room {
   floor      Int
   capacity   Int       @default(3)
   status     String    @default("available")
-  occupied   Int       @default(0)
   year       Int
   hostel_id  String
+  occupied   Int       @default(0)
   bookings   Booking[]
   hostel     Hostel    @relation(fields: [hostel_id], references: [id], onDelete: Cascade)
 

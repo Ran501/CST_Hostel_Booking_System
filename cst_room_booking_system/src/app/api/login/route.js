@@ -42,7 +42,7 @@ export async function POST(request) {
       include: {
         counselor: {
           include: {
-            hostel: true,   // includes hostel details for the counselor
+            hostel: true,
           },
         },
       },

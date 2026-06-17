@@ -6,23 +6,19 @@ function errorResponse(message, status = 400) {
   return Response.json({ error: message }, { status });
 }
 
-// ── GET /api/admin/counselor ──────────────────────────────────────────────
-//
-// ?available=true   → return only hostels NOT yet assigned to any counselor
-// (no params)       → return all counselor assignments with user + hostel info
-//
+// GET /api/admin/counselor
+//   ?available=true  → hostels not yet assigned to any counselor
+//   (no params)      → all counselor assignments with user + hostel
 export async function GET(req) {
   try {
     const { searchParams } = new URL(req.url);
 
     if (searchParams.get("available") === "true") {
-      // Find hostelIds already assigned to a counselor
       const assigned = await prisma.counselor.findMany({
         select: { hostelId: true },
       });
       const assignedIds = assigned.map((c) => c.hostelId);
 
-      // Return hostels that are NOT in that list
       const hostels = await prisma.hostel.findMany({
         where: {
           status: "active",
@@ -41,7 +37,6 @@ export async function GET(req) {
       return Response.json({ hostels });
     }
 
-    // Full list of assignments
     const counselors = await prisma.counselor.findMany({
       include: {
         user:   { select: { id: true, name: true, email: true, studentNumber: true } },
@@ -57,24 +52,16 @@ export async function GET(req) {
   }
 }
 
-// ── POST /api/admin/counselor ─────────────────────────────────────────────
-//
+// POST /api/admin/counselor
 // Body: { userId, hostelId }
-//
-// Creates (or updates) the Counselor record linking a user to a hostel.
-// Uses upsert on userId so re-assigning a counselor to a different hostel
-// replaces the old record rather than throwing a unique constraint error.
-//
 export async function POST(req) {
   try {
-    const body = await req.json();
-    const { userId, hostelId } = body;
+    const { userId, hostelId } = await req.json();
 
     if (!userId || !hostelId) {
       return errorResponse("userId and hostelId are required");
     }
 
-    // Verify the user exists and has the counselor role
     const user = await prisma.user.findUnique({
       where: { id: userId },
       select: { id: true, name: true, role: true },
@@ -85,14 +72,12 @@ export async function POST(req) {
       return errorResponse(`User role is "${user.role}", not "counselor". Update the role first.`);
     }
 
-    // Verify the hostel exists
     const hostel = await prisma.hostel.findUnique({
       where: { id: hostelId },
       select: { id: true, hostelName: true },
     });
     if (!hostel) return errorResponse("Hostel not found", 404);
 
-    // Check if another counselor is already assigned to this hostel
     const existingForHostel = await prisma.counselor.findUnique({
       where: { hostelId },
       include: { user: { select: { name: true } } },
@@ -104,8 +89,6 @@ export async function POST(req) {
       );
     }
 
-    // Upsert: update hostel if counselor record already exists for this user,
-    // otherwise create a fresh record.
     const counselor = await prisma.counselor.upsert({
       where:  { userId },
       update: { hostelId },
@@ -123,10 +106,8 @@ export async function POST(req) {
   }
 }
 
-// ── DELETE /api/admin/counselor ───────────────────────────────────────────
-//
-// Body: { userId }  — removes the counselor's hostel assignment
-//
+// DELETE /api/admin/counselor
+// Body: { userId }
 export async function DELETE(req) {
   try {
     const { userId } = await req.json();
