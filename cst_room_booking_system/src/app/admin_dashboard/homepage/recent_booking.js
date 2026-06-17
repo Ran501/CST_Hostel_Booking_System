@@ -2,7 +2,8 @@
 
 import { useState, useEffect } from "react";
 
-// ─── Tiny icon helpers (inline SVG, no dependency) ───────────────────────────
+// ─── Icon helpers ──────────────────────────────────────────────────────────
+
 const Icon = ({ d, size = 16, className = "" }) => (
   <svg width={size} height={size} viewBox="0 0 24 24" fill="none"
     stroke="currentColor" strokeWidth={1.8} strokeLinecap="round"
@@ -23,9 +24,11 @@ const ICONS = {
   x:        "M18 6L6 18M6 6l12 12",
   floor:    "M3 12h18M3 6h18M3 18h18",
   info:     "M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zM12 16v-4M12 8h.01",
+  user:     "M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2M12 11a4 4 0 1 0 0-8 4 4 0 0 0 0 8z",
 };
 
-// ─── Palette / tokens ─────────────────────────────────────────────────────────
+// ─── CSS ────────────────────────────────────────────────────────────────────
+
 const CSS = `
   @import url('https://fonts.googleapis.com/css2?family=Sora:wght@300;400;500;600&family=JetBrains+Mono:wght@400;500&display=swap');
 
@@ -60,18 +63,16 @@ const CSS = `
 
   .adm-root *, .adm-root *::before, .adm-root *::after { box-sizing: border-box; }
 
-  /* Layout */
   .adm-header { margin-bottom: 2rem; }
   .adm-title  { font-size: 1.5rem; font-weight: 600; letter-spacing: -.02em; }
   .adm-sub    { font-size: .8rem; color: var(--muted); margin-top: .2rem; font-family: var(--mono); }
 
   .adm-grid-4 { display: grid; grid-template-columns: repeat(4,1fr); gap: 1rem; margin-bottom: 1.5rem; }
-  .adm-grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.5rem; }
+  .adm-grid-1 { display: grid; grid-template-columns: 1fr; gap: 1rem; margin-bottom: 1.5rem; }
 
   @media(max-width:900px) { .adm-grid-4 { grid-template-columns: 1fr 1fr; } }
-  @media(max-width:600px) { .adm-grid-4,.adm-grid-2 { grid-template-columns: 1fr; } }
+  @media(max-width:600px) { .adm-grid-4 { grid-template-columns: 1fr; } }
 
-  /* Card */
   .adm-card {
     background: var(--surface);
     border: 1px solid var(--border);
@@ -82,14 +83,12 @@ const CSS = `
 
   .adm-card-pad { padding: 1.25rem 1.5rem; }
 
-  /* Stat card */
   .adm-stat { padding: 1.25rem 1.5rem; }
   .adm-stat-label { font-size: .7rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); margin-bottom: .5rem; }
   .adm-stat-value { font-size: 2rem; font-weight: 600; letter-spacing: -.03em; line-height: 1; }
   .adm-stat-sub   { font-size: .75rem; color: var(--muted); margin-top: .35rem; }
   .adm-stat-icon  { margin-bottom: .75rem; color: var(--muted); }
 
-  /* Pill badge */
   .adm-badge {
     display: inline-flex; align-items: center; gap: .3rem;
     font-size: .68rem; font-weight: 500; padding: .2rem .55rem;
@@ -101,7 +100,6 @@ const CSS = `
   .adm-badge-yellow { background: var(--yellow-lt); color: var(--yellow); }
   .adm-badge-gray   { background: var(--border);    color: var(--muted);  }
 
-  /* Section header */
   .adm-sect-head {
     display: flex; align-items: center; justify-content: space-between;
     padding: 1rem 1.5rem; border-bottom: 1px solid var(--border);
@@ -109,11 +107,9 @@ const CSS = `
   .adm-sect-title { font-size: .85rem; font-weight: 600; }
   .adm-sect-count { font-size: .75rem; color: var(--muted); font-family: var(--mono); }
 
-  /* Progress bar */
   .adm-progress { height: 4px; background: var(--border); border-radius: 2px; overflow: hidden; }
   .adm-progress-fill { height: 100%; border-radius: 2px; transition: width .4s ease; }
 
-  /* Table-style row */
   .adm-row {
     display: grid; align-items: center;
     padding: .85rem 1.5rem; border-bottom: 1px solid var(--border);
@@ -123,7 +119,6 @@ const CSS = `
   .adm-row:last-child { border-bottom: none; }
   .adm-row:hover { background: #faf9f7; }
 
-  /* Expandable */
   .adm-expand-btn {
     display: inline-flex; align-items: center; gap: .3rem;
     font-size: .7rem; font-family: var(--mono); color: var(--muted);
@@ -139,25 +134,14 @@ const CSS = `
   }
   @keyframes adm-slide { from { opacity:0; transform:translateY(-4px) } to { opacity:1; transform:none } }
 
-  /* Year breakdown rows */
-  .adm-year-grid { display: grid; grid-template-columns: 80px 1fr auto auto; gap: 1rem; align-items: center; }
-
-  /* Hostel row columns */
   .adm-hostel-grid { grid-template-columns: 1fr auto auto 90px auto; }
 
-  /* Floor table */
   .adm-floor-table { width: 100%; border-collapse: collapse; font-size: .75rem; }
   .adm-floor-table th { text-align: left; padding: .4rem .6rem; color: var(--muted); font-weight: 500; border-bottom: 1px solid var(--border); }
   .adm-floor-table td { padding: .45rem .6rem; border-bottom: 1px solid var(--border); }
   .adm-floor-table tr:last-child td { border-bottom: none; }
   .adm-floor-table tr:hover td { background: rgba(0,0,0,.02); }
 
-  /* Gender mini-bars */
-  .adm-gender-bar { display: flex; height: 6px; border-radius: 3px; overflow: hidden; gap: 2px; margin-top: .4rem; }
-  .adm-gender-m { background: var(--info); border-radius: 3px 0 0 3px; }
-  .adm-gender-f { background: #be185d; border-radius: 0 3px 3px 0; }
-
-  /* Loading */
   .adm-loading {
     display: flex; align-items: center; justify-content: center;
     min-height: 60vh; gap: .75rem; color: var(--muted); font-size: .85rem;
@@ -169,13 +153,10 @@ const CSS = `
   }
   @keyframes adm-spin { to { transform: rotate(360deg) } }
 
-  /* Error */
   .adm-error { text-align: center; padding: 3rem; color: var(--warn); font-size: .85rem; }
 
-  /* Divider label */
   .adm-divider { font-size: .68rem; text-transform: uppercase; letter-spacing: .1em; color: var(--muted); margin: 1.5rem 0 .75rem; }
 
-  /* Occupancy color */
   .occ-low    { background: var(--accent); }
   .occ-mid    { background: var(--yellow); }
   .occ-high   { background: var(--warn); }
@@ -185,7 +166,6 @@ const CSS = `
   .adm-text-sm { font-size: .78rem; }
   .adm-text-xs { font-size: .7rem; }
 
-  /* Show more */
   .adm-show-more {
     display: flex; align-items: center; justify-content: center;
     padding: .75rem; cursor: pointer; font-size: .75rem;
@@ -194,14 +174,18 @@ const CSS = `
   }
   .adm-show-more:hover { color: var(--text); background: var(--bg); }
 
-  /* Summary row at top of hostel detail */
   .adm-kv-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: .6rem; margin-bottom: .75rem; }
   .adm-kv { background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: .5rem .75rem; }
   .adm-kv-k { font-size: .65rem; text-transform: uppercase; letter-spacing: .08em; color: var(--muted); }
   .adm-kv-v { font-size: .95rem; font-weight: 600; font-family: var(--mono); margin-top: .1rem; }
+
+  .adm-counselor-grid {
+    grid-template-columns: 1fr 1fr;
+  }
 `;
 
-// ─── Helpers ──────────────────────────────────────────────────────────────────
+// ─── Helpers ────────────────────────────────────────────────────────────────
+
 function occClass(pct) {
   if (pct < 60) return "occ-low";
   if (pct < 85) return "occ-mid";
@@ -222,7 +206,7 @@ function statusBadge(s) {
   return <span className="adm-badge adm-badge-gray">{s ?? "—"}</span>;
 }
 
-// ─── Sub-components ───────────────────────────────────────────────────────────
+// ─── Sub‑components ─────────────────────────────────────────────────────────
 
 function StatCard({ label, value, sub, icon, accent }) {
   return (
@@ -246,7 +230,6 @@ function HostelRow({ hostel }) {
   return (
     <>
       <div className="adm-row adm-hostel-grid">
-        {/* Name + gender */}
         <div>
           <div className="adm-text-sm" style={{ fontWeight: 500 }}>{hostel.hostelName}</div>
           <div style={{ marginTop: ".2rem", display: "flex", gap: ".4rem", alignItems: "center" }}>
@@ -255,17 +238,14 @@ function HostelRow({ hostel }) {
           </div>
         </div>
 
-        {/* Rooms */}
         <div className="adm-text-mono adm-text-sm adm-text-muted" style={{ textAlign: "right" }}>
           {hostel.roomCount} <span style={{ fontSize: ".65rem" }}>rooms</span>
         </div>
 
-        {/* Beds */}
         <div className="adm-text-mono adm-text-sm" style={{ textAlign: "right" }}>
           {hostel.occupiedBeds}/{hostel.capacity}
         </div>
 
-        {/* Occupancy bar */}
         <div>
           <div className="adm-progress">
             <div
@@ -278,7 +258,6 @@ function HostelRow({ hostel }) {
           </div>
         </div>
 
-        {/* Toggle */}
         <button className="adm-expand-btn" onClick={() => setOpen(o => !o)}>
           <Icon d={open ? ICONS.chevronD : ICONS.chevron} size={12} />
           {open ? "Hide" : "Floors"}
@@ -287,7 +266,6 @@ function HostelRow({ hostel }) {
 
       {open && (
         <div className="adm-detail-panel">
-          {/* Summary KVs */}
           <div className="adm-kv-grid">
             <div className="adm-kv">
               <div className="adm-kv-k">Available</div>
@@ -303,7 +281,6 @@ function HostelRow({ hostel }) {
             </div>
           </div>
 
-          {/* Floor breakdown table */}
           {hostel.floors?.length > 0 ? (
             <table className="adm-floor-table">
               <thead>
@@ -338,52 +315,8 @@ function HostelRow({ hostel }) {
   );
 }
 
-function YearRow({ row }) {
-  const [open, setOpen] = useState(false);
-  const pct = row.totalStudents > 0 ? Math.round((row.residing / row.totalStudents) * 100) : 0;
+// ─── Main Dashboard ──────────────────────────────────────────────────────────
 
-  return (
-    <>
-      <div className="adm-row adm-year-grid">
-        <div className="adm-text-mono adm-text-sm" style={{ fontWeight: 600 }}>
-          Year {row.year}
-        </div>
-        <div>
-          <div className="adm-progress">
-            <div
-              className={`adm-progress-fill ${occClass(pct)}`}
-              style={{ width: `${pct}%` }}
-            />
-          </div>
-          <div className="adm-text-xs adm-text-muted" style={{ marginTop: ".2rem" }}>
-            {row.residing} of {row.totalStudents} residing
-          </div>
-        </div>
-        <span className="adm-badge adm-badge-green">{pct}%</span>
-        <button className="adm-expand-btn" onClick={() => setOpen(o => !o)}>
-          <Icon d={open ? ICONS.chevronD : ICONS.chevron} size={12} />
-          {open ? "Hide" : "Hostels"}
-        </button>
-      </div>
-
-      {open && row.hostels?.length > 0 && (
-        <div className="adm-detail-panel">
-          {row.hostels.map((h, i) => (
-            <div key={i} style={{
-              display: "flex", justifyContent: "space-between", alignItems: "center",
-              padding: ".35rem 0", borderBottom: i < row.hostels.length - 1 ? "1px solid var(--border)" : "none"
-            }}>
-              <span className="adm-text-sm">{h.hostelName}</span>
-              <span className="adm-text-mono adm-text-sm adm-badge adm-badge-gray">{h.count}</span>
-            </div>
-          ))}
-        </div>
-      )}
-    </>
-  );
-}
-
-// ─── Main Dashboard ───────────────────────────────────────────────────────────
 const DEFAULT_HOSTEL_LIMIT = 5;
 
 export default function AdminReportsDashboard() {
@@ -391,8 +324,10 @@ export default function AdminReportsDashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError]     = useState(null);
   const [showAllHostels, setShowAllHostels] = useState(false);
+  const [counselors, setCounselors] = useState([]);
 
   useEffect(() => {
+    // Fetch reports
     fetch("/api/admin/reports")
       .then(r => r.json())
       .then(json => {
@@ -401,11 +336,19 @@ export default function AdminReportsDashboard() {
       })
       .catch(() => setError("Network error — could not reach server"))
       .finally(() => setLoading(false));
+
+    // Fetch counselors
+    fetch("/api/admin/counselor")
+      .then(r => r.json())
+      .then(json => {
+        if (json.counselors) setCounselors(json.counselors);
+        else if (json.error) console.error("Counselor fetch error:", json.error);
+      })
+      .catch(err => console.error("Counselor fetch failed:", err));
   }, []);
 
   const students      = data?.students;
   const hostels       = data?.hostels ?? [];
-  const yearBreakdown = data?.yearBreakdown ?? [];
 
   const visibleHostels = showAllHostels ? hostels : hostels.slice(0, DEFAULT_HOSTEL_LIMIT);
   const totalBeds      = hostels.reduce((s, h) => s + h.capacity, 0);
@@ -453,105 +396,51 @@ export default function AdminReportsDashboard() {
                 sub={`${occupiedBeds} / ${totalBeds} beds`} />
             </div>
 
-            {/* ── Year + Hostel overview side-by-side ── */}
-            <div className="adm-divider">Breakdown</div>
-            <div className="adm-grid-2">
-
-              {/* Gender split card */}
+            {/* ── Counselors ── */}
+            <div className="adm-divider">Counselors</div>
+            <div className="adm-grid-1">
               <div className="adm-card">
                 <div className="adm-sect-head">
-                  <span className="adm-sect-title">Gender Split</span>
-                  <span className="adm-sect-count">{students?.total} total</span>
-                </div>
-                <div className="adm-card-pad">
-                  {/* Visual bar */}
-                  <div style={{ display: "flex", gap: ".75rem", alignItems: "center", marginBottom: "1rem" }}>
-                    <div style={{ flex: 1 }}>
-                      <div className="adm-gender-bar">
-                        <div className="adm-gender-m"
-                          style={{ flex: students?.male ?? 0 }} />
-                        <div className="adm-gender-f"
-                          style={{ flex: students?.female ?? 0 }} />
-                      </div>
-                    </div>
-                  </div>
-                  <div style={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: "1rem" }}>
-                    <div>
-                      <div className="adm-text-xs adm-text-muted" style={{ marginBottom: ".2rem" }}>Male</div>
-                      <div className="adm-text-mono" style={{ fontSize: "1.4rem", fontWeight: 600, color: "var(--info)" }}>
-                        {students?.male}
-                      </div>
-                      <div className="adm-text-xs adm-text-muted">
-                        {students?.total > 0 ? Math.round(students.male / students.total * 100) : 0}%
-                      </div>
-                    </div>
-                    <div>
-                      <div className="adm-text-xs adm-text-muted" style={{ marginBottom: ".2rem" }}>Female</div>
-                      <div className="adm-text-mono" style={{ fontSize: "1.4rem", fontWeight: 600, color: "#be185d" }}>
-                        {students?.female}
-                      </div>
-                      <div className="adm-text-xs adm-text-muted">
-                        {students?.total > 0 ? Math.round(students.female / students.total * 100) : 0}%
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* By year */}
-                  <div style={{ marginTop: "1.25rem" }}>
-                    <div className="adm-text-xs adm-text-muted" style={{ marginBottom: ".5rem", textTransform: "uppercase", letterSpacing: ".08em" }}>
-                      By Year
-                    </div>
-                    {(students?.byYear ?? []).map((y, i) => {
-                      const pct = students.total > 0 ? (y.count / students.total * 100) : 0;
-                      return (
-                        <div key={i} style={{ display: "flex", alignItems: "center", gap: ".75rem", marginBottom: ".45rem" }}>
-                          <span className="adm-text-xs adm-text-mono" style={{ width: 44, flexShrink: 0 }}>
-                            Yr {y.year}
-                          </span>
-                          <div style={{ flex: 1 }}>
-                            <div className="adm-progress">
-                              <div className="adm-progress-fill occ-low" style={{ width: `${pct}%` }} />
-                            </div>
-                          </div>
-                          <span className="adm-text-xs adm-text-mono adm-text-muted" style={{ width: 28, textAlign: "right" }}>
-                            {y.count}
-                          </span>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </div>
-              </div>
-
-              {/* Hostel occupancy card */}
-              <div className="adm-card">
-                <div className="adm-sect-head">
-                  <span className="adm-sect-title">Hostel Occupancy</span>
-                  <span className="adm-sect-count">{hostels.length} hostels</span>
+                  <span className="adm-sect-title">Counselors</span>
+                  <span className="adm-sect-count">{counselors.length} assigned</span>
                 </div>
                 <div>
-                  {hostels.slice(0, 6).map((h, i) => {
-                    const pct = h.occupancyPct ?? 0;
-                    return (
-                      <div key={i} style={{
-                        display: "flex", alignItems: "center", gap: ".75rem",
-                        padding: ".7rem 1.5rem", borderBottom: i < Math.min(hostels.length, 6) - 1 ? "1px solid var(--border)" : "none"
-                      }}>
-                        <span className="adm-text-sm" style={{ flex: 1, fontWeight: 500, minWidth: 0, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>
-                          {h.hostelName}
-                        </span>
-                        <div style={{ width: 80 }}>
-                          <div className="adm-progress">
-                            <div className={`adm-progress-fill ${occClass(pct)}`} style={{ width: `${pct}%` }} />
+                  {counselors.length === 0 ? (
+                    <div className="adm-card-pad adm-text-muted adm-text-sm">
+                      No counselors assigned yet.
+                    </div>
+                  ) : (
+                    <>
+                      <div className="adm-row adm-counselor-grid" style={{ background: "var(--bg)", borderBottom: "1px solid var(--border2)", fontWeight: 500, fontSize: ".7rem", textTransform: "uppercase", color: "var(--muted)", letterSpacing: ".08em" }}>
+                        <span>Counselor</span>
+                        <span style={{ textAlign: "right" }}>Hostel</span>
+                      </div>
+                      {counselors.map((c, i) => (
+                        <div
+                          key={c.user?.id || i}
+                          className="adm-row adm-counselor-grid"
+                          style={{
+                            padding: ".7rem 1.5rem",
+                            borderBottom: i < counselors.length - 1 ? "1px solid var(--border)" : "none"
+                          }}
+                        >
+                          <div>
+                            <div className="adm-text-sm" style={{ fontWeight: 500 }}>
+                              {c.user?.name || "—"}
+                            </div>
+                            <div className="adm-text-xs adm-text-muted">
+                              #{c.user?.studentNumber || "—"}
+                            </div>
+                          </div>
+                          <div className="adm-text-sm" style={{ textAlign: "right" }}>
+                            {c.hostel?.hostelName || "—"}
                           </div>
                         </div>
-                        <span className="adm-text-xs adm-text-mono" style={{ width: 32, textAlign: "right" }}>{pct}%</span>
-                      </div>
-                    );
-                  })}
+                      ))}
+                    </>
+                  )}
                 </div>
               </div>
-
             </div>
 
             {/* ── Hostel detail table ── */}
@@ -562,7 +451,6 @@ export default function AdminReportsDashboard() {
                 <span className="adm-sect-count">{hostels.length} total</span>
               </div>
 
-              {/* Column headers */}
               <div className="adm-row adm-hostel-grid" style={{ background: "var(--bg)", borderBottom: "1px solid var(--border2)" }}>
                 <span className="adm-text-xs adm-text-muted" style={{ textTransform: "uppercase", letterSpacing: ".08em" }}>Name</span>
                 <span className="adm-text-xs adm-text-muted" style={{ textTransform: "uppercase", letterSpacing: ".08em", textAlign: "right" }}>Rooms</span>
@@ -582,29 +470,6 @@ export default function AdminReportsDashboard() {
                 </div>
               )}
             </div>
-
-            {/* ── Year breakdown ── */}
-            <div className="adm-divider">Year-wise Residency</div>
-            <div className="adm-card">
-              <div className="adm-sect-head">
-                <span className="adm-sect-title">Students Residing by Year</span>
-                <span className="adm-sect-count">{yearBreakdown.length} years</span>
-              </div>
-
-              {/* Column headers */}
-              <div className="adm-row adm-year-grid" style={{ background: "var(--bg)", borderBottom: "1px solid var(--border2)" }}>
-                <span className="adm-text-xs adm-text-muted" style={{ textTransform: "uppercase", letterSpacing: ".08em" }}>Year</span>
-                <span className="adm-text-xs adm-text-muted" style={{ textTransform: "uppercase", letterSpacing: ".08em" }}>Residency</span>
-                <span className="adm-text-xs adm-text-muted" style={{ textTransform: "uppercase", letterSpacing: ".08em" }}>Rate</span>
-                <span />
-              </div>
-
-              {yearBreakdown.map((row, i) => <YearRow key={i} row={row} />)}
-
-              {yearBreakdown.length === 0 && (
-                <div className="adm-card-pad adm-text-muted adm-text-sm">No year data available.</div>
-              )}
-            </div>
           </>
         )}
 
@@ -612,124 +477,3 @@ export default function AdminReportsDashboard() {
     </>
   );
 }
-// "use client";
-
-// import { useEffect, useState } from "react";
-// import { animated, useSpring, useSpringRef } from "@react-spring/web";
-
-// export default function RecentBookings() {
-//   const [mounted, setMounted] = useState(false);
-//   const springRef = useSpringRef();
-
-//   const fadeIn = useSpring({
-//     ref: springRef,
-//     from: { opacity: 0, transform: "translateY(10px)" },
-//     to: { opacity: 1, transform: "translateY(0px)" },
-//     config: { duration: 400 },
-//   });
-
-//   useEffect(() => {
-//     const id = requestAnimationFrame(() => setMounted(true));
-//     return () => cancelAnimationFrame(id);
-//   }, []);
-
-//   useEffect(() => {
-//     if (mounted) springRef.start();
-//   }, [mounted, springRef]);
-
-//   if (!mounted) return null;
-
-//   // 🔥 Dummy Data
-//   const bookings = [
-//     { id: 1, studentNumber: "2021001", name: "Tshewang Dorji", email: "tshewang.dorji@cst.edu.bt", room: "RKA-101", gender: "Male" },
-//     { id: 2, studentNumber: "2021002", name: "Pema Choden", email: "pema.choden@cst.edu.bt", room: "HF-102", gender: "Female" },
-//     { id: 3, studentNumber: "2021003", name: "Kinley Wangchuk", email: "kinley.wangchuk@cst.edu.bt", room: "HA-103", gender: "Male" },
-//     { id: 4, studentNumber: "2021004", name: "Yangchen Lhamo", email: "yangchen.lhamo@cst.edu.bt", room: "HF-108", gender: "Female" },
-//     { id: 5, studentNumber: "2021005", name: "Chimi Dema", email: "chimi.dema@cst.edu.bt", room: "HF-105", gender: "Female" },
-//     { id: 6, studentNumber: "2021006", name: "Karma Yangzom", email: "karma.yangzom@cst.edu.bt", room: "HF-106", gender: "Female" },
-//     { id: 7, studentNumber: "2021007", name: "Lhendup Tshering", email: "lhendup.tshering@cst.edu.bt", room: "NK-107", gender: "Male" },
-//     { id: 8, studentNumber: "2021008", name: "Rinchen Dorji", email: "rinchen.dorji@cst.edu.bt", room: "HE-108", gender: "Male" },
-//     { id: 9, studentNumber: "2021009", name: "Sonam Tobgay", email: "sonam.tobgay@cst.edu.bt", room: "HB-109", gender: "Male" },
-//     { id: 10, studentNumber: "2021010", name: "Tshering Yangden", email: "tshering.yangden@cst.edu.bt", room: "HF-110", gender: "Female" },
-//   ];
-
-//   return (
-//     <div className="mt-6">
-//       {/* Header */}
-//       <div className="flex items-center justify-between mb-3 px-1">
-//         <h2 className="text-base sm:text-lg md:text-xl font-semibold text-gray-800">
-//           Recent Bookings
-//         </h2>
-//         <span className="text-xs sm:text-sm text-gray-500">Top 10</span>
-//       </div>
-
-//       {/* Table Container */}
-//       <div className="bg-white rounded-xl shadow border border-gray-100 overflow-hidden">
-        
-//         {/* Table Head */}
-//         <div className="hidden md:grid grid-cols-5 gap-4 px-4 py-3 bg-gray-50 text-xs font-medium text-gray-500 uppercase tracking-wide">
-//           <span>ID</span>
-//           <span>Name</span>
-//           <span>Email</span>
-//           <span>Room</span>
-//           <span>Gender</span>
-//         </div>
-
-//         {/* Rows */}
-//         <div className="divide-y">
-//           {bookings.map((student) => (
-//             <animated.div
-//               key={student.id}
-//               style={fadeIn}
-//               className="grid grid-cols-1 md:grid-cols-5 gap-2 md:gap-4 px-4 py-3 hover:bg-gray-50 transition group cursor-pointer"
-//             >
-//               {/* Mobile layout */}
-//               <div className="md:hidden flex justify-between text-xs text-gray-500">
-//                 <span>#{student.studentNumber}</span>
-//                 <span
-//                   className={`px-2 py-0.5 rounded-full text-[10px]
-//                   ${
-//                     student.gender === "Male"
-//                       ? "bg-blue-50 text-blue-600"
-//                       : "bg-pink-50 text-pink-600"
-//                   }`}
-//                 >
-//                   {student.gender}
-//                 </span>
-//               </div>
-
-//               <div className="text-sm text-gray-700 font-medium md:text-xs md:text-gray-500">
-//                 #{student.studentNumber}
-//               </div>
-
-//               <div className="text-sm font-semibold text-gray-800 truncate">
-//                 {student.name}
-//               </div>
-
-//               <div className="text-xs text-gray-500 truncate">
-//                 {student.email}
-//               </div>
-
-//               <div className="text-sm font-medium text-blue-600">
-//                 {student.room}
-//               </div>
-
-//               <div className="hidden md:flex items-center">
-//                 <span
-//                   className={`text-xs px-2 py-0.5 rounded-full
-//                   ${
-//                     student.gender === "Male"
-//                       ? "bg-blue-50 text-blue-600"
-//                       : "bg-pink-50 text-pink-600"
-//                   }`}
-//                 >
-//                   {student.gender}
-//                 </span>
-//               </div>
-//             </animated.div>
-//           ))}
-//         </div>
-//       </div>
-//     </div>
-//   );
-// }

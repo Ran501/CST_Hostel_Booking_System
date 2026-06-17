@@ -2,113 +2,18 @@
 // NOTE: Next.js App Router — named exports only, no default export.
 import { NextResponse } from "next/server";
 import { prisma } from "../../../../app/lib/prisma";
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────────────────────────────────────
-
-/**
- * Returns the single "current" BookingPeriod row.
- *
- * Strategy:
- *   1. Prefer the row where isActive = true (there should be at most one).
- *   2. If none is active, fall back to the most recently created row.
- *   3. If the table is empty, return null — the PATCH handler will upsert.
- */
-async function getCurrentBookingPeriod() {
-  const active = await prisma.bookingPeriod.findFirst({
-    where: { isActive: true },
-    orderBy: { startDate: "desc" },
-  });
-  if (active) return active;
-
-  return prisma.bookingPeriod.findFirst({
-    orderBy: { startDate: "desc" },
-  });
-}
+import { statsService } from "../../../../modules/stats/stats.service";
+import { cache } from "../../../../app/lib/cache";
 
 // ─────────────────────────────────────────────────────────────────────────────
 // GET /api/admin/stats
-//
-// Returns a single aggregated object for the dashboard overview:
-// {
-//   totalCapacity    — SUM of every room's capacity across all hostels
-//   occupiedBeds     — number of currently active bookings (checkOut > now)
-//   availableBeds    — totalCapacity - occupiedBeds
-//   totalHostels     — total number of hostels in the system
-//   activeHostels    — hostels with status = "active"
-//   maleBookings     — active bookings where the student is male
-//   femaleBookings   — active bookings where the student is female
-//   bookingPeriod    — current BookingPeriod row (or null)
-// }
 // ─────────────────────────────────────────────────────────────────────────────
 export async function GET() {
   try {
-    const now = new Date();
-
-    const [
-      capacityAgg,    // total bed capacity across all rooms
-      occupiedCount,  // active bookings count
-      hostelCounts,   // total + active hostels
-      genderCounts,   // active bookings split by student gender
-      bookingPeriod,  // current booking period status
-    ] = await Promise.all([
-
-      // 1. SUM all room capacities
-      prisma.room.aggregate({
-        _sum: { capacity: true },
-      }),
-
-      // 2. Count active bookings (checkOut in the future)
-      prisma.booking.count({
-        where: { checkOut: { gt: now } },
-      }),
-
-      // 3. Count total + active hostels in one query
-      prisma.hostel.groupBy({
-        by: ["status"],
-        _count: { id: true },
-      }),
-
-      // 4. Count active bookings grouped by student gender
-      prisma.booking.findMany({
-        where: { checkOut: { gt: now } },
-        select: {
-          user: { select: { gender: true } },
-        },
-      }),
-
-      // 5. Fetch current booking period
-      getCurrentBookingPeriod(),
-    ]);
-
-    const totalCapacity  = capacityAgg._sum.capacity ?? 0;
-    const occupiedBeds   = occupiedCount;
-    const availableBeds  = Math.max(0, totalCapacity - occupiedBeds);
-
-    const totalHostels  = hostelCounts.reduce((s, g) => s + g._count.id, 0);
-    const activeHostels = hostelCounts.find((g) => g.status === "active")?._count.id ?? 0;
-
-    let maleBookings   = 0;
-    let femaleBookings = 0;
-    for (const b of genderCounts) {
-      const g = b.user?.gender?.toLowerCase();
-      if (g === "male")   maleBookings++;
-      if (g === "female") femaleBookings++;
-    }
-
+    const data = await statsService.getDashboardStats();
     return NextResponse.json({
       success: true,
-      data: {
-        totalCapacity,
-        occupiedBeds,
-        availableBeds,
-        totalHostels,
-        activeHostels,
-        maleBookings,
-        femaleBookings,
-        bookingPeriod,  // { id, startDate, endDate, isActive, year } | null
-      },
+      data,
     });
   } catch (err) {
     console.error("[GET /api/admin/stats]", err);
@@ -202,6 +107,9 @@ export async function PATCH(request) {
       }
     }
 
+    // Invalidate dashboard stats cache on successful update
+    cache.del("stats:dashboard");
+
     return NextResponse.json({
       success: true,
       data: updatedPeriod,
@@ -213,4 +121,4 @@ export async function PATCH(request) {
       { status: 500 }
     );
   }
-}
+}

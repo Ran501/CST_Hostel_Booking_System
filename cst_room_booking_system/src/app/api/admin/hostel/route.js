@@ -2,6 +2,7 @@
 // NOTE: Next.js App Router — named exports only, no default export.
 import { NextResponse } from "next/server";
 import { prisma }         from "../../../../app/lib/prisma";
+import { cache }          from "../../../../app/lib/cache";
 
 
 // ── Helper: compute real capacity by summing all room capacities ──────────────
@@ -111,6 +112,9 @@ export async function PUT(request) {
         _count:           { select: { rooms: true } },
       },
     });
+
+    // Invalidate reports cache on successful update
+    cache.del("reports:admin");
 
     return NextResponse.json({
       success: true,
