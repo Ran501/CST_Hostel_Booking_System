@@ -7,38 +7,31 @@ export const HE_FLOOR_META = {
   2: { totalRooms: 33, totalBeds: 66 },
 };
 
-export function floor1TopRow() {
-  // Rooms in top row, left to right
+export function floor1rightcolumn() {
   return [101, 102, 103, 104, 105, 106];
 }
 
-export function floor1BottomRow() {
-  // Rooms in bottom row, left to right (reversed numbering)
+export function floor1leftcolumn() {
   return [112, 111, 110, 109, 108, 107];
 }
 
-
-export function floor2TopRowGroupA() {
-  return [224, 225, 226, 227, 228];
+export function floor2Toprightmid() {
+  return [223, 224, 225, 226, 227, 228, 229, 230, 231, 232, 233];
 }
 
-export function floor2TopRowGroupB() {
-  return [229, 230, 231, 232, 233];
-}
-
-export function floor2TopRowGroupC() {
+export function floor2bottomright() {
   return [201, 202, 203, 204, 205, 206];
 }
 
-export function floor2BottomRowGroupA() {
+export function floor2topleft() {
   return [222, 221, 220, 219, 218];
 }
 
-export function floor2BottomRowGroupB() {
+export function floor2leftmid() {
   return [217, 216, 215, 214, 213];
 }
 
-export function floor2BottomRowGroupC() {
+export function floor2Bottomleft() {
   return [212, 211, 210, 209, 208, 207];
 }
 
@@ -48,15 +41,14 @@ export function floor2BottomRowGroupC() {
 export function allRoomsForFloor(floorNum) {
   switch (floorNum) {
     case 1:
-      return [...floor1TopRow(), ...floor1BottomRow()];
+      return [...floor1rightcolumn(), ...floor1leftcolumn()];
     case 2:
       return [
-        ...floor2TopRowGroupA(),
-        ...floor2TopRowGroupB(),
-        ...floor2TopRowGroupC(),
-        ...floor2BottomRowGroupA(),
-        ...floor2BottomRowGroupB(),
-        ...floor2BottomRowGroupC(),
+        ...floor2Toprightmid(),
+        ...floor2bottomright(),
+        ...floor2topleft(),
+        ...floor2leftmid(),
+        ...floor2Bottomleft(),
       ];
     default:
       return [];

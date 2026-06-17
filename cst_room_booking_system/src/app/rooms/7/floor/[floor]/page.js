@@ -352,7 +352,7 @@ export default function HdFloorPage({ params }) {
         </div>
         <div className="pointer-events-none absolute inset-0 rounded-xl ring-0 transition group-hover:ring-1 group-hover:ring-slate-300/60" />
       </button>
-    );
+    )
   };
 
   // SPATIAL DATA
