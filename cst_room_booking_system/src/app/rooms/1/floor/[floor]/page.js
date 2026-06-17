@@ -186,10 +186,21 @@ export default function RkaFloorPage({ params }) {
       const roomInfo = getRoomInfo(roomNo);
       if (!roomInfo) return true; // no room info found, allow fallback
 
+      const roomYear = Number(roomInfo.year);
+      const userYear = Number(currentUser.year);
 
-      // Safe string conversion comparison to avoid type issues (e.g., "2" vs 2)
-      if (roomInfo.year && String(roomInfo.year).trim() !== String(currentUser.year).trim()) {
-        showToast(`Access Denied: This room is reserved for Year ${roomInfo.year} students.`);
+      // If room is for year 4, allow 4th, 5th, and 6th year students
+      if (roomYear === 4) {
+        if (userYear < 4) {
+          showToast("Access Denied: This room is reserved for Year 4+ students.");
+          return false;
+        }
+        return true;
+      }
+
+      // For other years, require exact match
+      if (roomYear !== userYear) {
+        showToast(`Access Denied: This room is reserved for Year ${roomYear} students.`);
         return false;
       }
 
