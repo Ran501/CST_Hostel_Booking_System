@@ -953,7 +953,7 @@ export default function LhawangFloorPage({ params }) {
             </div>
           </div>
           <FloorBookingsView
-          building={LHAWANG_NAME}
+          building={LHAWANG_HOSTEL_NAME}
           floor={floorNum}
           currentUser={currentUser}
           onDenied={(message) => showToast(message)}
