@@ -30,22 +30,12 @@ export async function POST(request) {
           role: "admin",
           gender: "male",
           phoneNumber: "",
-          // No counselor relation for admin
-          counselor: null,
         },
       });
     }
 
-    // Find user with counselor relation
     const user = await prisma.user.findUnique({
       where: { studentNumber: studentNumber.toString() },
-      include: {
-        counselor: {
-          include: {
-            hostel: true,
-          },
-        },
-      },
     });
 
     if (!user) {

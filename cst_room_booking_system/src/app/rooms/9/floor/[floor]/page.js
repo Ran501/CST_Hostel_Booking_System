@@ -40,34 +40,8 @@
   function getStoredSession() {
     if (typeof window === "undefined") return null;
 
-<<<<<<< Updated upstream
-  return (
-    <button
-      disabled={!clickable || isLoading}
-      onClick={clickable ? onClick : undefined}
-      className={`
-        relative flex flex-col items-center justify-center
-        rounded-lg border-2 shadow-sm transition-all duration-200
-        w-full h-full
-        ${colorClasses}
-        ${clickable && !isDisabled
-          ? "cursor-pointer hover:-translate-y-0.5 hover:shadow-md"
-          : "cursor-not-allowed opacity-60"}
-      `}
-    >
-      <span className="text-[11px] xs:text-sm sm:text-base font-semibold tracking-wider text-slate-700">
-        {room}
-      </span>
-      <span className={`text-[8px] xs:text-[9px] sm:text-[10px] font-medium mt-0.5 ${textColorClass}`}>
-        {isYourBooking ? "Your Room" : "Your Room"}
-      </span>
-    </button>
-  );
-}
-=======
     const session = window.localStorage.getItem("session");
     if (!session) return null;
->>>>>>> Stashed changes
 
     try {
       return JSON.parse(session);
@@ -719,124 +693,15 @@
             roomGender.charAt(0).toUpperCase() + roomGender.slice(1)
           } only!`,
         );
-<<<<<<< Updated upstream
-      } else {
-        showToast(result.error || "Could not unbook.");
-      }
-    } catch (err) {
-      showToast("Connection failed. Please try again.");
-    } finally {
-      setIsUnbooking(false);
-      setShowUnbookConfirm(false);
-    }
-  }
-
-  const validateFloorYear = (roomNo) => {
-    if (!currentUser?.year) {
-      showToast("Student year not found. Please log in again.");
-      return false;
-    }
-
-    const roomInfo = getRoomInfo(roomNo);
-    if (!roomInfo) return true; // fallback if no specific information is stored
-
-    // Safe string conversion comparison to avoid type mismatches (e.g., "2" vs 2)
-    if (roomInfo.year && String(roomInfo.year).trim() !== String(currentUser.year).trim()) {
-      showToast(`Access Denied: This room is reserved for Year ${roomInfo.year} students.`);
-      return false;
-    }
-
-    return true;
-  };
-=======
         return false;
       }
 
       return true;
     };
->>>>>>> Stashed changes
 
     async function handleConfirmBooking() {
       if (selectedRoom === null) return;
 
-<<<<<<< Updated upstream
-    if (!roomInfo) return true;
-    if (!currentUser) {
-      showToast("Please log in to book a room.");
-      return false;
-    }
-
-    const roomGender = (roomInfo.forGender || "").toLowerCase().trim();
-    const userGender = (currentUser.gender || "").toLowerCase().trim();
-
-    if (roomGender && userGender && roomGender !== userGender) {
-      showToast(
-        `Access Denied: This room is for ${
-          roomGender.charAt(0).toUpperCase() + roomGender.slice(1)
-        } only!`,
-      );
-      return false;
-    }
-
-    return true;
-  };
-
-  async function handleConfirmBooking() {
-    if (selectedRoom === null) return;
-
-    if (!sessionLoaded) {
-      showToast("Session is still loading, please wait.");
-      return;
-    }
-
-    if (!currentUser) {
-      showToast("You must be logged in to book a room.");
-      router.push("/login");
-      return;
-    }
-
-    const isCorrectYear = validateFloorYear(selectedRoom);
-    if (!isCorrectYear) return;
-
-    const isCorrectGender = validateGender(selectedRoom);
-    if (!isCorrectGender) return;
-
-    const studentNumber = currentUser.studentNumber ?? currentUser.phoneNumber ?? currentUser.stdNo;
-
-    if (!studentNumber) {
-      showToast("Student number not found in session. Please log in again.");
-      return;
-    }
-
-    const fullRoomId = `${HE_NAME}-${selectedRoom}`;
-
-    try {
-      setIsBooking(true);
-      const res = await fetch("/api/booking", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          roomNumber: fullRoomId,
-          studentNumber: String(studentNumber),
-          checkIn: new Date().toISOString(),
-          checkOut: new Date(new Date().setMonth(new Date().getMonth() + 6)).toISOString(),
-        }),
-      });
-
-      const result = await res.json();
-      if (result.success) {
-        showToast(`Room ${fullRoomId} reserved successfully! Details sent to your email.`, "success");
-        const updatedUser = { ...currentUser, hasBooked: true, bookedRoomNumber: fullRoomId };
-        setCurrentUser(updatedUser);
-        localStorage.setItem("session", JSON.stringify(updatedUser));
-        setRoomsData((prev) =>
-          prev.map((r) =>
-            r.roomNumber === fullRoomId ? { ...r, occupied: (r.occupied || 0) + 1 } : r,
-          ),
-        );
-      } else {
-        showToast("Error: " + (result.error || "Could not complete booking."));
-=======
       if (!sessionLoaded) {
         showToast("Session is still loading, please wait.");
         return;
@@ -896,7 +761,6 @@
       } finally {
         setIsBooking(false);
         setSelectedRoom(null);
->>>>>>> Stashed changes
       }
     }
 

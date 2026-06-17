@@ -81,75 +81,75 @@
     // Fetch rooms
     // Fetch rooms and find user booking in one go (NO double fetching)
   useEffect(() => {
-  async function fetchData() {
-    try {
-      setLoading(true);
-      
-      // Fetch rooms data
-      const roomsRes = await fetch(`/api/rooms?floor=${floorNum}&building=RKA`);
-      const roomsData = await roomsRes.json();
-      
-      if (roomsData.success) {
-        setRoomsData(roomsData.rooms || []);
-      }
-      
-      // Fetch user's booking using floor-bookings API (this has booking details)
-      if (currentUser) {
-        const studentNumber = currentUser.studentNumber ?? currentUser.phoneNumber ?? currentUser.stdNo;
+    async function fetchData() {
+      try {
+        setLoading(true);
         
-        if (studentNumber) {
-          const params = new URLSearchParams({
-            building: RKA_NAME,
-            floor: String(floorNum),
-            studentNumber: String(studentNumber),
-          });
+        // Fetch rooms data
+        const roomsRes = await fetch(`/api/rooms?floor=${floorNum}&building=RKA`);
+        const roomsData = await roomsRes.json();
+        
+        if (roomsData.success) {
+          setRoomsData(roomsData.rooms || []);
+        }
+        
+        // Fetch user's booking using floor-bookings API (this has booking details)
+        if (currentUser) {
+          const studentNumber = currentUser.studentNumber ?? currentUser.phoneNumber ?? currentUser.stdNo;
           
-          const bookingsRes = await fetch(`/api/floor-bookings?${params.toString()}`);
-          const bookingsData = await bookingsRes.json();
-          
-          if (bookingsData.success && bookingsData.rooms) {
-            let userBookedRoom = null;
+          if (studentNumber) {
+            const params = new URLSearchParams({
+              building: RKA_NAME,
+              floor: String(floorNum),
+              studentNumber: String(studentNumber),
+            });
             
-            for (const room of bookingsData.rooms) {
-              if (room.students && room.students.length > 0) {
-                const hasUserBooking = room.students.some(student => 
-                  student.studentNumber === studentNumber
-                );
-                
-                if (hasUserBooking) {
-                  userBookedRoom = room.roomNumber;
-                  break;
+            const bookingsRes = await fetch(`/api/floor-bookings?${params.toString()}`);
+            const bookingsData = await bookingsRes.json();
+            
+            if (bookingsData.success && bookingsData.rooms) {
+              let userBookedRoom = null;
+              
+              for (const room of bookingsData.rooms) {
+                if (room.students && room.students.length > 0) {
+                  const hasUserBooking = room.students.some(student => 
+                    student.studentNumber === studentNumber
+                  );
+                  
+                  if (hasUserBooking) {
+                    userBookedRoom = room.roomNumber;
+                    break;
+                  }
                 }
               }
-            }
-            
-            if (userBookedRoom) {
-              setCurrentUser(prev => ({
-                ...prev,
-                bookedRoomNumber: userBookedRoom,
-                hasBooked: true
-              }));
-            } else {
-              // No booking found - clear from state and localStorage
-              if (currentUser?.bookedRoomNumber) {
+              
+              if (userBookedRoom) {
                 setCurrentUser(prev => ({
                   ...prev,
-                  bookedRoomNumber: null,
-                  hasBooked: false
+                  bookedRoomNumber: userBookedRoom,
+                  hasBooked: true
                 }));
-                const updatedUser = { ...currentUser, bookedRoomNumber: null, hasBooked: false };
-                localStorage.setItem("session", JSON.stringify(updatedUser));
+              } else {
+                // No booking found - clear from state and localStorage
+                if (currentUser?.bookedRoomNumber) {
+                  setCurrentUser(prev => ({
+                    ...prev,
+                    bookedRoomNumber: null,
+                    hasBooked: false
+                  }));
+                  const updatedUser = { ...currentUser, bookedRoomNumber: null, hasBooked: false };
+                  localStorage.setItem("session", JSON.stringify(updatedUser));
+                }
               }
             }
           }
         }
+      } catch (err) {
+        console.error("Fetch error:", err);
+      } finally {
+        setLoading(false);
       }
-    } catch (err) {
-      console.error("Fetch error:", err);
-    } finally {
-      setLoading(false);
     }
-  }
   
   if (isValid) fetchData();
 }, [floorNum, isValid, currentUser?.studentNumber, currentUser?.phoneNumber, currentUser?.stdNo]);
@@ -201,8 +201,22 @@
       const roomInfo = getRoomInfo(roomNo);
       if (!roomInfo) return true; // no room info, allow
 
-      if (roomInfo.year && roomInfo.year != currentUser.year) {
-        showToast(`Access Denied: This room is reserved for Year ${roomInfo.year} students.`);
+      // Convert to numbers for safe comparison
+      const roomYear = Number(roomInfo.year);
+      const userYear = Number(currentUser.year);
+
+      // If room is for year 4, allow 4th, 5th, and 6th year students
+      if (roomYear === 4) {
+        if (userYear < 4) {
+          showToast(`Access Denied: This room is reserved for Year 4+ students.`);
+          return false;
+        }
+        return true;
+      }
+
+      // For other years, require exact match
+      if (roomYear !== userYear) {
+        showToast(`Access Denied: This room is reserved for Year ${roomYear} students.`);
         return false;
       }
 

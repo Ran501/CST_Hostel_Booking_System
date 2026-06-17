@@ -143,15 +143,41 @@ export async function POST(request) {
       }
 
       // Room-Level Year Allocation Validation
-      if (lockedRoom.year && String(lockedRoom.year).trim() !== String(user.year).trim()) {
+  if (lockedRoom.year) {
+      const roomYear = Number(lockedRoom.year);
+      const userYear = Number(user.year);
+
+      if (isNaN(userYear)) {
         return bookingResponse(
-          {
-            success: false,
-            error: `Access Denied: This room is exclusively reserved for Year ${lockedRoom.year} students.`,
-          },
+          { success: false, error: "Student year not found. Please update your profile." },
           403,
         );
       }
+
+      // Special rule: year‑4 rooms allow 4,5,6
+      if (roomYear === 4) {
+        if (userYear < 4) {
+          return bookingResponse(
+            {
+              success: false,
+              error: `Access Denied: This room is reserved for Year 4+ students.`,
+            },
+            403,
+          );
+        }
+      } else {
+        // All other years require an exact match
+        if (roomYear !== userYear) {
+          return bookingResponse(
+            {
+              success: false,
+              error: `Access Denied: This room is exclusively reserved for Year ${lockedRoom.year} students.`,
+            },
+            403,
+          );
+        }
+      }
+    }
 
       const roomGender = String(lockedRoom.hostel?.gender ?? "").toLowerCase().trim();
       const userGender = String(user.gender ?? "").toLowerCase().trim();

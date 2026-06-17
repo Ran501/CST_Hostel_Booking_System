@@ -199,28 +199,27 @@ export default function HdFloorPage({ params }) {
       showToast("Student year not found. Please log in again.");
       return false;
     }
-<<<<<<< Updated upstream
 
     const roomInfo = getRoomInfo(roomNo);
-    if (!roomInfo) return true; // fallback if no specific information is stored
+    if (!roomInfo) return true; // no room info, allow
 
-    // Safe string conversion comparison to avoid type mismatches (e.g., "2" vs 2)
-    if (roomInfo.year && String(roomInfo.year).trim() !== String(currentUser.year).trim()) {
-      showToast(`Access Denied: This room is reserved for Year ${roomInfo.year} students.`);
-      return false;
-=======
-    try {
-      const res = await fetch(`/api/floor-allocation?building=HD&floor=${floorNum}`);
-      const data = await res.json();
-      if (data.success && data.allocatedYear && data.allocatedYear != currentUser.year) {
-        showToast(`Access Denied: This floor is reserved for Year ${data.allocatedYear} students.`);
+    // Convert to numbers for safe comparison
+    const roomYear = Number(roomInfo.year);
+    const userYear = Number(currentUser.year);
+
+    // If room is for year 4, allow 4th, 5th, and 6th year students
+    if (roomYear === 4) {
+      if (userYear < 4) {
+        showToast(`Access Denied: This room is reserved for Year 4+ students.`);
         return false;
       }
       return true;
-    } catch (err) {
-      console.error("Floor validation error:", err);
-      return true;
->>>>>>> Stashed changes
+    }
+
+    // For other years, require exact match
+    if (roomYear !== userYear) {
+      showToast(`Access Denied: This room is reserved for Year ${roomYear} students.`);
+      return false;
     }
 
     return true;
@@ -257,12 +256,8 @@ export default function HdFloorPage({ params }) {
       router.push("/login");
       return;
     }
-<<<<<<< Updated upstream
 
     const isCorrectYear = validateFloorYear(selectedRoom);
-=======
-    const isCorrectYear = await validateFloorYear();
->>>>>>> Stashed changes
     if (!isCorrectYear) return;
     const isCorrectGender = validateGender(selectedRoom);
     if (!isCorrectGender) return;
@@ -347,12 +342,15 @@ export default function HdFloorPage({ params }) {
           }
         }}
       >
-        <span className="text-[11px] font-bold tracking-tight">
-          {room}
-        </span>
-        <span className={`text-[9px] xs:text-[10px] sm:text-[11px] whitespace-nowrap ${textColorClass}`}>
-          {isYourBooking ? (canUnbook ? "Tap to Unbook" : "Your Booking") : statusText}
-        </span>
+        <div className="flex h-full flex-col items-center justify-center leading-tight px-2">
+          <span className="text-sm xs:text-base sm:text-base font-semibold tracking-wide">
+            {room}
+          </span>
+          <span className={`text-[9px] xs:text-[10px] sm:text-[11px] whitespace-nowrap ${textColorClass}`}>
+            {isYourBooking ? (canUnbook ? "Your Room" : "Your Room") : statusText}
+          </span>
+        </div>
+        <div className="pointer-events-none absolute inset-0 rounded-xl ring-0 transition group-hover:ring-1 group-hover:ring-slate-300/60" />
       </button>
     );
   };
