@@ -373,7 +373,12 @@ export default function HbFloorPage({ params }) {
     );
   };
 
-  /* ================= UPDATED LAYOUT ================= */
+  /* ================= UPDATED LAYOUT - Matching HC structure ================= */
+
+  const leftTopRooms = floorNum === 1 ? leftRooms.slice(0, 4) : leftRooms.slice(0, 3);
+  const leftBottomRooms = floorNum === 1 ? leftRooms.slice(4) : leftRooms.slice(3);
+  const rightTopRooms = floorNum === 1 ? rightRooms.slice(0, 3) : rightRooms.slice(0, 3);
+  const rightBottomRooms = floorNum === 1 ? rightRooms.slice(3, 5) : rightRooms.slice(3, 5);
 
   return (
     <main className="min-h-screen bg-zinc-100 py-4 sm:py-6 md:py-8 text-slate-900 overflow-x-hidden">
@@ -384,59 +389,52 @@ export default function HbFloorPage({ params }) {
           </div>
         )}
 
-        <FloorBookingsView
+        {/* Mobile header */}
+        <div className="md:hidden flex items-center justify-between mb-4">
+          <div className="flex items-center text-slate-500">
+            <Link href="/" className="inline-flex items-center hover:text-slate-700">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 12H5m7-7l-7 7 7 7" />
+              </svg>
+            </Link>
+          </div>
+          <FloorBookingsView
           building={HB_NAME}
           floor={floorNum}
           currentUser={currentUser}
           onDenied={(message) => showToast(message)}
         />
 
-        {/* Mobile hamburger menu button */}
-        <div className="md:hidden flex items-center justify-between mb-4">
-          <button
-            onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-2 rounded-lg bg-white border border-slate-200 shadow-sm"
-            aria-label="Toggle floor menu"
-          >
-            <div className="w-6 h-6 flex flex-col justify-center gap-1">
-              <span
-                className={`w-6 h-0.5 bg-slate-700 transition-transform ${
-                  sidebarOpen ? "rotate-45 translate-y-1.5" : ""
-                }`}
-              />
-              <span
-                className={`w-6 h-0.5 bg-slate-700 transition-opacity ${
-                  sidebarOpen ? "opacity-0" : "opacity-100"
-                }`}
-              />
-              <span
-                className={`w-6 h-0.5 bg-slate-700 transition-transform ${
-                  sidebarOpen ? "-rotate-45 -translate-y-1.5" : ""
-                }`}
-              />
-            </div>
-          </button>
+          <h1 className="text-center text-base xs:text-lg font-semibold tracking-wide flex-1">
+            {HB_NAME} {floorLabel(floorNum)} floor
+          </h1>
 
-          <div className="text-sm text-slate-600 flex gap-4">
-            <span className="hidden xs:inline">
-              <span className="font-medium">Rooms:</span> {totalRooms}
-            </span>
-            <span>
-              <span className="font-medium">Beds:</span> {totalBeds}
-            </span>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="cursor-pointer px-3 py-1 bg-white border border-slate-200 rounded-full shadow-sm flex items-center gap-0.5 text-xs"
+              aria-label="Toggle floor menu"
+            >
+              <span className="font-small text-cstcolor font-bold">Floor</span>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className={`h-3 w-3 text-slate-700 transition-transform ${sidebarOpen ? "rotate-180" : ""}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
           </div>
+          
         </div>
 
         {/* Mobile sidebar overlay */}
         {sidebarOpen && (
-          <div
-            className="md:hidden fixed inset-0 z-50 bg-black/50"
-            onClick={() => setSidebarOpen(false)}
-          >
-            <div
-              className="absolute left-0 top-0 h-full w-64 bg-white shadow-xl p-4"
-              onClick={(e) => e.stopPropagation()}
-            >
+          <div className="md:hidden fixed inset-0 z-50 bg-black/50" onClick={() => setSidebarOpen(false)}>
+            <div className="absolute left-0 top-0 h-full w-64 bg-white shadow-xl p-4" onClick={(e) => e.stopPropagation()}>
               <FloorSidebar
                 currentFloor={floorNum}
                 baseHref="/rooms/5/floor"
@@ -446,47 +444,40 @@ export default function HbFloorPage({ params }) {
           </div>
         )}
 
-        <div className="mb-4 flex items-center text-slate-500">
-          <Link
-            href="/"
-            aria-label="Go back"
-            className="inline-flex items-center hover:text-slate-700"
-          >
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              className="h-6 w-6"
-              fill="none"
-              viewBox="0 0 24 24"
-              stroke="currentColor"
-              strokeWidth={2}
-            >
-              <path
-                strokeLinecap="round"
-                strokeLinejoin="round"
-                d="M19 12H5m7-7l-7 7 7 7"
-              />
-            </svg>
-          </Link>
-        </div>
-
-        <div className="mb-5 sm:mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <h1 className="text-xl sm:text-2xl font-semibold tracking-wide">
-            {HB_NAME} {floorLabel(floorNum)} floor
-          </h1>
-          <div className="text-sm text-slate-600 flex gap-4 sm:gap-6">
-            <span className="hidden sm:inline">
-              <span className="font-medium">Total Rooms:</span> {totalRooms}
-            </span>
-            <span className="hidden sm:inline">
-              <span className="font-medium">Total Beds:</span> {totalBeds}
-            </span>
+        {/* Desktop header */}
+        <div className="hidden md:flex items-center mb-4 sm:mb-5 lg:mb-6">
+          <div className="flex items-center text-slate-500">
+            <Link href="/" className="inline-flex items-center hover:text-slate-700">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 12H5m7-7l-7 7 7 7" />
+              </svg>
+            </Link>
           </div>
+
+          <div className="text-center flex-1">
+            <h1 className="text-lg sm:text-xl lg:text-2xl font-semibold tracking-wide">
+              {HB_NAME} {floorLabel(floorNum)} floor
+            </h1>
+            <div className="text-sm text-slate-600 flex justify-center gap-4 sm:gap-6 mt-1">
+              <span className="hidden sm:inline">
+                <span className="font-medium">Total Rooms:</span> {totalRooms}
+              </span>
+              <span className="hidden sm:inline">
+                <span className="font-medium">Total Beds:</span> {totalBeds}
+              </span>
+            </div>
+          </div>
+          <FloorBookingsView
+          building={HB_NAME}
+          floor={floorNum}
+          currentUser={currentUser}
+          onDenied={(message) => showToast(message)}
+        />
         </div>
 
-        {/* Tablet and Desktop Layout */}
+        {/* Main Layout - Matching HC structure */}
         <div className="w-full">
           <div className="flex flex-col md:flex-row gap-4 lg:gap-6">
-            {/* Sidebar */}
             <div className="hidden md:block w-48 lg:w-56 flex-shrink-0">
               <FloorSidebar
                 currentFloor={floorNum}
@@ -495,109 +486,73 @@ export default function HbFloorPage({ params }) {
               />
             </div>
 
-            {/* Main content area */}
             <div className="flex-1 min-w-0">
-              <section className="relative rounded-xl sm:rounded-2xl border border-slate-200 bg-white/80 p-3 sm:p-4 md:p-5 lg:p-6 shadow-lg lg:shadow-xl backdrop-blur overflow-hidden w-full">
-                <div className="grid grid-cols-[1fr_auto_1fr] gap-3 sm:gap-4 md:gap-5 lg:gap-6 pt-8 sm:pt-10 md:pt-12 pb-10 sm:pb-12">
-                  {/* Left column */}
-                  <div className="flex flex-col items-center gap-2 xs:gap-3 sm:gap-3 md:gap-4">
-                    {floorNum === 1 ? (
-                      <>
-                        <div className="w-full flex justify-center">
-                          <SpecialBlock text="🚿 Washroom" type="washroom" />
-                        </div>
-                        {rightRooms.slice(0, 3).map((r) => (
-                          <div key={r} className="w-full flex justify-center">
-                            <div className="w-[100px] xs:w-[110px] sm:w-[120px] md:w-[130px] lg:w-[140px] h-[36px] xs:h-[38px] sm:h-[40px] md:h-[42px] lg:h-[46px]">
-                              <RoomBlock room={r} />
-                            </div>
-                          </div>
-                        ))}
-                        <div className="h-6 sm:h-7 md:h-8" />
-                        {rightRooms.slice(3, 5).map((r) => (
-                          <div key={r} className="w-full flex justify-center">
-                            <div className="w-[100px] xs:w-[110px] sm:w-[120px] md:w-[130px] lg:w-[140px] h-[36px] xs:h-[38px] sm:h-[40px] md:h-[42px] lg:h-[46px]">
-                              <RoomBlock room={r} />
-                            </div>
-                          </div>
-                        ))}
-                        <div className="w-full flex justify-center">
-                          <SpecialBlock text="🚿 Washroom" type="washroom" />
-                        </div>
-                      </>
-                    ) : (
-                      <>
-                        <div className="w-full flex justify-center">
-                          <SpecialBlock text="🚿 Washroom" type="washroom" />
-                        </div>
-                        {rightRooms.slice(0, 3).map((r) => (
-                          <div key={r} className="w-full flex justify-center">
-                            <div className="w-[100px] xs:w-[110px] sm:w-[120px] md:w-[130px] lg:w-[140px] h-[36px] xs:h-[38px] sm:h-[40px] md:h-[42px] lg:h-[46px]">
-                              <RoomBlock room={r} />
-                            </div>
-                          </div>
-                        ))}
-                        <div className="my-3 sm:my-4 md:my-6 h-6 w-16 sm:h-7 sm:w-18 md:h-8 md:w-20 items-center justify-center rounded-full bg-transparent text-xs sm:text-sm text-slate-600 flex">
-                          <span>Enter → </span>
-                        </div>
-                        {rightRooms.slice(3, 5).map((r) => (
-                          <div key={r} className="w-full flex justify-center">
-                            <div className="w-[100px] xs:w-[110px] sm:w-[120px] md:w-[130px] lg:w-[140px] h-[36px] xs:h-[38px] sm:h-[40px] md:h-[42px] lg:h-[46px]">
-                              <RoomBlock room={r} />
-                            </div>
-                          </div>
-                        ))}
-                        <div className="w-full flex justify-center">
-                          <SpecialBlock text="🚿 Washroom" type="washroom" />
-                        </div>
-                      </>
-                    )}
+              <section className="relative rounded-2xl border border-slate-200 bg-white/80 p-4 md:p-6 shadow-lg backdrop-blur overflow-hidden">
+                <div className="grid grid-cols-[1fr_auto_1fr] gap-4 sm:gap-6 pt-10 pb-12">
+                  
+                  {/* LEFT COLUMN - Matching HC left column */}
+                  <div className="flex flex-col items-center gap-3">
+                    {/* Top washroom */}
+                    <div className="w-full flex justify-center">
+                      <SpecialBlock text="🚿 Washroom" type="washroom" />
+                    </div>
+
+                    {/* Top rooms */}
+                    {rightTopRooms.map((r) => (
+                      <div key={r} className="w-full max-w-[140px] h-[40px] md:h-[46px]">
+                        <RoomBlock room={r} />
+                      </div>
+                    ))}
+
+                    {/* Stairs or Enter sign based on floor */}
+                    <div className="h-8 flex items-center text-[10px] text-slate-400 uppercase font-bold tracking-tighter italic">
+                      Stairs
+                    </div>
+
+                    {/* Bottom rooms */}
+                    {rightBottomRooms.map((r) => (
+                      <div key={r} className="w-full max-w-[140px] h-[40px] md:h-[46px]">
+                        <RoomBlock room={r} />
+                      </div>
+                    ))}
+
+                    {/* Bottom washroom */}
+                    <div className="w-full flex justify-center">
+                      <SpecialBlock text="🚿 Washroom" type="washroom" />
+                    </div>
                   </div>
 
-                  {/* Corridor */}
+                  {/* CORRIDOR */}
                   <div className="relative">
-                    <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-[1px] xs:w-[2px] bg-slate-300/60" />
+                    <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-[2px] bg-slate-200" />
                   </div>
 
-                  {/* Right column */}
-                  <div className="flex flex-col items-center gap-2 xs:gap-3 sm:gap-3 md:gap-4">
-                    {floorNum === 1 ? (
-                      <>
-                        {leftRooms.slice(0, 4).map((r) => (
-                          <div key={r} className="w-full flex justify-center">
-                            <div className="w-[100px] xs:w-[110px] sm:w-[120px] md:w-[130px] lg:w-[140px] h-[36px] xs:h-[38px] sm:h-[40px] md:h-[42px] lg:h-[46px]">
-                              <RoomBlock room={r} />
-                            </div>
-                          </div>
-                        ))}
-                        <div className="my-3 sm:my-4 md:my-6 h-6 w-16 sm:h-7 sm:w-18 md:h-8 md:w-20 items-center justify-center rounded-full bg-transparent text-xs sm:text-sm text-slate-600 flex">
-                          <span>← Enter</span>
-                        </div>
-                        {leftRooms.slice(4).map((r) => (
-                          <div key={r} className="w-full flex justify-center">
-                            <div className="w-[100px] xs:w-[110px] sm:w-[120px] md:w-[130px] lg:w-[140px] h-[36px] xs:h-[38px] sm:h-[40px] md:h-[42px] lg:h-[46px]">
-                              <RoomBlock room={r} />
-                            </div>
-                          </div>
-                        ))}
-                      </>
-                    ) : (
-                      <>
-                        {leftRooms.map((r) => (
-                          <div key={r} className="w-full flex justify-center">
-                            <div className="w-[100px] xs:w-[110px] sm:w-[120px] md:w-[130px] lg:w-[140px] h-[36px] xs:h-[38px] sm:h-[40px] md:h-[42px] lg:h-[46px]">
-                              <RoomBlock room={r} />
-                            </div>
-                          </div>
-                        ))}
-                      </>
-                    )}
+                  {/* RIGHT COLUMN - Matching HC right column */}
+                  <div className="flex flex-col items-center gap-3">
+                    {/* Top rooms */}
+                    {leftTopRooms.map((r) => (
+                      <div key={r} className="w-full max-w-[140px] h-[40px] md:h-[46px]">
+                        <RoomBlock room={r} />
+                      </div>
+                    ))}
+
+                    {floorNum === 1 && (
+                    <div className="my-4 text-xs text-slate-400 italic">
+                      Main Entrance
+                    </div>
+                  )}
+
+                    {/* Bottom rooms */}
+                    {leftBottomRooms.map((r) => (
+                      <div key={r} className="w-full max-w-[140px] h-[40px] md:h-[46px]">
+                        <RoomBlock room={r} />
+                      </div>
+                    ))}
                   </div>
                 </div>
               </section>
 
-              {/* Legend */}
-              <div className="mt-4 sm:mt-5 lg:mt-6">
+              <div className="mt-6">
                 <RoomLegend />
               </div>
             </div>
@@ -615,13 +570,13 @@ export default function HbFloorPage({ params }) {
         )}
 
         {showUnbookConfirm && (
-        <ConfirmationDialog
-          message={`Do you want to unbook Room ${currentUser?.bookedRoomNumber}?`}
-          isLoading={isUnbooking}
-          onCancel={() => !isUnbooking && setShowUnbookConfirm(false)}
-          onConfirm={handleUnbook}
-        />
-      )}
+          <ConfirmationDialog
+            message={`Do you want to unbook Room ${currentUser?.bookedRoomNumber}?`}
+            isLoading={isUnbooking}
+            onCancel={() => !isUnbooking && setShowUnbookConfirm(false)}
+            onConfirm={handleUnbook}
+          />
+        )}
       </div>
     </main>
   );

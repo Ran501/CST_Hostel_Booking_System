@@ -54,10 +54,10 @@ function getStoredSession() {
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Shared Primitive Components
+// Room Block - Consistent with HA
 // ─────────────────────────────────────────────────────────────────────────────
 
-function SmallRoom({ room, onClick, roomInfo, selectedRoom, currentUser, buildingName, isLoading }) {
+function RoomBlock({ room, onClick, roomInfo, selectedRoom, currentUser, buildingName, isLoading }) {
   const { colorClasses, textColorClass, statusText, isDisabled } = getRoomColors(
     roomInfo,
     selectedRoom,
@@ -82,57 +82,13 @@ function SmallRoom({ room, onClick, roomInfo, selectedRoom, currentUser, buildin
           : "cursor-not-allowed opacity-60"}
       `}
     >
-      <span className="text-sm xs:text-base sm:text-lg font-semibold tracking-wider text-slate-700">
+      <span className="text-[11px] xs:text-sm sm:text-base font-semibold tracking-wider text-slate-700">
         {room}
       </span>
-      <span className={`text-[9px] xs:text-[10px] sm:text-[11px] font-medium mt-0.5 ${textColorClass}`}>
+      <span className={`text-[8px] xs:text-[9px] sm:text-[10px] font-medium mt-0.5 ${textColorClass}`}>
         {statusText}
       </span>
     </button>
-  );
-}
-
-function LargeRoom({ room, onClick, roomInfo, selectedRoom, currentUser, buildingName, isLoading }) {
-  const { colorClasses, textColorClass, statusText, isDisabled } = getRoomColors(
-    roomInfo,
-    selectedRoom,
-    currentUser,
-    buildingName,
-    room
-  );
-
-  const clickable = !isDisabled;
-
-  return (
-    <button
-      disabled={!clickable || isLoading}
-      onClick={clickable ? onClick : undefined}
-      className={`
-        relative flex flex-col items-center justify-center w-full h-full
-        rounded-xl border-2 shadow-sm transition-all duration-200
-        ${colorClasses}
-        ${clickable && !isDisabled
-          ? "cursor-pointer hover:-translate-y-0.5 hover:shadow-md"
-          : "cursor-not-allowed opacity-60"}
-      `}
-    >
-      <span className="text-2xl sm:text-3xl md:text-4xl font-semibold tracking-wider text-slate-700">
-        {room}
-      </span>
-      <span className={`text-xs sm:text-sm font-medium mt-1 ${textColorClass}`}>
-        {statusText}
-      </span>
-    </button>
-  );
-}
-
-function KitchenBlock({ label }) {
-  return (
-    <div className="flex items-center justify-center w-full h-full rounded-lg border-2 border-dashed border-slate-300 bg-slate-50">
-      <span className="text-xs xs:text-sm sm:text-base text-slate-400 font-medium px-2 text-center">
-        {label}
-      </span>
-    </div>
   );
 }
 
@@ -147,9 +103,9 @@ function StairsIndicator() {
       >
         <path strokeLinecap="round" strokeLinejoin="round" d="M5 15l7-7 7 7" />
       </svg>
-      <span className="text-[10px] xs:text-xs sm:text-sm text-slate-500 font-medium">
+      <span className="h-8 flex items-center text-[10px] text-slate-400 uppercase font-bold tracking-tighter italic">
         Stairs
-      </span>
+      </span> 
     </div>
   );
 }
@@ -167,17 +123,23 @@ function RightArrow() {
   );
 }
 
-/** FLOOR 1 — two large rooms: 102 | Stairs | 101 */
+// ─────────────────────────────────────────────────────────────────────────────
+// FLOOR 1 — two rooms: 102 | Stairs | 101
+// ─────────────────────────────────────────────────────────────────────────────
+// ─────────────────────────────────────────────────────────────────────────────
+// FLOOR 1 — two rooms: 102 | Stairs | 101
+// ─────────────────────────────────────────────────────────────────────────────
 function Floor1Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoading, buildingName }) {
-  const leftRoom  = floor1LeftRoom();   // 102
-  const rightRoom = floor1RightRoom();  // 101
-  const RH = "h-[200px] xs:h-[240px] sm:h-[290px] md:h-[350px]";
+  const leftRoom  = floor1LeftRoom();
+  const rightRoom = floor1RightRoom();
+  const TH = "h-[40px]";
+  const RW = "w-[110px] sm:w-[140px] md:w-[160px]";
 
   return (
-    <div className="grid grid-cols-[1fr_auto_1fr] items-center gap-4 sm:gap-6 md:gap-10">
-      <div className={RH}>
-        <LargeRoom 
-          room={leftRoom} 
+    <div className="flex items-center justify-center gap-8 sm:gap-16 md:gap-24 w-full">
+      <div className={`${RW} ${TH} flex-shrink-0`}>
+        <RoomBlock
+          room={leftRoom}
           roomInfo={getRoomInfo(leftRoom)}
           selectedRoom={selectedRoom}
           currentUser={currentUser}
@@ -187,9 +149,9 @@ function Floor1Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoa
         />
       </div>
       <StairsIndicator />
-      <div className={RH}>
-        <LargeRoom 
-          room={rightRoom} 
+      <div className={`${RW} ${TH} flex-shrink-0`}>
+        <RoomBlock
+          room={rightRoom}
           roomInfo={getRoomInfo(rightRoom)}
           selectedRoom={selectedRoom}
           currentUser={currentUser}
@@ -202,33 +164,54 @@ function Floor1Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoa
   );
 }
 
+<<<<<<< Updated upstream
 /** FLOOR 2 — Kitchen 1 + rooms 203/202/201 left | 204→205, 206, Stairs+207 right */
 function Floor2Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoading, buildingName,kitchenRoom }) {
   const leftRooms = floor2LeftColumn();                                  // [203, 202, 201]
+=======
+// ─────────────────────────────────────────────────────────────────────────────
+// FLOOR 2 — Kitchen + rooms
+// ─────────────────────────────────────────────────────────────────────────────
+function Floor2Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoading, buildingName }) {
+  const leftRooms = floor2LeftColumn();
+>>>>>>> Stashed changes
   const { connectedPair, standaloneRoom, stairsRoom } = floor2RightSection();
   const kitchenLabel = LHAWANG_KITCHEN_LABELS[2];
-  const TH = "h-[44px] xs:h-[50px] sm:h-[56px] md:h-[62px]";
+  const TH = "h-[40px] sm:h-[46px]";
+  const RW = "w-[100px] sm:w-[130px] md:w-[150px]";
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-[1fr_1.5fr] gap-4 sm:gap-6 md:gap-8 items-start">
+    <div className="flex flex-row justify-between w-full gap-4">
 
       {/* Left column */}
+<<<<<<< Updated upstream
       <div className="flex flex-col gap-3">
         <div className={TH}>
           <SmallRoom 
             room={kitchenRoom}
             roomInfo={getRoomInfo(kitchenRoom)}
+=======
+      <div className="flex flex-col items-stretch gap-3 flex-shrink-0" style={{ width: "max-content" }}>
+        <div className={`${RW} ${TH}`}>
+          <RoomBlock
+            room={kitchenLabel}
+            roomInfo={getRoomInfo(kitchenLabel)}
+>>>>>>> Stashed changes
             selectedRoom={selectedRoom}
             currentUser={currentUser}
             buildingName={buildingName}
             isLoading={isLoading}
+<<<<<<< Updated upstream
             onClick={() => onRoomClick(kitchenRoom)}
+=======
+            onClick={() => onRoomClick(kitchenLabel)}
+>>>>>>> Stashed changes
           />
         </div>
         {leftRooms.map((r) => (
-          <div key={r} className={TH}>
-            <SmallRoom 
-              room={r} 
+          <div key={r} className={`${RW} ${TH}`}>
+            <RoomBlock
+              room={r}
               roomInfo={getRoomInfo(r)}
               selectedRoom={selectedRoom}
               currentUser={currentUser}
@@ -240,13 +223,13 @@ function Floor2Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoa
         ))}
       </div>
 
-      {/* Right section */}
-      <div className="flex flex-col gap-3">
-        {/* Connected pair: 204 → 205 */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          <div className={`flex-1 ${TH}`}>
-            <SmallRoom 
-              room={connectedPair[0]} 
+      {/* Right column */}
+      <div className="flex flex-col items-start gap-3 flex-shrink-0">
+        {/* 204 → 205 */}
+        <div className="flex items-center gap-2">
+          <div className={`${RW} ${TH}`}>
+            <RoomBlock
+              room={connectedPair[0]}
               roomInfo={getRoomInfo(connectedPair[0])}
               selectedRoom={selectedRoom}
               currentUser={currentUser}
@@ -256,9 +239,9 @@ function Floor2Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoa
             />
           </div>
           <RightArrow />
-          <div className={`flex-1 ${TH}`}>
-            <SmallRoom 
-              room={connectedPair[1]} 
+          <div className={`${RW} ${TH}`}>
+            <RoomBlock
+              room={connectedPair[1]}
               roomInfo={getRoomInfo(connectedPair[1])}
               selectedRoom={selectedRoom}
               currentUser={currentUser}
@@ -269,13 +252,12 @@ function Floor2Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoa
           </div>
         </div>
 
-        {/* Invisible spacer to match image positioning */}
-        <div className={`${TH} invisible`} aria-hidden="true" />
+        <div className="h-1" />
 
-        {/* 206 — right-aligned */}
-        <div className={`w-[48%] self-end ${TH}`}>
-          <SmallRoom 
-            room={standaloneRoom} 
+        {/* 206 — aligned to the right of pair */}
+        <div className={`${RW} ${TH} self-end`}>
+          <RoomBlock
+            room={standaloneRoom}
             roomInfo={getRoomInfo(standaloneRoom)}
             selectedRoom={selectedRoom}
             currentUser={currentUser}
@@ -286,11 +268,11 @@ function Floor2Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoa
         </div>
 
         {/* Stairs + 207 */}
-        <div className="flex items-center gap-3 sm:gap-4 pt-1">
+        <div className="flex items-center gap-2">
           <StairsIndicator />
-          <div className={`flex-1 ${TH}`}>
-            <SmallRoom 
-              room={stairsRoom} 
+          <div className={`${RW} ${TH}`}>
+            <RoomBlock
+              room={stairsRoom}
               roomInfo={getRoomInfo(stairsRoom)}
               selectedRoom={selectedRoom}
               currentUser={currentUser}
@@ -305,33 +287,57 @@ function Floor2Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoa
   );
 }
 
+<<<<<<< Updated upstream
 /** FLOOR 3 — Kitchen 2 + rooms 304–301 left | Enter, 305→306, 307, 308, Stairs+309 right */
 function Floor3Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoading, buildingName,kitchenRoom }) {
   const leftRooms = floor3LeftColumn();                                              // [304, 303, 302, 301]
+=======
+// ─────────────────────────────────────────────────────────────────────────────
+// FLOOR 3 — Kitchen + rooms
+// ─────────────────────────────────────────────────────────────────────────────
+function Floor3Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoading, buildingName }) {
+  const leftRooms = floor3LeftColumn();
+>>>>>>> Stashed changes
   const { connectedPair, stackedRooms, stairsRoom } = floor3RightSection();
   const kitchenLabel = LHAWANG_KITCHEN_LABELS[3];
-  const TH = "h-[44px] xs:h-[50px] sm:h-[56px] md:h-[62px]";
+  const TH = "h-[40px] sm:h-[46px]";
+  const RW = "w-[100px] sm:w-[130px] md:w-[150px]";
+
+  const stackedRoomsArray = Array.isArray(stackedRooms) ? stackedRooms : [stackedRooms];
+  const stairsRoomArray   = Array.isArray(stairsRoom)   ? stairsRoom   : [stairsRoom];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-[1fr_1.5fr] gap-4 sm:gap-6 md:gap-8 items-start">
+    <div className="flex flex-row justify-between w-full gap-4">
 
       {/* Left column */}
+<<<<<<< Updated upstream
       <div className="flex flex-col gap-3">
         <div className={TH}>
           <SmallRoom 
             room={kitchenRoom}
             roomInfo={getRoomInfo(kitchenRoom)}
+=======
+      <div className="flex flex-col items-stretch gap-3 flex-shrink-0">
+        <div className={`${RW} ${TH}`}>
+          <RoomBlock
+            room={kitchenLabel}
+            roomInfo={getRoomInfo(kitchenLabel)}
+>>>>>>> Stashed changes
             selectedRoom={selectedRoom}
             currentUser={currentUser}
             buildingName={buildingName}
             isLoading={isLoading}
+<<<<<<< Updated upstream
             onClick={() => onRoomClick(kitchenRoom)}
+=======
+            onClick={() => onRoomClick(kitchenLabel)}
+>>>>>>> Stashed changes
           />
         </div>
         {leftRooms.map((r) => (
-          <div key={r} className={TH}>
-            <SmallRoom 
-              room={r} 
+          <div key={r} className={`${RW} ${TH}`}>
+            <RoomBlock
+              room={r}
               roomInfo={getRoomInfo(r)}
               selectedRoom={selectedRoom}
               currentUser={currentUser}
@@ -343,18 +349,13 @@ function Floor3Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoa
         ))}
       </div>
 
-      {/* Right section */}
-      <div className="flex flex-col gap-3">
-        {/* Enter label */}
-        <p className="text-xs sm:text-sm font-semibold text-slate-500 text-right pr-1">
-          Enter
-        </p>
-
-        {/* 305 → 306 */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          <div className={`flex-1 ${TH}`}>
-            <SmallRoom 
-              room={connectedPair[0]} 
+      {/* Right column */}
+      <div className="flex flex-col items-start gap-3 flex-shrink-0">
+        {/* 306 → 305 */}
+        <div className="flex items-center gap-2">
+          <div className={`${RW} ${TH}`}>
+            <RoomBlock
+              room={connectedPair[0]}
               roomInfo={getRoomInfo(connectedPair[0])}
               selectedRoom={selectedRoom}
               currentUser={currentUser}
@@ -364,9 +365,9 @@ function Floor3Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoa
             />
           </div>
           <RightArrow />
-          <div className={`flex-1 ${TH}`}>
-            <SmallRoom 
-              room={connectedPair[1]} 
+          <div className={`${RW} ${TH}`}>
+            <RoomBlock
+              room={connectedPair[1]}
               roomInfo={getRoomInfo(connectedPair[1])}
               selectedRoom={selectedRoom}
               currentUser={currentUser}
@@ -377,11 +378,11 @@ function Floor3Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoa
           </div>
         </div>
 
-        {/* 307, 308 — left-aligned */}
-        {stackedRooms.map((r) => (
-          <div key={r} className={`w-[48%] self-start ${TH}`}>
-            <SmallRoom 
-              room={r} 
+        {/* Stacked rooms (307) */}
+        {stackedRoomsArray.map((r) => (
+          <div key={r} className={`${RW} ${TH}`}>
+            <RoomBlock
+              room={r}
               roomInfo={getRoomInfo(r)}
               selectedRoom={selectedRoom}
               currentUser={currentUser}
@@ -392,54 +393,83 @@ function Floor3Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoa
           </div>
         ))}
 
-        {/* Stairs + 309 */}
-        <div className="flex items-center gap-3 sm:gap-4 pt-1">
-          <StairsIndicator />
-          <div className={`flex-1 ${TH}`}>
-            <SmallRoom 
-              room={stairsRoom} 
-              roomInfo={getRoomInfo(stairsRoom)}
-              selectedRoom={selectedRoom}
-              currentUser={currentUser}
-              buildingName={buildingName}
-              isLoading={isLoading}
-              onClick={() => onRoomClick(stairsRoom)}
-            />
-          </div>
+        {/* Stairs */}
+        <StairsIndicator />
+
+        {/* 308, 309 */}
+        <div className="flex items-center gap-3">
+          {stairsRoomArray.map((r) => (
+            <div key={r} className={`${RW} ${TH}`}>
+              <RoomBlock
+                room={r}
+                roomInfo={getRoomInfo(r)}
+                selectedRoom={selectedRoom}
+                currentUser={currentUser}
+                buildingName={buildingName}
+                isLoading={isLoading}
+                onClick={() => onRoomClick(r)}
+              />
+            </div>
+          ))}
         </div>
       </div>
     </div>
   );
 }
 
+<<<<<<< Updated upstream
 /** FLOOR 4 — Kitchen 3 + rooms 403–401 left | Enter, 405→out, 407, Stairs+408 right */
 function Floor4Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoading, buildingName,kitchenRoom }) {
   const leftRooms = floor4LeftColumn();                                               // [403, 402, 401]
+=======
+// ─────────────────────────────────────────────────────────────────────────────
+// FLOOR 4 — Kitchen + rooms
+// ─────────────────────────────────────────────────────────────────────────────
+function Floor4Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoading, buildingName }) {
+  const leftRooms = floor4LeftColumn();
+>>>>>>> Stashed changes
   const { entranceRoom, standaloneRoom, stairsRoom } = floor4RightSection();
   const kitchenLabel = LHAWANG_KITCHEN_LABELS[4];
-  const TH = "h-[44px] xs:h-[50px] sm:h-[56px] md:h-[62px]";
+  const TH = "h-[40px] sm:h-[46px]";
+  const RW = "w-[100px] sm:w-[130px] md:w-[150px]";
+
+  const stairsRoomArray = Array.isArray(stairsRoom) ? stairsRoom : [stairsRoom];
 
   return (
-    <div className="grid grid-cols-1 sm:grid-cols-[1fr_1.5fr] gap-4 sm:gap-6 md:gap-8 items-start">
+    <div className="flex flex-row justify-between w-full gap-4">
 
       {/* Left column */}
+<<<<<<< Updated upstream
       <div className="flex flex-col gap-3">
         <div className={TH}>
           <SmallRoom 
             room={kitchenRoom}
             roomInfo={getRoomInfo(kitchenRoom)}
+=======
+      <div className="flex flex-col items-stretch gap-3 flex-shrink-0">
+        <div className={`${RW} ${TH}`}>
+          <RoomBlock
+            room={kitchenLabel}
+            roomInfo={getRoomInfo(kitchenLabel)}
+>>>>>>> Stashed changes
             selectedRoom={selectedRoom}
             currentUser={currentUser}
             buildingName={buildingName}
             isLoading={isLoading}
+<<<<<<< Updated upstream
             onClick={() => onRoomClick(kitchenRoom)}
           />
         </div>
 
+=======
+            onClick={() => onRoomClick(kitchenLabel)}
+          />
+        </div>
+>>>>>>> Stashed changes
         {leftRooms.map((r) => (
-          <div key={r} className={TH}>
-            <SmallRoom 
-              room={r} 
+          <div key={r} className={`${RW} ${TH}`}>
+            <RoomBlock
+              room={r}
               roomInfo={getRoomInfo(r)}
               selectedRoom={selectedRoom}
               currentUser={currentUser}
@@ -451,18 +481,13 @@ function Floor4Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoa
         ))}
       </div>
 
-      {/* Right section */}
-      <div className="flex flex-col gap-3">
-        {/* Enter label */}
-        <p className="text-xs sm:text-sm font-semibold text-slate-500 text-right pr-1">
-          Enter
-        </p>
-
-        {/* 405 → (outward entrance arrow, no room on right) */}
-        <div className="flex items-center gap-2 sm:gap-3">
-          <div className={`flex-1 ${TH}`}>
-            <SmallRoom 
-              room={entranceRoom} 
+      {/* Right column */}
+      <div className="flex flex-col items-start gap-3 flex-shrink-0">
+        {/* 404 entrance */}
+        <div className="flex items-center gap-2">
+          <div className={`${RW} ${TH}`}>
+            <RoomBlock
+              room={entranceRoom}
               roomInfo={getRoomInfo(entranceRoom)}
               selectedRoom={selectedRoom}
               currentUser={currentUser}
@@ -471,14 +496,13 @@ function Floor4Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoa
               onClick={() => onRoomClick(entranceRoom)}
             />
           </div>
-          <RightArrow />
-          <div className="w-8 sm:w-10 flex-shrink-0" /> {/* empty — arrow points outward */}
+          <div className="w-6" />
         </div>
 
-        {/* 407 — right-aligned */}
-        <div className={`w-[48%] self-end ${TH}`}>
-          <SmallRoom 
-            room={standaloneRoom} 
+        {/* 405 */}
+        <div className={`${RW} ${TH}`}>
+          <RoomBlock
+            room={standaloneRoom}
             roomInfo={getRoomInfo(standaloneRoom)}
             selectedRoom={selectedRoom}
             currentUser={currentUser}
@@ -488,38 +512,46 @@ function Floor4Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoa
           />
         </div>
 
-        {/* Stairs + 408 */}
-        <div className="flex items-center gap-3 sm:gap-4 pt-1">
-          <StairsIndicator />
-          <div className={`flex-1 ${TH}`}>
-            <SmallRoom 
-              room={stairsRoom} 
-              roomInfo={getRoomInfo(stairsRoom)}
-              selectedRoom={selectedRoom}
-              currentUser={currentUser}
-              buildingName={buildingName}
-              isLoading={isLoading}
-              onClick={() => onRoomClick(stairsRoom)}
-            />
-          </div>
+        {/* Stairs */}
+        <StairsIndicator />
+
+        {/* 406, 407 */}
+        <div className="flex items-center gap-3">
+          {stairsRoomArray.map((r) => (
+            <div key={r} className={`${RW} ${TH}`}>
+              <RoomBlock
+                room={r}
+                roomInfo={getRoomInfo(r)}
+                selectedRoom={selectedRoom}
+                currentUser={currentUser}
+                buildingName={buildingName}
+                isLoading={isLoading}
+                onClick={() => onRoomClick(r)}
+              />
+            </div>
+          ))}
         </div>
       </div>
     </div>
   );
 }
 
-/** FLOOR 5 — two large rooms: 502 (left + stairs) | 501 (right + stairs) */
+// ─────────────────────────────────────────────────────────────────────────────
+// FLOOR 5 — two rooms: 502 (left) | 501 (right) with stairs below each
+// ─────────────────────────────────────────────────────────────────────────────
 function Floor5Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoading, buildingName }) {
-  const leftRoom  = floor5LeftRoom();   // 502
-  const rightRoom = floor5RightRoom();  // 501
-  const RH = "h-[180px] xs:h-[220px] sm:h-[270px] md:h-[330px]";
+  const leftRoom  = floor5LeftRoom();
+  const rightRoom = floor5RightRoom();
+  const TH = "h-[40px] sm:h-[46px]";
+  const RW = "w-[110px] sm:w-[140px] md:w-[160px]";
 
   return (
-    <div className="grid grid-cols-2 gap-4 sm:gap-6 md:gap-10">
-      <div className="flex flex-col items-center gap-3">
-        <div className={`w-full ${RH}`}>
-          <LargeRoom 
-            room={leftRoom} 
+    <div className="flex flex-row justify-between w-full gap-4">
+      {/* Left: room + stairs below */}
+      <div className="flex flex-col items-center gap-3 flex-shrink-0">
+        <div className={`${RW} ${TH}`}>
+          <RoomBlock
+            room={leftRoom}
             roomInfo={getRoomInfo(leftRoom)}
             selectedRoom={selectedRoom}
             currentUser={currentUser}
@@ -530,10 +562,12 @@ function Floor5Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoa
         </div>
         <StairsIndicator />
       </div>
-      <div className="flex flex-col items-center gap-3">
-        <div className={`w-full ${RH}`}>
-          <LargeRoom 
-            room={rightRoom} 
+
+      {/* Right: room + stairs below */}
+      <div className="flex flex-col items-center gap-3 flex-shrink-0">
+        <div className={`${RW} ${TH}`}>
+          <RoomBlock
+            room={rightRoom}
             roomInfo={getRoomInfo(rightRoom)}
             selectedRoom={selectedRoom}
             currentUser={currentUser}
@@ -902,17 +936,22 @@ export default function LhawangFloorPage({ params }) {
             {toast}
           </div>
         )}
+        {/* ── Mobile header ── */}
+        <div className="md:hidden flex items-center justify-between mb-4">
+          <BackArrow />
 
+<<<<<<< Updated upstream
         <FloorBookingsView
           building={LHAWANG_HOSTEL_NAME}
+=======
+          <FloorBookingsView
+          building={LHAWANG_NAME}
+>>>>>>> Stashed changes
           floor={floorNum}
           currentUser={currentUser}
           onDenied={(message) => showToast(message)}
         />
 
-        {/* ── Mobile header ── */}
-        <div className="md:hidden flex items-center justify-between mb-4">
-          <BackArrow />
           <h1 className="flex-1 text-center text-base xs:text-lg font-semibold tracking-wide">
             {LHAWANG_NAME} {floorLabel(floorNum)} floor
           </h1>
@@ -967,6 +1006,13 @@ export default function LhawangFloorPage({ params }) {
               </span>
             </div>
           </div>
+          <FloorBookingsView
+          building={LHAWANG_NAME}
+          floor={floorNum}
+          currentUser={currentUser}
+          onDenied={(message) => showToast(message)}
+        />
+
         </div>
 
         {/* ── Body: sidebar + floor plan ── */}
@@ -1015,3 +1061,4 @@ export default function LhawangFloorPage({ params }) {
     </main>
   );
 }
+

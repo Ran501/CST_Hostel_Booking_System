@@ -6,8 +6,8 @@ import { useRouter } from "next/navigation";
 import FloorSidebar from "../../../components/FloorSidebar";
 import FloorBookingsView from "../../../components/FloorBookingsView";
 import ConfirmationDialog from "../../../../confirmation";
-import SpecialBlock from "../../../../room/components/SpecialBlock";
 import { getRoomColors, RoomLegend } from "../../../../room/components/useColors";
+import SpecialBlock from "../../../../room/components/SpecialBlock";
 
 import {
   HA_NAME,
@@ -361,27 +361,96 @@ export default function HaFloorPage({ params }) {
           </div>
         )}
 
-        <FloorBookingsView
+        {/* Mobile header */}
+        <div className="md:hidden flex items-center justify-between mb-4">
+          <div className="flex items-center text-slate-500">
+            <Link href="/" className="inline-flex items-center hover:text-slate-700">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 12H5m7-7l-7 7 7 7" />
+              </svg>
+            </Link>
+          </div>
+
+          <FloorBookingsView
           building={HA_NAME}
           floor={floorNum}
           currentUser={currentUser}
           onDenied={(message) => showToast(message)}
         />
 
-        <div className="mb-4 flex items-center text-slate-500">
-          <Link href="/" className="inline-flex items-center hover:text-slate-700">
-            <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-              <path strokeLinecap="round" strokeLinejoin="round" d="M19 12H5m7-7l-7 7 7 7" />
-            </svg>
-          </Link>
-        </div>
-
-        <div className="mb-5 sm:mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-          <h1 className="text-xl sm:text-2xl font-semibold tracking-wide uppercase">
+          <h1 className="text-center text-base xs:text-lg font-semibold tracking-wide flex-1">
             {HA_NAME} {floorLabel(floorNum)} floor
           </h1>
+
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => setSidebarOpen(!sidebarOpen)}
+              className="cursor-pointer px-3 py-1 bg-white border border-slate-200 rounded-full shadow-sm flex items-center gap-0.5 text-xs"
+              aria-label="Toggle floor menu"
+            >
+              <span className="font-small text-cstcolor font-bold">Floor</span>
+              <svg
+                xmlns="http://www.w3.org/2000/svg"
+                className={`h-3 w-3 text-slate-700 transition-transform ${sidebarOpen ? "rotate-180" : ""}`}
+                fill="none"
+                viewBox="0 0 24 24"
+                stroke="currentColor"
+                strokeWidth={2}
+              >
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+          </div>
         </div>
 
+        {/* Mobile sidebar overlay */}
+        {sidebarOpen && (
+          <div className="md:hidden fixed inset-0 z-50 bg-black/50" onClick={() => setSidebarOpen(false)}>
+            <div className="absolute left-0 top-0 h-full w-64 bg-white shadow-xl p-4" onClick={(e) => e.stopPropagation()}>
+              <FloorSidebar
+                currentFloor={floorNum}
+                baseHref="/rooms/4/floor"
+                floors={[1, 2, 3]}
+              />
+            </div>
+          </div>
+        )}
+
+        {/* Desktop header */}
+        <div className="hidden md:flex items-center mb-4 sm:mb-5 lg:mb-6">
+          <div className="flex items-center text-slate-500">
+            <Link href="/" className="inline-flex items-center hover:text-slate-700">
+              <svg xmlns="http://www.w3.org/2000/svg" className="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
+                <path strokeLinecap="round" strokeLinejoin="round" d="M19 12H5m7-7l-7 7 7 7" />
+              </svg>
+            </Link>
+          </div>
+
+          <div className="text-center flex-1">
+            <h1 className="text-lg sm:text-xl lg:text-2xl font-semibold tracking-wide uppercase">
+              {HA_NAME} {floorLabel(floorNum)} floor
+            </h1>
+
+            
+            <div className="text-sm text-slate-600 flex justify-center gap-4 sm:gap-6 mt-1">
+              <span className="hidden sm:inline">
+                <span className="font-medium">Total Rooms:</span> {leftRooms.length + rightRooms.length}
+              </span>
+              <span className="hidden sm:inline">
+                <span className="font-medium">Total Beds:</span> {(leftRooms.length + rightRooms.length) * 2}
+              </span>
+            </div>
+          </div>
+
+          <FloorBookingsView
+          building={HA_NAME}
+          floor={floorNum}
+          currentUser={currentUser}
+          onDenied={(message) => showToast(message)}
+        />
+        </div>
+
+        {/* Main Layout */}
         <div className="w-full">
           <div className="flex flex-col md:flex-row gap-4 lg:gap-6">
             <div className="hidden md:block w-48 lg:w-56 flex-shrink-0">
@@ -395,6 +464,7 @@ export default function HaFloorPage({ params }) {
             <div className="flex-1 min-w-0">
               <section className="relative rounded-2xl border border-slate-200 bg-white/80 p-4 md:p-6 shadow-lg backdrop-blur overflow-hidden">
                 <div className="grid grid-cols-[1fr_auto_1fr] gap-4 sm:gap-6 pt-10 pb-12">
+                  {/* LEFT COLUMN */}
                   <div className="flex flex-col items-center gap-3">
                     {leftTopRooms.map((r) => (
                       <div key={r} className="w-full max-w-[140px] h-[40px] md:h-[46px]">
@@ -402,7 +472,7 @@ export default function HaFloorPage({ params }) {
                       </div>
                     ))}
                     {floorNum === 1 && (
-                      <div className="my-4 text-xs text-slate-400 hidden md:block italic">
+                      <div className="my-4 text-xs text-slate-400 italic">
                         Main Entrance
                       </div>
                     )}
@@ -413,33 +483,34 @@ export default function HaFloorPage({ params }) {
                     ))}
                   </div>
 
+                  {/* CORRIDOR */}
                   <div className="relative">
                     <div className="absolute inset-y-0 left-1/2 -translate-x-1/2 w-[2px] bg-slate-200" />
                   </div>
 
+                  {/* RIGHT COLUMN */}
                   <div className="flex flex-col items-center gap-3">
-                    <SpecialBlock text="🚿 Washroom" type="washroom" />
+                    <SpecialBlock text="🚻 Restroom" type="washroom" />
                     {rightTopRooms.map((r) => (
                       <div key={r} className="w-full max-w-[140px] h-[40px] md:h-[46px]">
                         <RoomBlock room={r} />
                       </div>
                     ))}
-                    {floorNum === 1 ? (
-                      <div className="h-8 flex items-center text-[10px] text-slate-400 uppercase font-bold tracking-tighter italic">
-                        Stairs
-                      </div>
-                    ) : (
-                      <div className="h-4" />
-                    )}
+                    
+                    <div className="h-8 flex items-center text-[10px] text-slate-400 uppercase font-bold tracking-tighter italic">
+    Stairs
+  </div>
+
                     {rightBottomRooms.map((r) => (
                       <div key={r} className="w-full max-w-[140px] h-[40px] md:h-[46px]">
                         <RoomBlock room={r} />
                       </div>
                     ))}
-                    <SpecialBlock text="🚿 Restroom" type="washroom" />
+                    <SpecialBlock text="🚻 Restroom" type="washroom" />
                   </div>
                 </div>
               </section>
+
               <div className="mt-6">
                 <RoomLegend />
               </div>
@@ -457,13 +528,13 @@ export default function HaFloorPage({ params }) {
         )}
 
         {showUnbookConfirm && (
-        <ConfirmationDialog
-          message={`Do you want to unbook Room ${currentUser?.bookedRoomNumber}?`}
-          isLoading={isUnbooking}
-          onCancel={() => !isUnbooking && setShowUnbookConfirm(false)}
-          onConfirm={handleUnbook}
-        />
-      )}
+          <ConfirmationDialog
+            message={`Do you want to unbook Room ${currentUser?.bookedRoomNumber}?`}
+            isLoading={isUnbooking}
+            onCancel={() => !isUnbooking && setShowUnbookConfirm(false)}
+            onConfirm={handleUnbook}
+          />
+        )}
       </div>
     </main>
   );

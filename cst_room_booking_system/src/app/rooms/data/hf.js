@@ -1,64 +1,120 @@
 // HF Hostel Building Data Configuration
 
 export const HF_NAME = "HF";
+export const HF_FLOORS = [1, 2, 3];
 
-export function getFloorConfig(floorNum) {
-  // Returns configuration for a specific floor
-  const floorConfig = {
-    1: {
-      name: "First Floor",
-      topLeft: [101, 102, 103, 104, 105, 106],
-      bottomLeft: [113, 114, 115, 116, 117, 118],
-      topRight: [107, 108, 109, 110, 111, 112],
-      bottomRight: [119, 120, 121, 122, 123, 124],
-      totalRooms: 12,
-      totalBeds: 24,
-    },
-    2: {
-      name: "Second Floor",
-      topLeft: [201, 202, 203],
-      middleLeft: [204, 205, 206, 207, 208],
-      bottomLeft: [209, 210, 211],
-      topRight: [212, 213, 214, 215, 216, 217],
-      bottomRight: [218, 219, 220, 221, 222, 223],
-      totalRooms: 12,
-      totalBeds: 24,
-    },
-    3: {
-      name: "Third Floor",
-      topLeft: [301, 302, 303],
-      middleLeft: [304, 305, 306, 307, 308],
-      bottomLeft: [309, 310, 311],
-      topRight: [312, 313, 314, 315, 316, 317],
-      bottomRight: [318, 319, 320, 321, 322, 323],
-      totalRooms: 12,
-      totalBeds: 24,
-    },
-    4: {
-      name: "Fourth Floor",
-      topLeft: [401, 402, 403],
-      middleLeft: [404, 405, 406, 407, 408],
-      bottomLeft: [409, 410, 411],
-      topRight: [412, 413, 414, 415, 416, 417],
-      bottomRight: [418, 419, 420, 421, 422, 423],
-      totalRooms: 12,
-      totalBeds: 24,
-    },
+// ----------------------
+// Room generation helpers
+// ----------------------
+export function hfAllRoomsForFloor(floor) {
+  const base = floor * 100;
+  const count = floor === 1 ? 24 : 23;
+  return Array.from({ length: count }, (_, i) => base + i + 1);
+}
+
+export function hfTopLeftRooms(floor) {
+  const base = floor * 100;
+  return floor === 1
+    ? Array.from({ length: 6 }, (_, i) => base + 12 - i) // 112–107
+    : Array.from({ length: 3 }, (_, i) => base + 11 - i); // 211–209
+}
+
+export function hfMiddleLeftRooms(floor) {
+  const base = floor * 100;
+  return floor > 1
+    ? Array.from({ length: 5 }, (_, i) => base + 8 - i) // 208–204
+    : [];
+}
+
+export function hfBottomLeftRooms(floor) {
+  const base = floor * 100;
+  return floor === 1
+    ? Array.from({ length: 6 }, (_, i) => base + 6 - i) // 106–101
+    : Array.from({ length: 3 }, (_, i) => base + 3 - i); // 203–201
+}
+
+export function hfTopRightRooms(floor) {
+  const base = floor * 100;
+  return floor === 1
+    ? [base + 13, base + 14, base + 15, base + 24, base + 16, base + 17] // 113–117 + 124
+    : Array.from({ length: 6 }, (_, i) => base + 12 + i); // 212–217
+}
+
+export function hfBottomRightRooms(floor) {
+  const base = floor * 100;
+  return floor === 1
+    ? [base + 18, base + 19, base + 23, base + 20, base + 21, base + 22] // 118–122 + 123
+    : Array.from({ length: 6 }, (_, i) => base + 18 + i); // 218–223
+}
+
+// ----------------------
+// Booking & bed rules
+// ----------------------
+export function hfBookedRoomsForFloor(_floor) {
+  // No predefined bookings for HF by default
+  return [];
+}
+
+// Rooms with 3 beds
+const twoBedRooms = [123, 124];
+
+export function getBedsForRoom(room) {
+  if (twoBedRooms.includes(room)) return 3;
+  return 2;
+}
+
+// ----------------------
+// Layout config
+// ----------------------
+export function getFloorConfig(floor) {
+  if (floor === 1) {
+    return {
+      // Quadrants for first floor (24 rooms)
+      topLeft: hfTopLeftRooms(floor),
+      bottomLeft: hfBottomLeftRooms(floor),
+      topRight: hfTopRightRooms(floor),
+      bottomRight: hfBottomRightRooms(floor),
+
+      // Washrooms only top and bottom
+      washroomTop: ["Washroom"],
+      washroomBottom: ["Washroom"],
+
+      // No corridor or balcony on floor 1
+      corridorLeft: [],
+      corridorRight: [],
+      balconyLeft: [],
+      balconyRight: [],
+    };
+  }
+
+  // Floors 2 & 3 (23 rooms each)
+  return {
+    topLeft: hfTopLeftRooms(floor),       // 211–209
+    middleLeft: hfMiddleLeftRooms(floor), // 208–204
+    bottomLeft: hfBottomLeftRooms(floor), // 203–201
+    topRight: hfTopRightRooms(floor),     // 212–217
+    bottomRight: hfBottomRightRooms(floor), // 218–223
+
+    // Washrooms top and bottom
+    washroomTop: ["Washroom"],
+    washroomBottom: ["Washroom"],
+
+    // Balconies exist on upper floors
+    corridorLeft: [],
+    corridorRight: [],
+    balconyLeft: ["Balcony1", "Balcony2"], // two balconies dividing left side
+    balconyRight: [],
   };
-  return floorConfig[floorNum] || floorConfig[1];
 }
 
-export function getTotalRoomsForFloor(floorNum) {
-  const config = getFloorConfig(floorNum);
-  return config.totalRooms;
+// ----------------------
+// Totals
+// ----------------------
+export function getTotalRoomsForFloor(floor) {
+  return hfAllRoomsForFloor(floor).length;
 }
 
-export function getTotalBedsForFloor(floorNum) {
-  const config = getFloorConfig(floorNum);
-  return config.totalBeds;
-}
-
-export function getBedsForRoom(roomNumber) {
-  // Returns number of beds for a specific room
-  return 2; // Standard 2-bed rooms
+export function getTotalBedsForFloor(floor) {
+  const rooms = hfAllRoomsForFloor(floor);
+  return rooms.reduce((sum, room) => sum + getBedsForRoom(room), 0);
 }

@@ -56,7 +56,7 @@ export default function FloorBookingsView({ building, floor, currentUser, onDeni
         type="button"
         onClick={loadBookings}
         disabled={loading}
-        className="inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 md:gap-2 md:px-3 md:py-2 md:text-sm"
+        className="cursor-pointer inline-flex items-center gap-1 rounded-lg border border-slate-200 bg-white px-2 py-1 text-xs font-medium text-slate-700 shadow-sm transition hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-60 md:gap-2 md:px-3 md:py-2 md:text-sm"
       >
         <Eye className="h-3 w-3 md:h-4 md:w-4" />
         <span>{loading ? "Loading" : "View"}</span>
@@ -78,7 +78,7 @@ export default function FloorBookingsView({ building, floor, currentUser, onDeni
               <button
                 type="button"
                 onClick={() => setOpen(false)}
-                className="rounded-md p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700"
+                className="cursor-pointer rounded-md p-2 text-slate-500 hover:bg-slate-100 hover:text-slate-700"
                 aria-label="Close bookings table"
               >
                 <X className="h-5 w-5" />

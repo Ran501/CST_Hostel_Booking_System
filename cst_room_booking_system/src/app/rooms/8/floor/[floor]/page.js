@@ -379,13 +379,6 @@ export default function HfFloorPage({ params }) {
           </div>
         )}
 
-        <FloorBookingsView
-          building={HF_NAME}
-          floor={floorNum}
-          currentUser={currentUser}
-          onDenied={(message) => showToast(message)}
-        />
-
         {/* Mobile header */}
         <div className="cursor-pointer md:hidden flex items-center justify-between mb-4">
           <div className="flex items-center text-slate-500">
@@ -408,6 +401,12 @@ export default function HfFloorPage({ params }) {
                 />
               </svg>
             </Link>
+            <FloorBookingsView
+          building={HF_NAME}
+          floor={floorNum}
+          currentUser={currentUser}
+          onDenied={(message) => showToast(message)}
+        />
           </div>
 
           <h1 className="text-center text-base xs:text-lg font-semibold tracking-wide flex-1">
@@ -491,6 +490,12 @@ export default function HfFloorPage({ params }) {
               </span>
             </div>
           </div>
+          <FloorBookingsView
+          building={HF_NAME}
+          floor={floorNum}
+          currentUser={currentUser}
+          onDenied={(message) => showToast(message)}
+        />
         </div>
 
         {/* Main Layout */}
@@ -527,8 +532,8 @@ export default function HfFloorPage({ params }) {
                           </div>
                         ))}
 
-                        <div className="my-2 sm:my-3 md:my-4 h-5 w-14 xs:h-6 xs:w-16 sm:h-7 sm:w-18 md:h-8 md:w-20 flex items-center justify-center rounded-full bg-transparent text-xs sm:text-sm text-slate-600">
-                          <span>Enter →</span>
+                        <div className="my-4 text-xs text-slate-400 italic">
+                        Main Entrance
                         </div>
 
                         {(floorConfig.bottomLeft || []).map((room) => (
@@ -549,9 +554,9 @@ export default function HfFloorPage({ params }) {
                           </div>
                         ))}
 
-                        <div className="my-2 sm:my-3 md:my-4 h-5 w-14 xs:h-6 xs:w-16 sm:h-7 sm:w-18 md:h-8 md:w-20 flex items-center justify-center rounded-full bg-transparent text-xs sm:text-sm text-slate-600">
-                          <span>Balcony</span>
-                        </div>
+                        <div className="h-8 flex items-center text-[10px] text-slate-400 uppercase font-bold tracking-tighter italic">
+                        Balcony
+                      </div>
 
                         {(floorConfig.middleLeft || []).map((room) => (
                           <div key={room} className="w-full flex justify-center">
@@ -561,9 +566,9 @@ export default function HfFloorPage({ params }) {
                           </div>
                         ))}
 
-                        <div className="my-2 sm:my-3 md:my-4 h-5 w-14 xs:h-6 xs:w-16 sm:h-7 sm:w-18 md:h-8 md:w-20 flex items-center justify-center rounded-full bg-transparent text-xs sm:text-sm text-slate-600">
-                          <span>Balcony</span>
-                        </div>
+                        <div className="h-8 flex items-center text-[10px] text-slate-400 uppercase font-bold tracking-tighter italic">
+                            Balcony
+                          </div>
 
                         {(floorConfig.bottomLeft || []).map((room) => (
                           <div key={room} className="w-full flex justify-center">
@@ -586,12 +591,8 @@ export default function HfFloorPage({ params }) {
                       </div>
                     ))}
 
-                    <div className="my-2 sm:my-3 md:my-4 h-5 w-14 xs:h-6 xs:w-16 sm:h-7 sm:w-18 md:h-8 md:w-20 flex items-center justify-center rounded-full bg-transparent text-xs sm:text-sm text-slate-600">
-                      {floorNum === 1 ? (
-                        <span>Stairs →</span>
-                      ) : (
-                        <span>← Enter</span>
-                      )}
+                    <div className="h-8 flex items-center text-[10px] text-slate-400 uppercase font-bold tracking-tighter italic">
+                    Stairs
                     </div>
 
                     {(floorConfig.bottomRight || []).map((room) => (

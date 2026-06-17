@@ -42,11 +42,11 @@ export function floor3RightSection() {
     // Shows "Enter" label above the connected pair
     hasEnterLabel: true,
     // Horizontal connected pair with arrow between them
-    connectedPair: [305, 306],
+    connectedPair: [306, 305],
     // Rooms stacked below the pair (left-aligned)
-    stackedRooms: [307, 308],
+    stackedRooms: 307,
     // Room shown next to Stairs at the bottom
-    stairsRoom: 309,
+    stairsRoom: [309,308]
   };
 }
 // FLOOR 4
@@ -56,14 +56,12 @@ export function floor4LeftColumn() {
 
 export function floor4RightSection() {
   return {
-    // Shows "Enter" label above the entrance room
-    hasEnterLabel: true,
     // Single room with outward arrow (entrance, no room on the right of arrow)
-    entranceRoom: 405,
+    entranceRoom: 404,
     // Room shown on the right side below (right-aligned)
-    standaloneRoom: 407,
+    standaloneRoom: 405,
     // Room shown next to Stairs at the bottom
-    stairsRoom: 408,
+    stairsRoom: [406,407]
   };
 }
 // FLOOR 5
