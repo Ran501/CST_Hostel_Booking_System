@@ -1,11 +1,9 @@
 "use client";
 
 import Image from "next/image";
-import { Menu, X, Settings, LogOut } from "lucide-react";
+import { Menu, X, LogOut } from "lucide-react";
 import { useState, useEffect, useRef } from "react";
 import { useRouter, usePathname } from "next/navigation";
-// import LoginModal from "../../../login/page";
-// import AdminManagementModal from "../../../admin_dashboard/components/AdminManagementModal";
 import { useConfirmation } from "../components/useConfirmation";
 
 export default function Navbar() {
@@ -21,9 +19,9 @@ export default function Navbar() {
   const [adminModalOpen, setAdminModalOpen] = useState(false);
   const { confirm, confirmationDialog } = useConfirmation();
 
-//   const [userName, setUserName] = useState("");
-//   const [userEmail, setUserEmail] = useState("");
-//   const [gender, setGender] = useState("male");
+  const [userName, setUserName] = useState("");
+  const [userEmail, setUserEmail] = useState("");
+  const [gender, setGender] = useState("male");
 
   const navItems = ["Dashboard", "Students", "Rooms", "Hostel"];
 
@@ -59,37 +57,30 @@ export default function Navbar() {
     window.location.href = "/login";
   };
 
-//   useEffect(() => {
-//     try {
-//       const session = localStorage.getItem("session");
-//       if (session) {
-//         const parsed = JSON.parse(session);
-//         setUserName(parsed.name || parsed.phoneNumber || "User");
-//         setUserEmail(parsed.email || "");
-//         if (parsed.gender === "female" || parsed.gender === "male") {
-//           setGender(parsed.gender);
-//         }
-//       }
-//     } catch (error) {
-//       console.error("Error loading user session:", error);
-//     }
-//   }, []);
-  // Dummy session object
-  const dummySession = {
-    name: "Test User",
-    email: "test@example.com",
-    phoneNumber: "1234567890",
-    gender: "female",
-  };
-
-  // Initialize state directly from dummySession
-  const [userName] = useState(dummySession.name || dummySession.phoneNumber || "User");
-  const [userEmail] = useState(dummySession.email || "");
-  const [gender] = useState(
-    dummySession.gender === "female" || dummySession.gender === "male"
-      ? dummySession.gender
-      : ""
-  );
+  useEffect(() => {
+    try {
+      const session = localStorage.getItem("session");
+      if (session) {
+        const parsed = JSON.parse(session);
+        setUserName(parsed.name || parsed.phoneNumber || "User");
+        setUserEmail(parsed.email || "");
+        if (parsed.gender === "female" || parsed.gender === "male") {
+          setGender(parsed.gender);
+        }
+      }
+    } catch (error) {
+      console.error("Error loading user session:", error);
+    }
+  }, []);
+  
+  // // Initialize state directly from dummySession
+  // const [userName] = useState(dummySession.name || dummySession.phoneNumber || "User");
+  // const [userEmail] = useState(dummySession.email || "");
+  // const [gender] = useState(
+  //   dummySession.gender === "female" || dummySession.gender === "male"
+  //     ? dummySession.gender
+  //     : ""
+  // );
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -163,19 +154,11 @@ export default function Navbar() {
                   className="absolute right-0 top-full mt-2 w-56 sm:w-64 bg-white shadow-2xl rounded-xl z-50"
                 >
                   <div className="px-4 py-3 bg-gray-50 border-b">
-                    <p className="font-semibold">{userName}</p>
+                    <p className="font-semibold text-black">{userName}</p>
                     {userEmail && (
                       <p className="text-xs text-gray-500">{userEmail}</p>
                     )}
                   </div>
-
-                  {/* <button
-                    className="w-full px-4 py-2 text-left hover:bg-gray-100"
-                    onClick={() => setAdminModalOpen(true)}
-                  >
-                    <Settings className="inline w-4 h-4 mr-2" />
-                    Manage Admin
-                  </button> */}
 
                   <button
                     className="w-full px-4 py-2 text-left text-red-600 hover:bg-red-100"
