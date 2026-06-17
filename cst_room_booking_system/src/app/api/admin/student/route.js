@@ -6,26 +6,6 @@ function errorResponse(message, status = 400) {
   return Response.json({ error: message }, { status });
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// GET /api/admin/student
-//
-// This route handles TWO different callers — do NOT break either:
-//
-// ── Caller A: Student management page (original behaviour) ───────────────────
-//   ?export=true              → return all matching students for Excel export
-//   ?cursor=&limit=&search=
-//     &department=&year=      → cursor-paginated list for the student table
-//
-// ── Caller B: Room allocation / download (added by room feature) ─────────────
-//   ?gender=male|female       → filter by gender
-//   ?allowedYears=1,2         → comma-separated year integers
-//   ?unallocated=true         → exclude students with an active booking
-//   ?studentNumbers=sn1,sn2   → fetch specific students by number (download)
-//   ?search=                  → name/studentNumber substring
-//
-// We detect Caller B by the presence of any room-allocation-specific param.
-// Everything else falls through to the original studentService logic.
-// ─────────────────────────────────────────────────────────────────────────────
 export async function GET(req) {
   try {
     const { searchParams } = new URL(req.url);

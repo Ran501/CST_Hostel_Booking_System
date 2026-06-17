@@ -1,41 +1,41 @@
 // src/modules/room/room.service.js
 import { roomRepository } from "./room.repository";
-import { prisma }         from "../../app/lib/prisma";
+import { prisma } from "../../app/lib/prisma";
+import { sendBookingEmail } from "../../app/lib/mail";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function deriveStatus(room) {
   if (room.status === "disabled") return "disabled";
   const occupied = room.bookings?.length ?? 0;
-  if (occupied === 0)            return "empty";
+  if (occupied === 0) return "empty";
   if (occupied >= room.capacity) return "full";
   return "partial";
 }
 
 function formatRoom(room) {
   const occupants = (room.bookings ?? []).map((b) => ({
-    bookingId:     b.id,
+    bookingId: b.id,
     studentNumber: b.user?.studentNumber ?? b.studentNumber,
-    name:          b.user?.name          ?? "Unknown",
-    phoneNumber:   b.user?.phoneNumber   ?? "",
+    name: b.user?.name ?? "Unknown",
+    phoneNumber: b.user?.phoneNumber ?? "",
   }));
 
   return {
-    id:        room.id,
-    room:      room.roomNumber,
-    floor:     room.floor,
-    hostelId:  room.hostel_id,
-    status:    deriveStatus(room),
-    capacity:  room.capacity,
+    id: room.id,
+    room: room.roomNumber,
+    floor: room.floor,
+    hostelId: room.hostel_id,
+    status: deriveStatus(room),
+    capacity: room.capacity,
     occupants,
-    year:      room.year,
+    year: room.year,
   };
 }
 
 // ── Service ───────────────────────────────────────────────────────────────────
 
 export const roomService = {
-
   // ── GET rooms ─────────────────────────────────────────────────────────────
   async getRoomsByHostel(hostelId, floor) {
     if (!hostelId) throw { status: 400, message: "hostelId is required" };
@@ -49,20 +49,19 @@ export const roomService = {
 
     const rooms = await roomRepository.findManyByIds(roomIds);
 
-    // Guard: already disabled
     const alreadyDisabled = rooms
       .filter((r) => r.status === "disabled")
       .map((r) => r.roomNumber);
 
-    // Guard: has occupants
     const occupied = rooms
       .filter((r) => r.status !== "disabled" && (r.bookings?.length ?? 0) > 0)
       .map((r) => r.roomNumber);
 
     if (alreadyDisabled.length || occupied.length) {
       const parts = [];
-      if (occupied.length)       parts.push(`Occupied: ${occupied.join(", ")}`);
-      if (alreadyDisabled.length) parts.push(`Already disabled: ${alreadyDisabled.join(", ")}`);
+      if (occupied.length) parts.push(`Occupied: ${occupied.join(", ")}`);
+      if (alreadyDisabled.length)
+        parts.push(`Already disabled: ${alreadyDisabled.join(", ")}`);
       throw { status: 400, message: parts.join(" | ") };
     }
 
@@ -77,16 +76,14 @@ export const roomService = {
     return { enabled: roomIds.length };
   },
 
-  // ── FIX 1: EDIT rooms — now persists capacity AND year ────────────────────
+  // ── EDIT rooms ────────────────────────────────────────────────────────────
   async editRooms(roomIds, { capacity, year }) {
     if (!roomIds?.length) throw { status: 400, message: "No rooms selected" };
 
-    // At least one field must be provided
     if (capacity === undefined && year === undefined) {
       throw { status: 400, message: "Nothing to update" };
     }
 
-    // Build the update payload with only provided fields
     const data = {};
 
     if (capacity !== undefined) {
@@ -105,7 +102,6 @@ export const roomService = {
       data.year = yr;
     }
 
-    // Use updateMany with the built payload
     await prisma.room.updateMany({
       where: { id: { in: roomIds } },
       data,
@@ -114,63 +110,113 @@ export const roomService = {
     return { updated: roomIds.length };
   },
 
-  // ── ALLOCATE students ─────────────────────────────────────────────────────
+  // ── ALLOCATE students (WITH EMAIL) ────────────────────────────────────────
   async allocateStudents(roomId, studentNumbers, checkIn, checkOut) {
-    if (!roomId)                 throw { status: 400, message: "roomId is required" };
-    if (!studentNumbers?.length) throw { status: 400, message: "No students provided" };
+    if (!roomId) throw { status: 400, message: "roomId is required" };
+    if (!studentNumbers?.length)
+      throw { status: 400, message: "No students provided" };
 
-    const room = await roomRepository.findById(roomId);
-    if (!room)                         throw { status: 404, message: "Room not found" };
-    if (room.status === "disabled")    throw { status: 400, message: "Room is disabled" };
+    const room = await prisma.room.findUnique({
+      where: { id: roomId },
+      include: { hostel: true, bookings: true },
+    });
+
+    if (!room) throw { status: 404, message: "Room not found" };
+    if (room.status === "disabled")
+      throw { status: 400, message: "Room is disabled" };
 
     const availableBeds = room.capacity - (room.bookings?.length ?? 0);
     if (studentNumbers.length > availableBeds) {
-      throw { status: 400, message: `Only ${availableBeds} bed(s) available in this room` };
+      throw {
+        status: 400,
+        message: `Only ${availableBeds} bed(s) available in this room`,
+      };
     }
 
     const users = await prisma.user.findMany({
       where: { studentNumber: { in: studentNumbers } },
     });
+
     if (users.length !== studentNumbers.length) {
-      const found   = users.map((u) => u.studentNumber);
+      const found = users.map((u) => u.studentNumber);
       const missing = studentNumbers.filter((s) => !found.includes(s));
-      throw { status: 404, message: `Students not found: ${missing.join(", ")}` };
+      throw {
+        status: 404,
+        message: `Students not found: ${missing.join(", ")}`,
+      };
     }
 
-    const checkInDate  = checkIn  ? new Date(checkIn)  : new Date();
+    const checkInDate = checkIn ? new Date(checkIn) : new Date();
     const checkOutDate = checkOut
       ? new Date(checkOut)
-      : new Date(new Date().setFullYear(new Date().getFullYear() + 1));
+      : new Date(
+          new Date().setFullYear(new Date().getFullYear() + 1)
+        );
 
     const existing = await prisma.booking.findMany({
       where: {
         roomId,
         studentNumber: { in: studentNumbers },
-        checkIn:  { lt: checkOutDate },
-        checkOut: { gt: checkInDate  },
+        checkIn: { lt: checkOutDate },
+        checkOut: { gt: checkInDate },
       },
     });
+
     if (existing.length) {
       const dupes = existing.map((b) => b.studentNumber);
-      throw { status: 409, message: `Already booked in this room: ${dupes.join(", ")}` };
+      throw {
+        status: 409,
+        message: `Already booked in this room: ${dupes.join(", ")}`,
+      };
     }
 
+    // ── CREATE BOOKINGS ─────────────────────────────────────────────────────
     const bookings = await prisma.$transaction(
       studentNumbers.map((sn) =>
         prisma.booking.create({
-          data: { studentNumber: sn, roomId, checkIn: checkInDate, checkOut: checkOutDate },
-          include: { user: { select: { name: true, studentNumber: true } } },
+          data: {
+            studentNumber: sn,
+            roomId,
+            checkIn: checkInDate,
+            checkOut: checkOutDate,
+          },
+          include: {
+            user: {
+              select: { name: true, studentNumber: true, email: true },
+            },
+          },
         })
       )
     );
 
+    // ── SEND EMAILS (NON-BLOCKING SAFE) ─────────────────────────────────────
+    
+    await Promise.all(
+      bookings.map(async (b) => {
+        try {
+          if (!b.user?.email) return;
+
+          await sendBookingEmail(b.user.email, {
+            roomNumber: room.roomNumber,
+            userId: b.user.studentNumber,
+            checkIn: b.checkIn.toISOString(),
+            hostelName: room.hostel?.hostelName || "N/A",
+            floor: String(room.floor ?? "N/A"),
+          });
+        } catch (err) {
+          console.error("Email failed:", b.user?.email, err);
+        }
+      })
+    );
+
+    // ── RETURN RESPONSE ─────────────────────────────────────────────────────
     return bookings.map((b) => ({
-      bookingId:     b.id,
+      bookingId: b.id,
       studentNumber: b.studentNumber,
-      name:          b.user?.name,
-      roomId:        b.roomId,
-      checkIn:       b.checkIn,
-      checkOut:      b.checkOut,
+      name: b.user?.name,
+      roomId: b.roomId,
+      checkIn: b.checkIn,
+      checkOut: b.checkOut,
     }));
   },
 
@@ -189,10 +235,11 @@ export const roomService = {
 
     const result = await prisma.booking.deleteMany({
       where: {
-        roomId:   { in: roomIds },
+        roomId: { in: roomIds },
         checkOut: { gt: new Date() },
       },
     });
+
     return { deallocated: result.count };
   },
 };
