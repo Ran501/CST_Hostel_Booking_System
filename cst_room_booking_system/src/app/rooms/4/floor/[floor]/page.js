@@ -485,7 +485,7 @@ export default function HaFloorPage({ params }) {
                       </div>
                     ))}
                     {floorNum === 1 && (
-                      <div className="my-4 text-xs text-slate-400 italic">
+                      <div className="text-[10px] xs:text-xs sm:text-sm text-slate-400 font-medium uppercase tracking-wider italic">
                         Main Entrance
                       </div>
                     )}
@@ -510,7 +510,7 @@ export default function HaFloorPage({ params }) {
                       </div>
                     ))}
                     
-                    <div className="h-8 flex items-center text-[10px] text-slate-400 uppercase font-bold tracking-tighter italic">
+                    <div className="text-[10px] xs:text-xs sm:text-sm text-slate-400 font-medium uppercase tracking-wider italic">
     Stairs
   </div>
 

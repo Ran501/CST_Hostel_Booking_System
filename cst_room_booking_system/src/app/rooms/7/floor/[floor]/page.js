@@ -491,7 +491,7 @@ export default function HdFloorPage({ params }) {
                       </div>
                     ))}
                     {floorNum === 1 && (
-                      <div className="my-4 text-xs text-slate-400 italic">
+                      <div className="text-[10px] xs:text-xs sm:text-sm text-slate-400 font-medium uppercase tracking-wider italic">
                         Main Entrance
                       </div>
                     )}
@@ -509,23 +509,23 @@ export default function HdFloorPage({ params }) {
 
                   {/* RIGHT COLUMN */}
                   <div className="flex flex-col items-center gap-3">
-                    <SpecialBlock text="🚿 Restroom" type="washroom" />
+                    <SpecialBlock text="🚻 Restroom" type="washroom" />
                     {rightTopRooms.map((r) => (
                       <div key={r} className="w-full max-w-[140px] h-[40px] md:h-[46px]">
                         <RoomBlock room={r} />
                       </div>
                     ))}
                     
-                    <div className="h-8 flex items-center text-[10px] text-slate-400 uppercase font-bold tracking-tighter italic">
-    Stairs
-  </div>
+                    <div className="text-[10px] xs:text-xs sm:text-sm text-slate-400 font-medium uppercase tracking-wider italic">
+                      Stairs
+                    </div>
 
                     {rightBottomRooms.map((r) => (
                       <div key={r} className="w-full max-w-[140px] h-[40px] md:h-[46px]">
                         <RoomBlock room={r} />
                       </div>
                     ))}
-                    <SpecialBlock text="🚿 Restroom" type="washroom" />
+                    <SpecialBlock text="🚻 Restroom" type="washroom" />
                   </div>
                 </div>
               </section>

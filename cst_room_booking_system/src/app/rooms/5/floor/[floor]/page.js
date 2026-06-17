@@ -507,7 +507,7 @@ export default function HbFloorPage({ params }) {
                   <div className="flex flex-col items-center gap-3">
                     {/* Top washroom */}
                     <div className="w-full flex justify-center">
-                      <SpecialBlock text="🚿 Washroom" type="washroom" />
+                      <SpecialBlock text="🚻 Restroom" type="washroom" />
                     </div>
 
                     {/* Top rooms */}
@@ -518,7 +518,7 @@ export default function HbFloorPage({ params }) {
                     ))}
 
                     {/* Stairs or Enter sign based on floor */}
-                    <div className="h-8 flex items-center text-[10px] text-slate-400 uppercase font-bold tracking-tighter italic">
+                    <div className="text-[10px] xs:text-xs sm:text-sm text-slate-400 font-medium uppercase tracking-wider italic">
                       Stairs
                     </div>
 
@@ -531,7 +531,7 @@ export default function HbFloorPage({ params }) {
 
                     {/* Bottom washroom */}
                     <div className="w-full flex justify-center">
-                      <SpecialBlock text="🚿 Washroom" type="washroom" />
+                      <SpecialBlock text="🚻 Restroom" type="washroom" />
                     </div>
                   </div>
 
@@ -550,7 +550,7 @@ export default function HbFloorPage({ params }) {
                     ))}
 
                     {floorNum === 1 && (
-                    <div className="my-4 text-xs text-slate-400 italic">
+                    <div className="text-[10px] xs:text-xs sm:text-sm text-slate-400 font-medium uppercase tracking-wider italic">
                       Main Entrance
                     </div>
                   )}
