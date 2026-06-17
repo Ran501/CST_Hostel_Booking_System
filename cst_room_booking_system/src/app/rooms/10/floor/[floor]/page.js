@@ -203,7 +203,7 @@ function Floor1Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoa
 }
 
 /** FLOOR 2 — Kitchen 1 + rooms 203/202/201 left | 204→205, 206, Stairs+207 right */
-function Floor2Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoading, buildingName }) {
+function Floor2Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoading, buildingName,kitchenRoom }) {
   const leftRooms = floor2LeftColumn();                                  // [203, 202, 201]
   const { connectedPair, standaloneRoom, stairsRoom } = floor2RightSection();
   const kitchenLabel = LHAWANG_KITCHEN_LABELS[2];
@@ -214,7 +214,17 @@ function Floor2Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoa
 
       {/* Left column */}
       <div className="flex flex-col gap-3">
-        <div className={TH}><KitchenBlock label={kitchenLabel} /></div>
+        <div className={TH}>
+          <SmallRoom 
+            room={kitchenRoom}
+            roomInfo={getRoomInfo(kitchenRoom)}
+            selectedRoom={selectedRoom}
+            currentUser={currentUser}
+            buildingName={buildingName}
+            isLoading={isLoading}
+            onClick={() => onRoomClick(kitchenRoom)}
+          />
+        </div>
         {leftRooms.map((r) => (
           <div key={r} className={TH}>
             <SmallRoom 
@@ -296,7 +306,7 @@ function Floor2Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoa
 }
 
 /** FLOOR 3 — Kitchen 2 + rooms 304–301 left | Enter, 305→306, 307, 308, Stairs+309 right */
-function Floor3Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoading, buildingName }) {
+function Floor3Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoading, buildingName,kitchenRoom }) {
   const leftRooms = floor3LeftColumn();                                              // [304, 303, 302, 301]
   const { connectedPair, stackedRooms, stairsRoom } = floor3RightSection();
   const kitchenLabel = LHAWANG_KITCHEN_LABELS[3];
@@ -307,7 +317,17 @@ function Floor3Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoa
 
       {/* Left column */}
       <div className="flex flex-col gap-3">
-        <div className={TH}><KitchenBlock label={kitchenLabel} /></div>
+        <div className={TH}>
+          <SmallRoom 
+            room={kitchenRoom}
+            roomInfo={getRoomInfo(kitchenRoom)}
+            selectedRoom={selectedRoom}
+            currentUser={currentUser}
+            buildingName={buildingName}
+            isLoading={isLoading}
+            onClick={() => onRoomClick(kitchenRoom)}
+          />
+        </div>
         {leftRooms.map((r) => (
           <div key={r} className={TH}>
             <SmallRoom 
@@ -393,7 +413,7 @@ function Floor3Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoa
 }
 
 /** FLOOR 4 — Kitchen 3 + rooms 403–401 left | Enter, 405→out, 407, Stairs+408 right */
-function Floor4Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoading, buildingName }) {
+function Floor4Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoading, buildingName,kitchenRoom }) {
   const leftRooms = floor4LeftColumn();                                               // [403, 402, 401]
   const { entranceRoom, standaloneRoom, stairsRoom } = floor4RightSection();
   const kitchenLabel = LHAWANG_KITCHEN_LABELS[4];
@@ -404,7 +424,18 @@ function Floor4Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoa
 
       {/* Left column */}
       <div className="flex flex-col gap-3">
-        <div className={TH}><KitchenBlock label={kitchenLabel} /></div>
+        <div className={TH}>
+          <SmallRoom 
+            room={kitchenRoom}
+            roomInfo={getRoomInfo(kitchenRoom)}
+            selectedRoom={selectedRoom}
+            currentUser={currentUser}
+            buildingName={buildingName}
+            isLoading={isLoading}
+            onClick={() => onRoomClick(kitchenRoom)}
+          />
+        </div>
+
         {leftRooms.map((r) => (
           <div key={r} className={TH}>
             <SmallRoom 
@@ -542,6 +573,8 @@ export default function LhawangFloorPage({ params }) {
 
   const meta = LHAWANG_FLOOR_META[floorNum] ?? LHAWANG_FLOOR_META[1];
 
+  const kitchenRoom = LHAWANG_KITCHEN_LABELS[floorNum]
+
   // Fetch rooms data
   useEffect(() => {
     async function fetchRooms() {
@@ -625,18 +658,30 @@ export default function LhawangFloorPage({ params }) {
   }, [currentUser?.studentNumber, currentUser?.phoneNumber, currentUser?.stdNo, floorNum]);
   
 
-  const getRoomInfo = (roomNo) => {
+  function getRoomInfo(roomNo) {
     const fullRoomId = `${LHAWANG_NAME}-${roomNo}`;
-    const roomDigits = getNumericRoomNumber(roomNo);
+    // Check if roomNo is purely numeric (e.g., "201")
+    const isNumeric = /^\d+$/.test(String(roomNo));
+    const roomDigits = isNumeric ? getNumericRoomNumber(roomNo) : null;
+
     return roomsData.find((r) => {
-      const roomNumber = String(r.roomNumber);
-      return (
-        roomNumber === fullRoomId ||
-        getNumericRoomNumber(roomNumber) === roomNo ||
-        (roomDigits !== null && getNumericRoomNumber(roomNumber) === roomDigits)
-      );
+      const rn = String(r.roomNumber);
+      // 1) Exact match on full ID (e.g., "LH-K201")
+      if (rn === fullRoomId) return true;
+
+      // 2) Numeric match only for numeric rooms (prevents "K201" from matching "LH-201")
+      if (isNumeric && roomDigits !== null) {
+        const rDigits = getNumericRoomNumber(rn);
+        if (rDigits === roomDigits) return true;
+      }
+
+      // 3) Suffix match (after the hyphen) for rooms like K201
+      const suffix = rn.includes('-') ? rn.split('-').pop() : rn;
+      if (suffix === roomNo) return true;
+
+      return false;
     }) || { roomNumber: fullRoomId, isActive: true, occupied: 0, capacity: 3 };
-  };
+  }
 
   function handleRoomClick(room) {
       const fullRoomId = `${LHAWANG_NAME}-${room}`;
@@ -829,7 +874,8 @@ export default function LhawangFloorPage({ params }) {
     currentUser, 
     onRoomClick: handleRoomClick, 
     isLoading: loading || isBooking,
-    buildingName: LHAWANG_NAME
+    buildingName: LHAWANG_NAME,
+    kitchenRoom
   };
 
   const PLANS = {

@@ -75,11 +75,11 @@ export function floor5RightRoom() {
   return 501;
 }
 export const LHAWANG_KITCHEN_LABELS = {
-  2: "Kitchen 1",
-  3: "Kitchen 2",
-  4: "Kitchen 3",
+  2: "K201",  // matches LH-K201 from backend
+  3: "K301",  // matches LH-K301
+  4: "K401",  // matches LH-K401
 };
-
+  
 export function allRoomsForFloor(floorNum) {
   switch (floorNum) {
     case 1:
