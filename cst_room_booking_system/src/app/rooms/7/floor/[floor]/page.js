@@ -199,7 +199,6 @@ export default function HdFloorPage({ params }) {
       showToast("Student year not found. Please log in again.");
       return false;
     }
-<<<<<<< Updated upstream
 
     const roomInfo = getRoomInfo(roomNo);
     if (!roomInfo) return true; // fallback if no specific information is stored
@@ -208,19 +207,6 @@ export default function HdFloorPage({ params }) {
     if (roomInfo.year && String(roomInfo.year).trim() !== String(currentUser.year).trim()) {
       showToast(`Access Denied: This room is reserved for Year ${roomInfo.year} students.`);
       return false;
-=======
-    try {
-      const res = await fetch(`/api/floor-allocation?building=HD&floor=${floorNum}`);
-      const data = await res.json();
-      if (data.success && data.allocatedYear && data.allocatedYear != currentUser.year) {
-        showToast(`Access Denied: This floor is reserved for Year ${data.allocatedYear} students.`);
-        return false;
-      }
-      return true;
-    } catch (err) {
-      console.error("Floor validation error:", err);
-      return true;
->>>>>>> Stashed changes
     }
 
     return true;
@@ -257,12 +243,8 @@ export default function HdFloorPage({ params }) {
       router.push("/login");
       return;
     }
-<<<<<<< Updated upstream
 
     const isCorrectYear = validateFloorYear(selectedRoom);
-=======
-    const isCorrectYear = await validateFloorYear();
->>>>>>> Stashed changes
     if (!isCorrectYear) return;
     const isCorrectGender = validateGender(selectedRoom);
     if (!isCorrectGender) return;

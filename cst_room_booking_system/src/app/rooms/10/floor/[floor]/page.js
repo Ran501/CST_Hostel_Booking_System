@@ -164,17 +164,9 @@ function Floor1Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoa
   );
 }
 
-<<<<<<< Updated upstream
 /** FLOOR 2 — Kitchen 1 + rooms 203/202/201 left | 204→205, 206, Stairs+207 right */
 function Floor2Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoading, buildingName,kitchenRoom }) {
   const leftRooms = floor2LeftColumn();                                  // [203, 202, 201]
-=======
-// ─────────────────────────────────────────────────────────────────────────────
-// FLOOR 2 — Kitchen + rooms
-// ─────────────────────────────────────────────────────────────────────────────
-function Floor2Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoading, buildingName }) {
-  const leftRooms = floor2LeftColumn();
->>>>>>> Stashed changes
   const { connectedPair, standaloneRoom, stairsRoom } = floor2RightSection();
   const kitchenLabel = LHAWANG_KITCHEN_LABELS[2];
   const TH = "h-[40px] sm:h-[46px]";
@@ -184,28 +176,16 @@ function Floor2Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoa
     <div className="flex flex-row justify-between w-full gap-4">
 
       {/* Left column */}
-<<<<<<< Updated upstream
       <div className="flex flex-col gap-3">
         <div className={TH}>
-          <SmallRoom 
+          <RoomBlock
             room={kitchenRoom}
             roomInfo={getRoomInfo(kitchenRoom)}
-=======
-      <div className="flex flex-col items-stretch gap-3 flex-shrink-0" style={{ width: "max-content" }}>
-        <div className={`${RW} ${TH}`}>
-          <RoomBlock
-            room={kitchenLabel}
-            roomInfo={getRoomInfo(kitchenLabel)}
->>>>>>> Stashed changes
             selectedRoom={selectedRoom}
             currentUser={currentUser}
             buildingName={buildingName}
             isLoading={isLoading}
-<<<<<<< Updated upstream
             onClick={() => onRoomClick(kitchenRoom)}
-=======
-            onClick={() => onRoomClick(kitchenLabel)}
->>>>>>> Stashed changes
           />
         </div>
         {leftRooms.map((r) => (
@@ -287,17 +267,9 @@ function Floor2Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoa
   );
 }
 
-<<<<<<< Updated upstream
 /** FLOOR 3 — Kitchen 2 + rooms 304–301 left | Enter, 305→306, 307, 308, Stairs+309 right */
 function Floor3Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoading, buildingName,kitchenRoom }) {
   const leftRooms = floor3LeftColumn();                                              // [304, 303, 302, 301]
-=======
-// ─────────────────────────────────────────────────────────────────────────────
-// FLOOR 3 — Kitchen + rooms
-// ─────────────────────────────────────────────────────────────────────────────
-function Floor3Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoading, buildingName }) {
-  const leftRooms = floor3LeftColumn();
->>>>>>> Stashed changes
   const { connectedPair, stackedRooms, stairsRoom } = floor3RightSection();
   const kitchenLabel = LHAWANG_KITCHEN_LABELS[3];
   const TH = "h-[40px] sm:h-[46px]";
@@ -310,28 +282,16 @@ function Floor3Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoa
     <div className="flex flex-row justify-between w-full gap-4">
 
       {/* Left column */}
-<<<<<<< Updated upstream
       <div className="flex flex-col gap-3">
         <div className={TH}>
-          <SmallRoom 
+          <RoomBlock 
             room={kitchenRoom}
             roomInfo={getRoomInfo(kitchenRoom)}
-=======
-      <div className="flex flex-col items-stretch gap-3 flex-shrink-0">
-        <div className={`${RW} ${TH}`}>
-          <RoomBlock
-            room={kitchenLabel}
-            roomInfo={getRoomInfo(kitchenLabel)}
->>>>>>> Stashed changes
             selectedRoom={selectedRoom}
             currentUser={currentUser}
             buildingName={buildingName}
             isLoading={isLoading}
-<<<<<<< Updated upstream
             onClick={() => onRoomClick(kitchenRoom)}
-=======
-            onClick={() => onRoomClick(kitchenLabel)}
->>>>>>> Stashed changes
           />
         </div>
         {leftRooms.map((r) => (
@@ -417,17 +377,9 @@ function Floor3Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoa
   );
 }
 
-<<<<<<< Updated upstream
 /** FLOOR 4 — Kitchen 3 + rooms 403–401 left | Enter, 405→out, 407, Stairs+408 right */
 function Floor4Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoading, buildingName,kitchenRoom }) {
   const leftRooms = floor4LeftColumn();                                               // [403, 402, 401]
-=======
-// ─────────────────────────────────────────────────────────────────────────────
-// FLOOR 4 — Kitchen + rooms
-// ─────────────────────────────────────────────────────────────────────────────
-function Floor4Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoading, buildingName }) {
-  const leftRooms = floor4LeftColumn();
->>>>>>> Stashed changes
   const { entranceRoom, standaloneRoom, stairsRoom } = floor4RightSection();
   const kitchenLabel = LHAWANG_KITCHEN_LABELS[4];
   const TH = "h-[40px] sm:h-[46px]";
@@ -439,33 +391,19 @@ function Floor4Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoa
     <div className="flex flex-row justify-between w-full gap-4">
 
       {/* Left column */}
-<<<<<<< Updated upstream
       <div className="flex flex-col gap-3">
         <div className={TH}>
-          <SmallRoom 
+          <RoomBlock 
             room={kitchenRoom}
             roomInfo={getRoomInfo(kitchenRoom)}
-=======
-      <div className="flex flex-col items-stretch gap-3 flex-shrink-0">
-        <div className={`${RW} ${TH}`}>
-          <RoomBlock
-            room={kitchenLabel}
-            roomInfo={getRoomInfo(kitchenLabel)}
->>>>>>> Stashed changes
             selectedRoom={selectedRoom}
             currentUser={currentUser}
             buildingName={buildingName}
             isLoading={isLoading}
-<<<<<<< Updated upstream
             onClick={() => onRoomClick(kitchenRoom)}
           />
         </div>
 
-=======
-            onClick={() => onRoomClick(kitchenLabel)}
-          />
-        </div>
->>>>>>> Stashed changes
         {leftRooms.map((r) => (
           <div key={r} className={`${RW} ${TH}`}>
             <RoomBlock
@@ -940,13 +878,8 @@ export default function LhawangFloorPage({ params }) {
         <div className="md:hidden flex items-center justify-between mb-4">
           <BackArrow />
 
-<<<<<<< Updated upstream
         <FloorBookingsView
           building={LHAWANG_HOSTEL_NAME}
-=======
-          <FloorBookingsView
-          building={LHAWANG_NAME}
->>>>>>> Stashed changes
           floor={floorNum}
           currentUser={currentUser}
           onDenied={(message) => showToast(message)}
