@@ -15,8 +15,6 @@ export default function Navbar() {
   const [userMenuOpen, setUserMenuOpen] = useState(false);
   const userMenuRef = useRef(null);
 
-  const [loginModalOpen, setLoginModalOpen] = useState(false);
-  const [adminModalOpen, setAdminModalOpen] = useState(false);
   const { confirm, confirmationDialog } = useConfirmation();
 
   const [userName, setUserName] = useState("");
@@ -72,15 +70,6 @@ export default function Navbar() {
       console.error("Error loading user session:", error);
     }
   }, []);
-  
-  // // Initialize state directly from dummySession
-  // const [userName] = useState(dummySession.name || dummySession.phoneNumber || "User");
-  // const [userEmail] = useState(dummySession.email || "");
-  // const [gender] = useState(
-  //   dummySession.gender === "female" || dummySession.gender === "male"
-  //     ? dummySession.gender
-  //     : ""
-  // );
 
   useEffect(() => {
     function handleClickOutside(event) {
@@ -224,17 +213,6 @@ export default function Navbar() {
           onClick={() => setOpen(false)}
         />
       )}
-
-      {/* <AdminManagementModal
-        isOpen={adminModalOpen}
-        onClose={() => setAdminModalOpen(false)}
-      />
-
-      <LoginModal
-        open={loginModalOpen}
-        onClose={() => setLoginModalOpen(false)}
-        onSuccess={(id) => console.log("Logged in", id)}
-      /> */}
 
       {confirmationDialog}
     </header>
