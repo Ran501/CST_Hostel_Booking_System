@@ -6,6 +6,7 @@ function errorResponse(message, status = 400) {
   return Response.json({ error: message }, { status });
 }
 
+
 export async function GET(req) {
   try {
     const { searchParams } = new URL(req.url);

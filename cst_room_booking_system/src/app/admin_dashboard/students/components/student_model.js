@@ -37,12 +37,8 @@ function useUser() {
   const loadUser = useCallback(() => {
     const raw = localStorage.getItem("session");
     if (raw) {
-      try {
-        const session = JSON.parse(raw);
-        setUser(session);
-      } catch {
-        setUser(null);
-      }
+      try { setUser(JSON.parse(raw)); }
+      catch { setUser(null); }
     } else {
       setUser(null);
     }
@@ -51,14 +47,27 @@ function useUser() {
 
   useEffect(() => {
     loadUser();
-    const handleStorage = (e) => {
-      if (e.key === "session") loadUser();
-    };
+    const handleStorage = (e) => { if (e.key === "session") loadUser(); };
     window.addEventListener("storage", handleStorage);
     return () => window.removeEventListener("storage", handleStorage);
   }, [loadUser]);
 
   return { user, loading };
+}
+
+// ── Inline error banner ────────────────────────────────────────────────────
+// Reusable red banner shown inside modals for field-level / API errors.
+function ErrorBanner({ message }) {
+  if (!message) return null;
+  return (
+    <div className="mb-3 flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
+      {/* simple ✕ icon using SVG so we don't need an extra import */}
+      <svg className="w-4 h-4 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
+        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+      </svg>
+      <span>{message}</span>
+    </div>
+  );
 }
 
 // ── Assign Hostel Modal ──────────────────────────────────────────────────
@@ -78,7 +87,7 @@ function AssignHostelModal({ isOpen, studentName, userId, onAssign, onClose }) {
     fetch("/api/admin/counselor?available=true")
       .then((r) => r.json())
       .then((data) => setHostels(data.hostels || []))
-      .catch(() => setError("Failed to load hostels."))
+      .catch(() => setError("Failed to load hostels. Please try again."))
       .finally(() => setLoading(false));
   }, [isOpen]);
 
@@ -93,7 +102,9 @@ function AssignHostelModal({ isOpen, studentName, userId, onAssign, onClose }) {
       toast.success(`Hostel assigned to ${studentName}`);
       onClose();
     } catch (err) {
-      setError(err.message || "Failed to assign hostel.");
+      const msg = err.message || "Failed to assign hostel.";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
@@ -107,6 +118,9 @@ function AssignHostelModal({ isOpen, studentName, userId, onAssign, onClose }) {
           <span className="font-medium text-gray-700">{studentName}</span> is being made a counselor.
           Select the hostel they will manage.
         </p>
+
+        <ErrorBanner message={error} />
+
         {loading ? (
           <div className="py-8 text-center text-gray-400 text-sm">Loading hostels…</div>
         ) : hostels.length === 0 ? (
@@ -138,7 +152,7 @@ function AssignHostelModal({ isOpen, studentName, userId, onAssign, onClose }) {
             ))}
           </div>
         )}
-        {error && <p className="mt-3 text-sm text-red-600 bg-red-50 rounded px-3 py-2">{error}</p>}
+
         <div className="flex justify-end gap-2 mt-6">
           <button onClick={onClose} className="px-4 py-2 rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-50">Cancel</button>
           {hostels.length > 0 && (
@@ -167,19 +181,23 @@ function AddStudentModal({ isOpen, onClose, onAdd }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  useEffect(() => {
-    if (isOpen) setError("");
-  }, [isOpen]);
+  // Clear error whenever the modal re-opens
+  useEffect(() => { if (isOpen) setError(""); }, [isOpen]);
 
   if (!isOpen) return null;
 
+  const handleChange = (key, value) => {
+    setForm(f => ({ ...f, [key]: value }));
+    // Clear error as soon as the user starts correcting
+    if (error) setError("");
+  };
+
   const handleSubmit = async () => {
-    if (!form.studentNumber || !form.name || !form.email) {
-      const msg = "Student number, name and email are required.";
-      setError(msg);
-      toast.error(msg);
-      return;
-    }
+    // ── Client-side validation (shown inline only, no toast for these) ──
+    if (!form.studentNumber.trim()) { setError("Student number is required."); return; }
+    if (!form.name.trim())          { setError("Name is required."); return; }
+    if (!form.email.trim())         { setError("Email is required."); return; }
+
     setSaving(true);
     setError("");
     try {
@@ -193,9 +211,12 @@ function AddStudentModal({ isOpen, onClose, onAdd }) {
         phoneNumber: "", gender: "male", isActive: true,
       });
     } catch (err) {
-      const msg = err.message || "Failed to add student";
+      // The service now returns clean messages for all Prisma errors,
+      // so we just display whatever comes back.
+      const msg = err.message || "Failed to add student. Please try again.";
       setError(msg);
-      toast.error(msg);
+      // Use a long-duration error toast so it's hard to miss
+      toast.error(msg, { duration: 6000 });
     } finally {
       setSaving(false);
     }
@@ -205,79 +226,89 @@ function AddStudentModal({ isOpen, onClose, onAdd }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 p-6">
         <h2 className="text-lg font-bold text-gray-900 mb-4">Add New Student</h2>
+
         {form.role === "counselor" && (
           <div className="mb-3 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-700">
             You will be prompted to assign a hostel after creating this counselor.
           </div>
         )}
-        {error && <div className="mb-3 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-700">{error}</div>}
+
+        {/* Inline error — shown for both validation and API errors */}
+        <ErrorBanner message={error} />
+
         <div className="grid grid-cols-2 gap-3">
           {[
             { label: "Student Number", key: "studentNumber" },
-            { label: "Name", key: "name" },
-            { label: "Email", key: "email" },
-            { label: "Phone", key: "phoneNumber" },
+            { label: "Name",           key: "name" },
+            { label: "Email",          key: "email" },
+            { label: "Phone",          key: "phoneNumber" },
           ].map(({ label, key }) => (
             <div key={key}>
               <label className="block text-xs font-medium text-gray-600 mb-1">{label}</label>
               <input
                 type="text"
                 value={form[key]}
-                onChange={(e) => setForm(f => ({ ...f, [key]: e.target.value }))}
+                onChange={(e) => handleChange(key, e.target.value)}
                 className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm focus:ring-2 focus:ring-blue-500 text-gray-900"
               />
             </div>
           ))}
+
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Department</label>
             <select
               value={form.department}
-              onChange={(e) => setForm(f => ({ ...f, department: e.target.value }))}
+              onChange={(e) => handleChange("department", e.target.value)}
               className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm text-gray-900"
             >
               {departments.filter(d => d !== "All").map(d => <option key={d} value={d}>{d}</option>)}
             </select>
           </div>
+
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Role</label>
             <select
               value={form.role}
-              onChange={(e) => setForm(f => ({ ...f, role: e.target.value }))}
+              onChange={(e) => handleChange("role", e.target.value)}
               className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm text-gray-900"
             >
               {roleOptions.map(r => <option key={r} value={r}>{r}</option>)}
             </select>
           </div>
+
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Year</label>
             <input
               type="number" min={1} max={6}
               value={form.year}
-              onChange={(e) => setForm(f => ({ ...f, year: Number(e.target.value) }))}
+              onChange={(e) => handleChange("year", Number(e.target.value))}
               className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm text-gray-900"
             />
           </div>
+
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Gender</label>
             <select
               value={form.gender}
-              onChange={(e) => setForm(f => ({ ...f, gender: e.target.value }))}
+              onChange={(e) => handleChange("gender", e.target.value)}
               className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm text-gray-900"
             >
               <option value="male">Male</option>
               <option value="female">Female</option>
             </select>
           </div>
+
           <div className="flex items-center gap-2 mt-4">
             <input
               type="checkbox"
               checked={form.isActive}
-              onChange={(e) => setForm(f => ({ ...f, isActive: e.target.checked }))}
+              onChange={(e) => handleChange("isActive", e.target.checked)}
               className="rounded"
             />
             <label className="text-sm text-gray-700">Active</label>
           </div>
         </div>
+
         <div className="flex justify-end gap-2 mt-6">
           <button onClick={onClose} className="px-4 py-2 rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-50">Cancel</button>
           <button onClick={handleSubmit} disabled={saving} className="px-4 py-2 rounded-lg bg-cstcolor text-white text-sm hover:bg-cstcolor3 disabled:opacity-60">
@@ -300,9 +331,7 @@ function ImportModal({ isOpen, onClose, onImport }) {
   const [error, setError] = useState("");
   const fileRef = useRef();
 
-  useEffect(() => {
-    if (isOpen) setError("");
-  }, [isOpen]);
+  useEffect(() => { if (isOpen) setError(""); }, [isOpen]);
 
   if (!isOpen) return null;
 
@@ -319,14 +348,19 @@ function ImportModal({ isOpen, onClose, onImport }) {
       const lines = text.split("\n").filter(l => l.trim());
       setPreview(lines.slice(0, 5));
     };
-    reader.onerror = () => setError("Could not read the file. Please try selecting it again.");
+    reader.onerror = () => {
+      const msg = "Could not read the file. Please try selecting it again.";
+      setError(msg);
+      toast.error(msg);
+    };
     reader.readAsText(f);
   };
 
   const handleImport = async () => {
     if (!fileText) {
-      setError("Please select a CSV file first.");
-      toast.error("Please select a CSV file first.");
+      const msg = "Please select a CSV file first.";
+      setError(msg);
+      toast.error(msg);
       return;
     }
     setImporting(true);
@@ -336,11 +370,15 @@ function ImportModal({ isOpen, onClose, onImport }) {
       const result = await onImport(fileText);
       if (result === false) return;
       setImportResult(result);
-      toast.success(`Import complete: ${result.created} created, ${result.skipped} skipped`);
+      if (result.errors?.length) {
+        toast.error(`Import finished with ${result.errors.length} error(s). Check the list below.`, { duration: 6000 });
+      } else {
+        toast.success(`Import complete: ${result.created} created, ${result.skipped} skipped`);
+      }
     } catch (err) {
-      const msg = err.message || "Import failed";
+      const msg = err.message || "Import failed. Please check the file and try again.";
       setError(msg);
-      toast.error(msg);
+      toast.error(msg, { duration: 6000 });
     } finally {
       setImporting(false);
     }
@@ -364,7 +402,9 @@ function ImportModal({ isOpen, onClose, onImport }) {
           <br />
           Optional: <code>role</code> (default: student), <code>isActive / status</code> (default: disabled), <code>password</code>
         </p>
-        {error && <div className="mb-3 p-2 bg-red-50 border border-red-200 rounded text-sm text-red-700">{error}</div>}
+
+        <ErrorBanner message={error} />
+
         <div
           onClick={() => fileRef.current.click()}
           className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-blue-400 transition-colors"
@@ -372,22 +412,25 @@ function ImportModal({ isOpen, onClose, onImport }) {
           <input ref={fileRef} type="file" accept=".csv,.CSV" className="hidden" onChange={handleFile} />
           {fileName ? <p className="text-sm text-gray-700 font-medium">{fileName}</p> : <p className="text-sm text-gray-400">Click to select a CSV file</p>}
         </div>
+
         {preview.length > 0 && (
           <div className="mt-3 bg-gray-50 rounded p-3 text-xs text-gray-600 font-mono overflow-x-auto">
             {preview.map((line, i) => <div key={i} className={i === 0 ? "font-bold text-gray-800" : ""}>{line}</div>)}
             <div className="text-gray-400 mt-1">preview — first {preview.length} rows</div>
           </div>
         )}
+
         {importResult && (
-          <div className={`mt-3 rounded p-3 text-sm ${importResult.errors?.length ? "bg-yellow-50 text-yellow-800" : "bg-green-50 text-green-800"}`}>
+          <div className={`mt-3 rounded p-3 text-sm ${importResult.errors?.length ? "bg-yellow-50 text-yellow-800 border border-yellow-200" : "bg-green-50 text-green-800 border border-green-200"}`}>
             <p className="font-medium">Import complete — {importResult.created} created, {importResult.skipped} skipped</p>
             {importResult.errors?.length > 0 && (
-              <ul className="mt-1 text-xs list-disc list-inside space-y-0.5 max-h-24 overflow-y-auto">
+              <ul className="mt-1 text-xs list-disc list-inside space-y-0.5 max-h-28 overflow-y-auto">
                 {importResult.errors.map((e, i) => <li key={i}>{e}</li>)}
               </ul>
             )}
           </div>
         )}
+
         <div className="flex justify-end gap-2 mt-6">
           <button onClick={handleClose} className="px-4 py-2 rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-50">
             {importResult ? "Close" : "Cancel"}
@@ -407,9 +450,9 @@ function ImportModal({ isOpen, onClose, onImport }) {
 
 export default function StudentManagement() {
   const { user, loading: userLoading } = useUser();
-  const isAdmin = user?.role === "admin";
+  const isAdmin    = user?.role === "admin";
   const isCounselor = user?.role === "counselor";
-  const isViewOnly = isCounselor;
+  const isViewOnly  = isCounselor;
 
   const [students, setStudents] = useState([]);
   const [nextCursor, setNextCursor] = useState(null);
@@ -426,16 +469,9 @@ export default function StudentManagement() {
   const [showImportModal, setShowImportModal] = useState(false);
   const { confirm, confirmationDialog } = useConfirmation();
 
-  // ── Hostel assignment modal state ────────────────────────────────────────
-  const [hostelModal, setHostelModal] = useState({
-    open: false,
-    userId: null,
-    studentName: "",
-  });
-
-  // ── Pending role change state (for counselor promotion) ────────────────
-  const [pendingRoleChange, setPendingRoleChange] = useState(null); // { studentId, studentName }
-  const [selectedHostelForRoleChange, setSelectedHostelForRoleChange] = useState(null);
+  const [hostelModal, setHostelModal] = useState({ open: false, userId: null, studentName: "" });
+  const [pendingRoleChange, setPendingRoleChange] = useState(null);
+  const [hostelsData, setHostelsData] = useState([]);
 
   const [editingCell, setEditingCell] = useState({ id: null, field: null, value: "" });
   const editConfirmationPending = useRef(false);
@@ -445,13 +481,24 @@ export default function StudentManagement() {
 
   const normalizeStudent = (raw) => ({
     ...raw,
-    isActive: Boolean(raw.isActive),
-    role: (raw.role ?? "student").toString().trim().toLowerCase(),
+    isActive:   Boolean(raw.isActive),
+    role:       (raw.role       ?? "student").toString().trim().toLowerCase(),
     department: (raw.department ?? "").toString().trim(),
-    gender: (raw.gender ?? "").toString().trim().toLowerCase(),
+    gender:     (raw.gender     ?? "").toString().trim().toLowerCase(),
   });
 
   const normalizeStudents = (arr) => arr.map(normalizeStudent);
+
+  // ── Generic safe API call: parses JSON and throws clean errors ────────────
+  const apiCall = async (url, options = {}) => {
+    const res  = await fetch(url, options);
+    const text = await res.text();
+    let json;
+    try { json = JSON.parse(text); }
+    catch { throw new Error(`Server error (${res.status}): ${text.slice(0, 120)}`); }
+    if (!res.ok) throw new Error(json.error || json.message || `Request failed (${res.status})`);
+    return json;
+  };
 
   // ── Fetch ────────────────────────────────────────────────────────────────
 
@@ -468,15 +515,9 @@ export default function StudentManagement() {
       });
       if (cursor) params.append("cursor", cursor);
 
-      const res = await fetch(`/api/admin/student?${params}`);
-      const text = await res.text();
-      let result;
-      try { result = JSON.parse(text); } catch {
-        throw new Error(`Server error (${res.status}): ${text.substring(0, 100)}`);
-      }
-      if (!res.ok) throw new Error(result.error || "Failed to fetch students");
-
+      const result = await apiCall(`/api/admin/student?${params}`);
       const newStudents = normalizeStudents(result.data || []);
+
       if (isLoadMore) {
         setStudents(prev => {
           const combined = [...prev, ...newStudents];
@@ -505,116 +546,84 @@ export default function StudentManagement() {
 
   useEffect(() => {
     const observer = new IntersectionObserver(
-      (entries) => {
-        if (entries[0].isIntersecting && hasMore && !loadingMore) {
-          fetchStudents(nextCursor, true);
-        }
-      },
+      (entries) => { if (entries[0].isIntersecting && hasMore && !loadingMore) fetchStudents(nextCursor, true); },
       { threshold: 0.6 }
     );
     if (loadMoreRef.current) observer.observe(loadMoreRef.current);
     return () => observer.disconnect();
   }, [hasMore, nextCursor, loadingMore, fetchStudents]);
 
+  // ── Hostels data (for counselor role confirmation message) ────────────────
+
+  useEffect(() => {
+    fetch("/api/admin/hostel")
+      .then(r => r.json())
+      .then(json => {
+        const list = Array.isArray(json) ? json : Array.isArray(json.data) ? json.data : Array.isArray(json.hostels) ? json.hostels : [];
+        setHostelsData(list);
+      })
+      .catch(err => console.error("Failed to fetch hostels:", err));
+  }, []);
+
   // ── API helpers ──────────────────────────────────────────────────────────
 
-  const updateStudent = async (id, fields) => {
-    const res = await fetch("/api/admin/student", {
+  const updateStudent = (id, fields) =>
+    apiCall("/api/admin/student", {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ id, ...fields }),
     });
-    const text = await res.text();
-    let result;
-    try { result = JSON.parse(text); } catch { throw new Error(`Server error: ${text.substring(0, 100)}`); }
-    if (!res.ok) throw new Error(result.error || "Update failed");
-    return result;
-  };
 
-  const handleAssignHostel = async (userId, hostelId) => {
-    const res = await fetch("/api/admin/counselor", {
+  const handleAssignHostel = (userId, hostelId) =>
+    apiCall("/api/admin/counselor", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ userId, hostelId }),
     });
-    const text = await res.text();
-    let result;
-    try { result = JSON.parse(text); } catch { throw new Error(`Server error: ${text.substring(0, 100)}`); }
-    if (!res.ok) throw new Error(result.error || "Failed to assign hostel");
-    return result;
-  };
 
-  // ── Hostel selection for role change (counselor promotion) ─────────────
+  // ── Role change — pick hostel first if promoting to counselor ────────────
 
   const handleHostelSelectForRoleChange = async (userId, hostelId) => {
-    setSelectedHostelForRoleChange(hostelId);
     setHostelModal({ open: false, userId: null, studentName: "" });
 
     const student = students.find(s => s.id === userId);
-    const hostel = hostelsData.find(h => h.id === hostelId); // we need hostels list
+    const hostel  = hostelsData.find(h => h.id === hostelId);
+
     if (!student || !hostel) {
-      toast.error("Student or hostel not found");
+      toast.error("Student or hostel not found. Please refresh and try again.");
       setPendingRoleChange(null);
       return;
     }
 
     confirm({
-      message: `Change ${student.name}'s role to counselor and assign hostel "${hostel.hostelName}"?`,
+      message: `Change ${student.name}'s role to counselor and assign them to "${hostel.hostelName}"?`,
       confirmText: "Confirm",
       onConfirm: async () => {
         try {
-          // 1. Update role
           await updateStudent(userId, { role: "counselor" });
           setStudents(prev => prev.map(s => s.id === userId ? { ...s, role: "counselor" } : s));
-          // 2. Assign hostel
           await handleAssignHostel(userId, hostelId);
           toast.success(`${student.name} is now a counselor assigned to ${hostel.hostelName}`);
         } catch (err) {
-          toast.error(err.message || "Failed to assign role/hostel");
+          toast.error(err.message || "Failed to assign role/hostel. Please try again.");
         } finally {
           setPendingRoleChange(null);
-          setSelectedHostelForRoleChange(null);
         }
       },
-      onCancel: () => {
-        setPendingRoleChange(null);
-        setSelectedHostelForRoleChange(null);
-      }
+      onCancel: () => setPendingRoleChange(null),
     });
   };
-
-  // ── Hostels list for the modal (for message) ────────────────────────────
-
-  const [hostelsData, setHostelsData] = useState([]);
-
-  useEffect(() => {
-    // Fetch hostels for display in confirmation
-    const fetchHostels = async () => {
-      try {
-        const res = await fetch("/api/admin/hostel");
-        const json = await res.json();
-        const list = Array.isArray(json) ? json : Array.isArray(json.data) ? json.data : Array.isArray(json.hostels) ? json.hostels : [];
-        setHostelsData(list);
-      } catch (err) {
-        console.error("Failed to fetch hostels:", err);
-      }
-    };
-    fetchHostels();
-  }, []);
-
-  // ── Role change handler ──────────────────────────────────────────────────
 
   const requestRoleChange = (student, newRole) => {
     if (isViewOnly || newRole === student.role) return;
 
-    // If changing to counselor and student is not already a counselor → open hostel modal first
+    // Promoting to counselor → open hostel picker first
     if (newRole === "counselor" && student.role !== "counselor") {
       setPendingRoleChange({ studentId: student.id, studentName: student.name });
       setHostelModal({ open: true, userId: student.id, studentName: student.name });
       return;
     }
 
-    // Otherwise, normal confirmation and update
     confirm({
       message: `Change ${student.name}'s role to "${newRole}"?`,
       confirmText: "Change",
@@ -622,15 +631,15 @@ export default function StudentManagement() {
         try {
           await updateStudent(student.id, { role: newRole });
           setStudents(prev => prev.map(s => s.id === student.id ? { ...s, role: newRole } : s));
-          toast.success(`${student.name} role updated to ${newRole}`);
+          toast.success(`${student.name}'s role updated to ${newRole}`);
         } catch (err) {
-          toast.error(err.message || "Role update failed");
+          toast.error(err.message || "Role update failed. Please try again.");
         }
       },
     });
   };
 
-  // ── Other actions ──────────────────────────────────────────────────────
+  // ── Other actions ─────────────────────────────────────────────────────────
 
   const promptHostelAssignment = (userId, studentName) => {
     if (!isAdmin) return;
@@ -639,15 +648,11 @@ export default function StudentManagement() {
 
   const deleteSelectedStudents = async () => {
     const ids = [...selectedStudents];
-    const res = await fetch("/api/admin/student", {
+    await apiCall("/api/admin/student", {
       method: "DELETE",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ids }),
     });
-    const text = await res.text();
-    let result;
-    try { result = JSON.parse(text); } catch { throw new Error(`Server error: ${text.substring(0, 100)}`); }
-    if (!res.ok) throw new Error(result.error || "Failed to delete");
     setStudents(prev => prev.filter(s => !ids.includes(s.id)));
     setSelectedStudents([]);
     toast.success(`Deleted ${ids.length} student${ids.length !== 1 ? "s" : ""}`);
@@ -658,21 +663,20 @@ export default function StudentManagement() {
     confirm({
       message: `Delete ${selectedStudents.length} student${selectedStudents.length !== 1 ? "s" : ""}? This cannot be undone.`,
       confirmText: "Delete",
-      onConfirm: deleteSelectedStudents,
+      onConfirm: async () => {
+        try { await deleteSelectedStudents(); }
+        catch (err) { toast.error(err.message || "Delete failed. Please try again."); }
+      },
     });
   };
 
   const handleAddStudent = async (form) => {
-    const res = await fetch("/api/admin/student", {
+    // apiCall throws with the friendly message from the service layer
+    const newStudent = await apiCall("/api/admin/student", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(form),
     });
-    const text = await res.text();
-    let result;
-    try { result = JSON.parse(text); } catch { throw new Error(`Server error: ${text.substring(0, 100)}`); }
-    if (!res.ok) throw new Error(result.error || "Failed to add student");
-    const newStudent = result;
     setStudents(prev => [normalizeStudent(newStudent), ...prev]);
     if (form.role === "counselor") promptHostelAssignment(newStudent.id, newStudent.name);
     return newStudent;
@@ -688,15 +692,11 @@ export default function StudentManagement() {
   };
 
   const handleImportStudents = async (csvText) => {
-    const res = await fetch("/api/admin/student", {
+    const result = await apiCall("/api/admin/student", {
       method: "POST",
       headers: { "Content-Type": "text/csv" },
       body: csvText,
     });
-    const text = await res.text();
-    let result;
-    try { result = JSON.parse(text); } catch { throw new Error(`Server error: ${text.substring(0, 100)}`); }
-    if (!res.ok) throw new Error(result.error || "Import failed");
     setStudents([]);
     setNextCursor(null);
     await fetchStudents();
@@ -720,11 +720,7 @@ export default function StudentManagement() {
         year: selectedYear === "All" ? "" : selectedYear,
         search: searchTerm,
       });
-      const res = await fetch(`/api/admin/student?${params}`);
-      const text = await res.text();
-      let result;
-      try { result = JSON.parse(text); } catch { throw new Error(`Server error: ${text.substring(0, 100)}`); }
-      if (!res.ok) throw new Error(result.error || "Export failed");
+      const result = await apiCall(`/api/admin/student?${params}`);
       const data = result.data || [];
 
       const headers = ["studentNumber", "name", "email", "role", "department", "year", "phoneNumber", "gender", "isActive"];
@@ -732,17 +728,19 @@ export default function StudentManagement() {
       const csv = [headers.join(","), ...rows].join("\n");
 
       const blob = new Blob([csv], { type: "text/csv" });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
+      const url  = URL.createObjectURL(blob);
+      const a    = document.createElement("a");
+      a.href     = url;
       a.download = `students_${new Date().toISOString().slice(0, 10)}.csv`;
       a.click();
       URL.revokeObjectURL(url);
-      toast.success("Export successful");
+      toast.success("Export downloaded successfully");
     } catch (err) {
-      toast.error(err.message || "Export failed");
+      toast.error(err.message || "Export failed. Please try again.");
     }
   };
+
+  // ── Editing ──────────────────────────────────────────────────────────────
 
   const startEdit = (id, field, value) => {
     if (isViewOnly) return;
@@ -762,7 +760,7 @@ export default function StudentManagement() {
           setStudents(prev => prev.map(s => s.id === id ? { ...s, [field]: newValue } : s));
           toast.success(`${field} updated successfully`);
         } catch (err) {
-          toast.error(err.message || "Update failed");
+          toast.error(err.message || "Update failed. Please try again.");
         } finally {
           editConfirmationPending.current = false;
         }
@@ -778,10 +776,11 @@ export default function StudentManagement() {
     setStudents(prev => prev.map(s => s.id === student.id ? { ...s, year: newYear } : s));
     try {
       await updateStudent(student.id, { year: newYear });
-      toast.success(`${student.name} year updated to ${newYear}`);
-    } catch (error) {
+      toast.success(`${student.name} moved to year ${newYear}`);
+    } catch (err) {
       setStudents(prev => prev.map(s => s.id === student.id ? { ...s, year: student.year } : s));
-      throw error;
+      toast.error(err.message || "Year update failed. Please try again.");
+      throw err;
     }
   };
 
@@ -823,7 +822,7 @@ export default function StudentManagement() {
           setStudents(prev => prev.map(s => s.id === student.id ? { ...s, isActive: newStatus } : s));
           toast.success(`${student.name} ${newStatus ? "activated" : "deactivated"}`);
         } catch (err) {
-          toast.error(err.message || "Status update failed");
+          toast.error(err.message || "Status update failed. Please try again.");
           setStudents(prev => prev.map(s => s.id === student.id ? { ...s, isActive: student.isActive } : s));
         }
       },
@@ -832,8 +831,7 @@ export default function StudentManagement() {
 
   const promoteStudent = (student) => {
     if (isViewOnly) return;
-    const isArch = student.department === "Architecture";
-    const maxYear = isArch ? 6 : 5;
+    const maxYear = student.department === "Architecture" ? 6 : 5;
     if (student.year >= maxYear) return;
     const newYear = student.year + 1;
     confirm({
@@ -857,8 +855,7 @@ export default function StudentManagement() {
   const applyBulkYearAction = async (type) => {
     const targets = students.filter(s => selectedStudents.includes(s.id));
     const updates = targets.map(s => {
-      const isArch = s.department === "Architecture";
-      const maxYear = isArch ? 6 : 5;
+      const maxYear = s.department === "Architecture" ? 6 : 5;
       const newYear = type === "promote" ? Math.min(s.year + 1, maxYear) : Math.max(s.year - 1, 1);
       return { ...s, year: newYear };
     });
@@ -872,9 +869,9 @@ export default function StudentManagement() {
     const failures = results.filter(r => r.status === "rejected");
     if (failures.length > 0) {
       await fetchStudents();
-      toast.error(`Failed to update ${failures.length} student${failures.length !== 1 ? "s" : ""}`);
+      toast.error(`Failed to update ${failures.length} student${failures.length !== 1 ? "s" : ""}. Please try again.`);
     } else {
-      toast.success(`Year ${type === "promote" ? "promoted" : "demoted"} for ${updates.length} student${updates.length !== 1 ? "s" : ""}`);
+      toast.success(`${type === "promote" ? "Promoted" : "Demoted"} ${updates.length} student${updates.length !== 1 ? "s" : ""}`);
     }
   };
 
@@ -899,7 +896,7 @@ export default function StudentManagement() {
           setStudents(prev => prev.map(s => s.id === student.id ? { ...s, department: newDepartment } : s));
           toast.success(`${student.name} moved to ${newDepartment}`);
         } catch (err) {
-          toast.error(err.message || "Department update failed");
+          toast.error(err.message || "Department update failed. Please try again.");
         }
       },
     });
@@ -915,9 +912,9 @@ export default function StudentManagement() {
         try {
           await updateStudent(student.id, { gender: newGender });
           setStudents(prev => prev.map(s => s.id === student.id ? { ...s, gender: newGender } : s));
-          toast.success(`${student.name} gender updated to ${newGender}`);
+          toast.success(`${student.name}'s gender updated`);
         } catch (err) {
-          toast.error(err.message || "Gender update failed");
+          toast.error(err.message || "Gender update failed. Please try again.");
         }
       },
     });
@@ -1011,23 +1008,13 @@ export default function StudentManagement() {
                     <td className="px-2 py-2 text-sm text-gray-700">{renderEditableCell(student, "name", student.name)}</td>
                     <td className="px-2 py-2 text-sm text-gray-500">{renderEditableCell(student, "email", student.email)}</td>
                     <td className="px-2 py-2 text-sm">
-                      <select
-                        value={student.role}
-                        onChange={(e) => requestRoleChange(student, e.target.value)}
-                        disabled={isViewOnly}
-                        className={`border border-gray-300 rounded px-2 py-1 text-sm text-gray-900 bg-white w-full focus:ring-2 focus:ring-blue-500 ${isViewOnly ? "cursor-not-allowed opacity-80" : ""}`}
-                      >
+                      <select value={student.role} onChange={(e) => requestRoleChange(student, e.target.value)} disabled={isViewOnly} className={`border border-gray-300 rounded px-2 py-1 text-sm text-gray-900 bg-white w-full focus:ring-2 focus:ring-blue-500 ${isViewOnly ? "cursor-not-allowed opacity-80" : ""}`}>
                         {!roleOptions.includes(student.role) && <option value={student.role}>{student.role || "— unknown —"}</option>}
                         {roleOptions.map(r => <option key={r} value={r}>{r}</option>)}
                       </select>
                     </td>
                     <td className="px-2 py-2 text-sm">
-                      <select
-                        value={student.department}
-                        onChange={(e) => requestDepartmentChange(student, e.target.value)}
-                        disabled={isViewOnly}
-                        className={`border border-gray-300 rounded px-2 py-1 text-sm text-gray-900 bg-white w-full focus:ring-2 focus:ring-blue-500 ${isViewOnly ? "cursor-not-allowed opacity-80" : ""}`}
-                      >
+                      <select value={student.department} onChange={(e) => requestDepartmentChange(student, e.target.value)} disabled={isViewOnly} className={`border border-gray-300 rounded px-2 py-1 text-sm text-gray-900 bg-white w-full focus:ring-2 focus:ring-blue-500 ${isViewOnly ? "cursor-not-allowed opacity-80" : ""}`}>
                         {!departments.filter(d => d !== "All").includes(student.department) && <option value={student.department}>{student.department || "— select —"}</option>}
                         {departments.filter(d => d !== "All").map(d => <option key={d} value={d}>{d}</option>)}
                       </select>
@@ -1076,11 +1063,7 @@ export default function StudentManagement() {
             onAssign={pendingRoleChange ? handleHostelSelectForRoleChange : handleAssignHostel}
             onClose={() => {
               setHostelModal({ open: false, userId: null, studentName: "" });
-              // If there was a pending role change, clear it
-              if (pendingRoleChange) {
-                setPendingRoleChange(null);
-                setSelectedHostelForRoleChange(null);
-              }
+              if (pendingRoleChange) setPendingRoleChange(null);
             }}
           />
         </>
