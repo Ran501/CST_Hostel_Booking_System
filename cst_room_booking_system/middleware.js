@@ -34,7 +34,9 @@ export async function middleware(request) {
   // Already logged in → redirect away from /login
   if (pathname === "/login" && session) {
     const dest =
-      session.role === "admin" ? "/admin_dashboard" : "/homecontent";
+      session.role === "admin" || session.role === "counselor"
+        ? "/admin_dashboard"
+        : "/homecontent";
     return NextResponse.redirect(new URL(dest, request.url));
   }
 
@@ -46,10 +48,11 @@ export async function middleware(request) {
     return NextResponse.redirect(new URL("/login", request.url));
   }
 
-  // Non-admin trying to reach admin area
+  // Only admin and counselor can reach admin area
   if (
     pathname.startsWith("/admin_dashboard") &&
-    session.role !== "admin"
+    session.role !== "admin" &&
+    session.role !== "counselor"
   ) {
     return NextResponse.redirect(new URL("/homecontent", request.url));
   }

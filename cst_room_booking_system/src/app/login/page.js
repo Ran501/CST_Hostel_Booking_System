@@ -1,14 +1,13 @@
 // components/LoginModal.js
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 
 export default function LoginModal({ open = true, onClose, onSuccess }) {
   const [studentNumber, setStudentNumber] = useState("");
   const [password, setPassword] = useState("");
-  const [showPasswordField, setShowPasswordField] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const router = useRouter();
@@ -26,49 +25,20 @@ export default function LoginModal({ open = true, onClose, onSuccess }) {
       setPassword("");
       setError(null);
       setStudentNumber("");
-      setShowPasswordField(false);
     }
   }, [open]);
 
-  // Show activation success message and show password field if account is activated
+  // Show toast messages after activation or password setup
   useEffect(() => {
     if (activated === "true") {
       toast.success("Account activated successfully! You can now login.");
-      setShowPasswordField(true);
     }
     if (passwordSet === "true") {
       toast.success("Password set successfully! Please login with your new password.");
     }
   }, [activated, passwordSet]);
 
-  // Check if user is activated when student number is entered
-  useEffect(() => {
-    const checkActivationStatus = async () => {
-      if (studentNumber.trim().length > 0) {
-        try {
-          const res = await fetch(`/api/auth/check-password-status?studentNumber=${studentNumber.trim()}`);
-          const data = await res.json().catch(() => null);
-          if (data?.isActive) {
-            setShowPasswordField(true);
-          } else {
-            setShowPasswordField(false);
-          }
-        } catch {
-          setShowPasswordField(false);
-        }
-      }
-    };
-
-    const debounceTimer = setTimeout(checkActivationStatus, 500);
-    return () => clearTimeout(debounceTimer);
-  }, [studentNumber]);
-
-  const disabled = useMemo(() => {
-    if (showPasswordField) {
-      return loading || studentNumber.trim().length === 0 || password.trim().length === 0;
-    }
-    return loading || studentNumber.trim().length === 0;
-  }, [loading, studentNumber, password, showPasswordField]);
+  const disabled = loading || studentNumber.trim().length === 0 || password.trim().length === 0;
 
   const handleCancel = () => {
     localStorage.removeItem("session");
@@ -91,10 +61,7 @@ export default function LoginModal({ open = true, onClose, onSuccess }) {
         return;
       }
 
-      const body = { studentNumber: studentNum };
-      if (showPasswordField) {
-        body.password = password.trim();
-      }
+      const body = { studentNumber: studentNum, password: password.trim() };
 
       const res = await fetch("/api/login", {
         method: "POST",
@@ -239,23 +206,24 @@ export default function LoginModal({ open = true, onClose, onSuccess }) {
                       </p>
                     </div>
 
-                    {showPasswordField && (
-                      <div>
-                        <label className="mb-2 block text-sm font-medium text-white/90">
-                          Password
-                        </label>
-                        <div className="relative">
-                          <input
-                            type="password"
-                            value={password}
-                            className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder-white/40 shadow-inner outline-none transition-all duration-200 focus:border-cstcolor/50 focus:bg-white/10 focus:shadow-lg"
-                            onChange={(e) => setPassword(e.target.value)}
-                            placeholder="Enter your password"
-                          />
-                          <div className="absolute inset-0 rounded-lg border border-transparent pointer-events-none transition-all duration-200 group-focus-within:border-cstcolor/30"></div>
-                        </div>
+                    <div>
+                      <label className="mb-2 block text-sm font-medium text-white/90">
+                        Password
+                      </label>
+                      <div className="relative">
+                        <input
+                          type="password"
+                          value={password}
+                          className="w-full rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-white placeholder-white/40 shadow-inner outline-none transition-all duration-200 focus:border-cstcolor/50 focus:bg-white/10 focus:shadow-lg"
+                          onChange={(e) => setPassword(e.target.value)}
+                          onFocus={(e) => e.target.removeAttribute("readOnly")}
+                          readOnly
+                          autoComplete="new-password"
+                          placeholder="Enter your password"
+                        />
+                        <div className="absolute inset-0 rounded-lg border border-transparent pointer-events-none transition-all duration-200 group-focus-within:border-cstcolor/30"></div>
                       </div>
-                    )}
+                    </div>
 
                     {error && (
                       <div className="rounded-lg bg-red-500/10 border border-red-500/30 p-3">

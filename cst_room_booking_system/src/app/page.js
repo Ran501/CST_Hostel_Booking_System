@@ -54,5 +54,9 @@ export default function HomePage() {
     return null;
   }
 
-  return <HomeContent />;
+  return (
+    <>
+      <HomeContent />
+    </>
+  );
 }
