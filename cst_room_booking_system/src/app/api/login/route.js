@@ -30,13 +30,22 @@ export async function POST(request) {
           role: "admin",
           gender: "male",
           phoneNumber: "",
+          // No counselor relation for admin
+          counselor: null,
         },
       });
     }
 
-    // Find user by student number
+    // Find user with counselor relation
     const user = await prisma.user.findUnique({
       where: { studentNumber: studentNumber.toString() },
+      include: {
+        counselor: {
+          include: {
+            hostel: true,   // includes hostel details for the counselor
+          },
+        },
+      },
     });
 
     if (!user) {
@@ -49,10 +58,10 @@ export async function POST(request) {
     // Check if account is active
     if (!user.isActive) {
       return Response.json(
-        { 
-          success: false, 
+        {
+          success: false,
           error: "Account not activated. Please activate your account first.",
-          requiresActivation: true
+          requiresActivation: true,
         },
         { status: 403 }
       );
@@ -65,13 +74,13 @@ export async function POST(request) {
           success: false,
           error: "Please set your password first after activation",
           requiresPasswordSetup: true,
-          studentNumber: user.studentNumber
+          studentNumber: user.studentNumber,
         },
         { status: 200 }
       );
     }
 
-    // User has set password, so verify it
+    // Verify password
     if (!password) {
       return Response.json(
         { success: false, error: "Password is required" },
@@ -87,7 +96,7 @@ export async function POST(request) {
       );
     }
 
-    // Return user data (excluding password)
+    // Remove password field before returning
     const { password: _, ...userWithoutPassword } = user;
 
     return Response.json({

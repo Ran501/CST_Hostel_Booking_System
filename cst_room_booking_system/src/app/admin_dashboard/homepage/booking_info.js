@@ -7,7 +7,42 @@ import { animated, useSpring, useSpringRef } from "@react-spring/web";
 
 import TopCards from "./topcard_overview";
 
-// ── Single fetch from /api/admin/stats ────────────────────────────────────────
+// ─── Custom hook to read user from localStorage ────────────────────────────
+function useUser() {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const loadUser = useCallback(() => {
+    const raw = localStorage.getItem("session");
+    if (raw) {
+      try {
+        const session = JSON.parse(raw);
+        setUser(session);
+      } catch {
+        setUser(null);
+      }
+    } else {
+      setUser(null);
+    }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    loadUser();
+
+    const handleStorage = (e) => {
+      if (e.key === "session") {
+        loadUser();
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, [loadUser]);
+
+  return { user, loading };
+}
+
+// ── Single fetch from /api/admin/stats ──────────────────────────────────────
 async function fetchStats() {
   const res  = await fetch("/api/admin/stats");
   const json = await res.json();
@@ -17,7 +52,7 @@ async function fetchStats() {
   //   maleBookings, femaleBookings, bookingPeriod }
 }
 
-// ── Toggle booking period on/off ─────────────────────────────────────────────
+// ── Toggle booking period on/off ────────────────────────────────────────────
 async function toggleBookingPeriod(currentlyActive) {
   const res  = await fetch("/api/admin/stats", {
     method: "PATCH",
@@ -31,6 +66,11 @@ async function toggleBookingPeriod(currentlyActive) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 export default function BookingInfo() {
+  const { user, loading: userLoading } = useUser();
+  const isAdmin    = user?.role === "admin";
+  const isCounselor = user?.role === "counselor";
+  const canToggle  = isAdmin; // only admins can toggle
+
   const [stats,          setStats]          = useState(null);
   const [loading,        setLoading]        = useState(true);
   const [error,          setError]          = useState(null);
@@ -55,7 +95,7 @@ export default function BookingInfo() {
       .finally(() => setLoading(false));
   }, [mounted]);
 
-  // ── Derived values ───────────────────────────────────────────────────────────
+  // ── Derived values ──────────────────────────────────────────────────────────
   const totalBeds     = stats?.totalCapacity ?? 0;
   const occupiedBeds  = stats?.occupiedBeds  ?? 0;
   const availableBeds = stats?.availableBeds ?? 0;
@@ -70,7 +110,7 @@ export default function BookingInfo() {
   const malePct         = totalGender > 0 ? (male   / totalGender) * 100 : 0;
   const femalePct       = totalGender > 0 ? (female / totalGender) * 100 : 0;
 
-  // ── Animations ───────────────────────────────────────────────────────────────
+  // ── Animations ──────────────────────────────────────────────────────────────
   const [availValue, setAvailValue] = useState(0);
 
   const availRef  = useSpringRef();
@@ -96,9 +136,9 @@ export default function BookingInfo() {
     }
   }, [mounted, loading, availRef, maleRef, femaleRef]);
 
-  // ── Toggle handler ───────────────────────────────────────────────────────────
+  // ── Toggle handler ──────────────────────────────────────────────────────────
   const handleToggle = useCallback(async () => {
-    if (toggling) return;
+    if (toggling || !canToggle) return;
     setToggling(true);
     setToggleError(null);
     setToggleSuccess(null);
@@ -122,10 +162,10 @@ export default function BookingInfo() {
     } finally {
       setToggling(false);
     }
-  }, [toggling, isBookingOpen]);
+  }, [toggling, isBookingOpen, canToggle]);
 
-  // ── Skeleton while loading ────────────────────────────────────────────────────
-  if (!mounted || loading) {
+  // ── Skeleton while loading ──────────────────────────────────────────────────
+  if (!mounted || loading || userLoading) {
     return (
       <section className="w-full bg-white p-4">
         {/* Skeleton toggle bar */}
@@ -163,12 +203,17 @@ export default function BookingInfo() {
           {toggleError && (
             <span className="mt-1 text-xs font-medium text-red-600">{toggleError}</span>
           )}
+
+          {/* Counselor view-only indicator */}
+          {isCounselor && (
+            <span className="mt-1 text-xs text-gray-400 italic">(View‑only – you are a counselor)</span>
+          )}
         </div>
 
-        {/* Toggle pill button */}
+        {/* Toggle pill button — disabled for counselors */}
         <button
           onClick={handleToggle}
-          disabled={toggling}
+          disabled={toggling || !canToggle}
           aria-pressed={isBookingOpen}
           aria-label={isBookingOpen ? "Close booking period" : "Open booking period"}
           className={`
@@ -178,7 +223,7 @@ export default function BookingInfo() {
               ? "bg-green-50 border-green-300 text-green-700 hover:bg-green-100 focus:ring-green-400"
               : "bg-gray-100 border-gray-300 text-gray-600 hover:bg-gray-200 focus:ring-gray-400"
             }
-            ${toggling ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}
+            ${(toggling || !canToggle) ? "opacity-60 cursor-not-allowed" : "cursor-pointer"}
           `}
         >
           {/* Track + thumb */}

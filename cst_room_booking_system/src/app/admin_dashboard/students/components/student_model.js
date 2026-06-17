@@ -27,6 +27,154 @@ const SkeletonRow = () => (
   </tr>
 );
 
+// ─── Custom hook to read user from localStorage ────────────────────────────
+
+function useUser() {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const loadUser = useCallback(() => {
+    const raw = localStorage.getItem("session");
+    if (raw) {
+      try {
+        const session = JSON.parse(raw);
+        setUser(session);
+      } catch {
+        setUser(null);
+      }
+    } else {
+      setUser(null);
+    }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    loadUser();
+
+    const handleStorage = (e) => {
+      if (e.key === "session") {
+        loadUser();
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, [loadUser]);
+
+  return { user, loading };
+}
+
+// ── Assign Hostel Modal ────────────────────────────────────────────────────
+// Shown whenever a user is promoted to / created as "counselor".
+// Fetches available hostels (those not yet assigned to another counselor).
+function AssignHostelModal({ isOpen, studentName, userId, onAssign, onClose }) {
+  const [hostels, setHostels]     = useState([]);
+  const [selected, setSelected]   = useState("");
+  const [loading, setLoading]     = useState(false);
+  const [saving, setSaving]       = useState(false);
+  const [error, setError]         = useState("");
+
+  // Fetch unassigned hostels every time the modal opens
+  useEffect(() => {
+    if (!isOpen) return;
+    setSelected("");
+    setError("");
+    setLoading(true);
+
+    fetch("/api/admin/counselor?available=true")
+      .then((r) => r.json())
+      .then((data) => setHostels(data.hostels || []))
+      .catch(() => setError("Failed to load hostels."))
+      .finally(() => setLoading(false));
+  }, [isOpen]);
+
+  if (!isOpen) return null;
+
+  const handleAssign = async () => {
+    if (!selected) { setError("Please select a hostel."); return; }
+    setSaving(true);
+    setError("");
+    try {
+      await onAssign(userId, selected);
+      onClose();
+    } catch (err) {
+      setError(err.message || "Failed to assign hostel.");
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
+      <div className="bg-white rounded-xl shadow-xl w-full max-w-md mx-4 p-6">
+        <h2 className="text-lg font-bold text-gray-900 mb-1">Assign Hostel to Counselor</h2>
+        <p className="text-sm text-gray-500 mb-4">
+          <span className="font-medium text-gray-700">{studentName}</span> is being made a counselor.
+          Select the hostel they will manage.
+        </p>
+
+        {loading ? (
+          <div className="py-8 text-center text-gray-400 text-sm">Loading hostels…</div>
+        ) : hostels.length === 0 ? (
+          <div className="py-6 text-center text-amber-600 text-sm bg-amber-50 rounded-lg">
+            All hostels already have a counselor assigned.<br />
+            Reassign an existing counselor first, or add a new hostel.
+          </div>
+        ) : (
+          <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
+            {hostels.map((h) => (
+              <label
+                key={h.id}
+                className={`flex items-center gap-3 p-3 rounded-lg border cursor-pointer transition-colors ${
+                  selected === h.id
+                    ? "border-blue-500 bg-blue-50"
+                    : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
+                }`}
+              >
+                <input
+                  type="radio"
+                  name="hostel"
+                  value={h.id}
+                  checked={selected === h.id}
+                  onChange={() => { setSelected(h.id); setError(""); }}
+                  className="text-blue-600"
+                />
+                <div className="flex-1 min-w-0">
+                  <p className="text-sm font-medium text-gray-800">{h.hostelName}</p>
+                  <p className="text-xs text-gray-500 capitalize">
+                    {h.gender} · {h.numberOfFloor} floor{h.numberOfFloor !== 1 ? "s" : ""} · capacity {h.capacity}
+                  </p>
+                </div>
+              </label>
+            ))}
+          </div>
+        )}
+
+        {error && (
+          <p className="mt-3 text-sm text-red-600 bg-red-50 rounded px-3 py-2">{error}</p>
+        )}
+
+        <div className="flex justify-end gap-2 mt-6">
+          <button
+            onClick={onClose}
+            className="px-4 py-2 rounded-lg border border-gray-300 text-sm text-gray-700 hover:bg-gray-50"
+          >
+            Cancel
+          </button>
+          {hostels.length > 0 && (
+            <button
+              onClick={handleAssign}
+              disabled={saving || !selected}
+              className="px-4 py-2 rounded-lg bg-cstcolor text-white text-sm hover:bg-cstcolor3 disabled:opacity-60"
+            >
+              {saving ? "Assigning…" : "Assign Hostel"}
+            </button>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // ── Add Student Modal ──────────────────────────────────────────────────────
 function AddStudentModal({ isOpen, onClose, onAdd }) {
   const [form, setForm] = useState({
@@ -45,8 +193,9 @@ function AddStudentModal({ isOpen, onClose, onAdd }) {
     }
     setSaving(true);
     try {
-      const saved = await onAdd(form);
-      if (saved === false) return;
+      // onAdd returns { student, needsHostelAssignment } when role is counselor
+      const result = await onAdd(form);
+      if (result === false) return;
       onClose();
       setForm({
         studentNumber: "", name: "", email: "", role: "student",
@@ -64,6 +213,13 @@ function AddStudentModal({ isOpen, onClose, onAdd }) {
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 p-6">
         <h2 className="text-lg font-bold text-gray-900 mb-4">Add New Student</h2>
+
+        {form.role === "counselor" && (
+          <div className="mb-3 px-3 py-2 bg-blue-50 border border-blue-200 rounded-lg text-xs text-blue-700">
+            You will be prompted to assign a hostel after creating this counselor.
+          </div>
+        )}
+
         <div className="grid grid-cols-2 gap-3">
           {[
             { label: "Student Number", key: "studentNumber" },
@@ -151,17 +307,14 @@ function AddStudentModal({ isOpen, onClose, onAdd }) {
 // ── Import Modal ───────────────────────────────────────────────────────────
 function ImportModal({ isOpen, onClose, onImport }) {
   const [fileName, setFileName] = useState("");
-  const [fileText, setFileText] = useState("");   // raw CSV text — read ONCE on select
+  const [fileText, setFileText] = useState("");
   const [preview, setPreview]   = useState([]);
   const [importing, setImporting] = useState(false);
-  const [importResult, setImportResult] = useState(null); // { created, skipped, errors }
+  const [importResult, setImportResult] = useState(null);
   const fileRef = useRef();
 
   if (!isOpen) return null;
 
-  // Read the file into state immediately on selection so we never touch the
-  // File object again — avoids the "file could not be read / permission" error
-  // that occurs when the browser invalidates the File reference after first read.
   const handleFile = (e) => {
     const f = e.target.files[0];
     if (!f) return;
@@ -172,13 +325,10 @@ function ImportModal({ isOpen, onClose, onImport }) {
     reader.onload = (ev) => {
       const text = ev.target.result;
       setFileText(text);
-      // Show first 5 non-empty lines as preview
       const lines = text.split("\n").filter(l => l.trim());
       setPreview(lines.slice(0, 5));
     };
-    reader.onerror = () => {
-      alert("Could not read the file. Please try selecting it again.");
-    };
+    reader.onerror = () => alert("Could not read the file. Please try selecting it again.");
     reader.readAsText(f);
   };
 
@@ -187,7 +337,6 @@ function ImportModal({ isOpen, onClose, onImport }) {
     setImporting(true);
     setImportResult(null);
     try {
-      // Pass the already-read text string to onImport — no second File read needed.
       const result = await onImport(fileText);
       if (result === false) return;
       setImportResult(result);
@@ -266,6 +415,11 @@ function ImportModal({ isOpen, onClose, onImport }) {
 
 // ── Main Component ─────────────────────────────────────────────────────────
 export default function StudentManagement() {
+  const { user, loading: userLoading } = useUser();
+  const isAdmin = user?.role === "admin";
+  const isCounselor = user?.role === "counselor";
+  const isViewOnly = isCounselor;  // only counselors are read-only
+
   const [students, setStudents] = useState([]);
   const [nextCursor, setNextCursor] = useState(null);
   const [hasMore, setHasMore] = useState(true);
@@ -279,20 +433,23 @@ export default function StudentManagement() {
   const [selectedStudents, setSelectedStudents] = useState([]);
 
   // Modals
-  const [showAddModal, setShowAddModal] = useState(false);
+  const [showAddModal, setShowAddModal]       = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
-  const { confirm, confirmationDialog } = useConfirmation();
+  const { confirm, confirmationDialog }       = useConfirmation();
+
+  // ── Hostel assignment modal state ────────────────────────────────────────
+  // Triggered after a user is promoted to counselor (role change or new user).
+  const [hostelModal, setHostelModal] = useState({
+    open: false,
+    userId: null,
+    studentName: "",
+  });
 
   const [editingCell, setEditingCell] = useState({ id: null, field: null, value: "" });
   const editConfirmationPending = useRef(false);
   const loadMoreRef = useRef(null);
 
   // ── Helpers ──────────────────────────────────────────────────────────────
-
-  // Normalize a student record from the API.
-  // isActive is now a real boolean from Prisma (added to the repository select),
-  // so Boolean() is all we need. We also trim string fields to prevent
-  // whitespace mismatches in the role/department dropdowns.
   const normalizeStudent = (raw) => ({
     ...raw,
     isActive:   Boolean(raw.isActive),
@@ -304,8 +461,6 @@ export default function StudentManagement() {
   const normalizeStudents = (arr) => arr.map(normalizeStudent);
 
   // ── Fetch ────────────────────────────────────────────────────────────────
-  // FIX #5: wrap in useCallback so the stable reference can be passed to the
-  // IntersectionObserver effect without stale-closure problems.
   const fetchStudents = useCallback(async (cursor = null, isLoadMore = false) => {
     if (isLoadMore) setLoadingMore(true);
     else setLoading(true);
@@ -314,7 +469,6 @@ export default function StudentManagement() {
       const params = new URLSearchParams({
         limit: "25",
         search: searchTerm,
-        // FIX #5: send the actual filter values, empty-string means "no filter"
         department: selectedDepartment === "All" ? "" : selectedDepartment,
         year: selectedYear === "All" ? "" : selectedYear,
       });
@@ -346,7 +500,6 @@ export default function StudentManagement() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [selectedDepartment, selectedYear, searchTerm]);
 
-  // FIX #5: reset + refetch whenever any filter changes
   useEffect(() => {
     setStudents([]);
     setNextCursor(null);
@@ -382,6 +535,28 @@ export default function StudentManagement() {
     return res.json();
   };
 
+  // ── Counselor hostel assignment ──────────────────────────────────────────
+  // Called by AssignHostelModal once the admin picks a hostel.
+  const handleAssignHostel = async (userId, hostelId) => {
+    const res = await fetch("/api/admin/counselor", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ userId, hostelId }),
+    });
+    if (!res.ok) {
+      const err = await res.json().catch(() => ({}));
+      throw new Error(err.error || "Failed to assign hostel");
+    }
+    return res.json();
+  };
+
+  // Opens the hostel assignment modal for a given user.
+  const promptHostelAssignment = (userId, studentName) => {
+    // Only admins can assign hostels
+    if (!isAdmin) return;
+    setHostelModal({ open: true, userId, studentName });
+  };
+
   const deleteSelectedStudents = async () => {
     const ids = [...selectedStudents];
     const res = await fetch("/api/admin/student", {
@@ -400,7 +575,7 @@ export default function StudentManagement() {
   };
 
   const requestDeleteSelectedStudents = () => {
-    if (selectedStudents.length === 0) return;
+    if (selectedStudents.length === 0 || isViewOnly) return;
 
     confirm({
       message: `Delete ${selectedStudents.length} student${selectedStudents.length !== 1 ? "s" : ""}? This cannot be undone.`,
@@ -409,7 +584,7 @@ export default function StudentManagement() {
     });
   };
 
-  // FIX #4: Add student
+  // ── Add student ──────────────────────────────────────────────────────────
   const handleAddStudent = async (form) => {
     const res = await fetch("/api/admin/student", {
       method: "POST",
@@ -421,21 +596,26 @@ export default function StudentManagement() {
       throw new Error(err.error || "Failed to add student");
     }
     const newStudent = await res.json();
-
     setStudents(prev => [normalizeStudent(newStudent), ...prev]);
+
+    // If the new user is a counselor, open the hostel assignment modal
+    if (form.role === "counselor") {
+      promptHostelAssignment(newStudent.id, newStudent.name);
+    }
+
     return newStudent;
   };
 
-  const requestAddStudent = (form) =>
-    confirm({
+  const requestAddStudent = (form) => {
+    if (isViewOnly) return;
+    return confirm({
       message: `Add ${form.name || form.studentNumber} as a ${form.role}?`,
       confirmText: "Add Student",
       onConfirm: () => handleAddStudent(form),
     });
+  };
 
-  // FIX #4: Bulk import
-  // Receives raw CSV text from ImportModal (file is read once there).
-  // Sends it as text/csv so the API route can forward it to importFromCsv.
+  // ── Bulk import ──────────────────────────────────────────────────────────
   const handleImportStudents = async (csvText) => {
     const res = await fetch("/api/admin/student", {
       method: "POST",
@@ -447,22 +627,22 @@ export default function StudentManagement() {
       throw new Error(err.error || "Import failed");
     }
     const result = await res.json();
-    // Refresh the list so newly imported students appear
     setStudents([]);
     setNextCursor(null);
     await fetchStudents();
-    // Return result so ImportModal can show the summary (created / skipped / errors)
     return result;
   };
 
-  const requestImportStudents = (csvText) =>
-    confirm({
+  const requestImportStudents = (csvText) => {
+    if (isViewOnly) return;
+    return confirm({
       message: "Import students from the selected CSV file?",
       confirmText: "Import",
       onConfirm: () => handleImportStudents(csvText),
     });
+  };
 
-  // FIX #4: Export
+  // ── Export ───────────────────────────────────────────────────────────────
   const handleExport = async () => {
     try {
       const params = new URLSearchParams({
@@ -492,10 +672,13 @@ export default function StudentManagement() {
   };
 
   // ── Editing ──────────────────────────────────────────────────────────────
-  const startEdit = (id, field, value) => setEditingCell({ id, field, value: value ?? "" });
+  const startEdit = (id, field, value) => {
+    if (isViewOnly) return;
+    setEditingCell({ id, field, value: value ?? "" });
+  };
 
   const saveEdit = (id, field, newValue) => {
-    if (editConfirmationPending.current) return;
+    if (isViewOnly || editConfirmationPending.current) return;
 
     editConfirmationPending.current = true;
     setEditingCell({ id: null, field: null, value: "" });
@@ -540,9 +723,11 @@ export default function StudentManagement() {
     }
     return (
       <div
-        className="cursor-text hover:bg-gray-100 px-2 py-1 rounded transition-colors text-sm text-gray-800"
+        className={`px-2 py-1 rounded transition-colors text-sm text-gray-800 ${
+          isViewOnly ? "" : "cursor-text hover:bg-gray-100"
+        }`}
         onDoubleClick={() => startEdit(student.id, field, displayValue)}
-        title={displayValue}
+        title={isViewOnly ? "Read‑only" : displayValue}
       >
         {displayValue || "-"}
       </div>
@@ -550,6 +735,7 @@ export default function StudentManagement() {
   };
 
   const toggleStatus = (student) => {
+    if (isViewOnly) return;
     const newStatus = !student.isActive;
 
     confirm({
@@ -569,6 +755,7 @@ export default function StudentManagement() {
 
   // ── Year actions ─────────────────────────────────────────────────────────
   const promoteStudent = (student) => {
+    if (isViewOnly) return;
     const isArch = student.department === "Architecture";
     const maxYear = isArch ? 6 : 5;
     if (student.year >= maxYear) return;
@@ -582,6 +769,7 @@ export default function StudentManagement() {
   };
 
   const demoteStudent = (student) => {
+    if (isViewOnly) return;
     if (student.year <= 1) return;
     const newYear = student.year - 1;
 
@@ -592,7 +780,6 @@ export default function StudentManagement() {
     });
   };
 
-  // FIX #6: Bulk promote/demote for selected students
   const applyBulkYearAction = async (type) => {
     const targets = students.filter(s => selectedStudents.includes(s.id));
     const updates = targets.map(s => {
@@ -604,7 +791,6 @@ export default function StudentManagement() {
       return { ...s, year: newYear };
     });
 
-    // Optimistic UI
     setStudents(prev => prev.map(s => {
       const updated = updates.find(u => u.id === s.id);
       return updated ? { ...s, year: updated.year } : s;
@@ -620,6 +806,7 @@ export default function StudentManagement() {
   };
 
   const requestBulkYearAction = (type) => {
+    if (isViewOnly) return;
     if (selectedStudents.length === 0) { alert("Select at least one student first."); return; }
 
     confirm({
@@ -629,9 +816,9 @@ export default function StudentManagement() {
     });
   };
 
-  // ── Confirm handlers ─────────────────────────────────────────────────────
+  // ── Role change — triggers hostel modal for counselor ────────────────────
   const requestRoleChange = (student, newRole) => {
-    if (newRole === student.role) return;
+    if (isViewOnly || newRole === student.role) return;
 
     confirm({
       message: `Change ${student.name}'s role to "${newRole}"?`,
@@ -639,12 +826,17 @@ export default function StudentManagement() {
       onConfirm: async () => {
         await updateStudent(student.id, { role: newRole });
         setStudents(prev => prev.map(s => s.id === student.id ? { ...s, role: newRole } : s));
+
+        // After the role is saved, open the hostel assignment modal
+        if (newRole === "counselor") {
+          promptHostelAssignment(student.id, student.name);
+        }
       },
     });
   };
 
   const requestDepartmentChange = (student, newDepartment) => {
-    if (newDepartment === student.department) return;
+    if (isViewOnly || newDepartment === student.department) return;
 
     confirm({
       message: `Move ${student.name} to "${newDepartment}"?`,
@@ -657,6 +849,7 @@ export default function StudentManagement() {
   };
 
   const requestGenderChange = (student) => {
+    if (isViewOnly) return;
     const newGender = student.gender === "male" ? "female" : "male";
 
     confirm({
@@ -670,34 +863,41 @@ export default function StudentManagement() {
   };
 
   // ── Selection ────────────────────────────────────────────────────────────
-  const handleSelectStudent = (id) =>
+  const handleSelectStudent = (id) => {
+    if (isViewOnly) return;
     setSelectedStudents(prev => prev.includes(id) ? prev.filter(s => s !== id) : [...prev, id]);
-
-  const handleSelectAll = () =>
-    setSelectedStudents(prev => prev.length === students.length && students.length > 0 ? [] : students.map(s => s.id));
-
-  const handleHeaderPromote = () => {
-    requestBulkYearAction("promote");
   };
 
-  const handleHeaderDemote = () => {
-    requestBulkYearAction("demote");
+  const handleSelectAll = () => {
+    if (isViewOnly) return;
+    setSelectedStudents(prev => prev.length === students.length && students.length > 0 ? [] : students.map(s => s.id));
   };
 
   // ── Render ───────────────────────────────────────────────────────────────
+  if (userLoading) {
+    return <div className="min-h-screen bg-gray-50 flex items-center justify-center">Loading user...</div>;
+  }
+
+  if (!user) {
+    return <div className="min-h-screen bg-gray-50 flex items-center justify-center text-red-500">Not authenticated</div>;
+  }
+
   return (
     <div className="min-h-screen bg-gray-50 p-4">
       <div className="max-w-full mx-auto">
         <div className="mb-6">
           <h1 className="text-2xl font-bold text-gray-900">Student Management System</h1>
-          <p className="text-gray-500 text-sm mt-1">Double-click any cell to edit | Select checkboxes for bulk actions</p>
+          <p className="text-gray-500 text-sm mt-1">
+            {isViewOnly
+              ? "View‑only mode – you are a counselor."
+              : "Double‑click any cell to edit | Select checkboxes for bulk actions"}
+          </p>
         </div>
 
         {/* Filters */}
         <div className="bg-white rounded-lg shadow-sm p-3 mb-4">
           <div className="flex flex-wrap gap-3 items-center justify-between">
             <div className="flex flex-wrap gap-3 items-center">
-              {/* FIX #5: controlled selects that actually drive fetchStudents via useEffect */}
               <select
                 value={selectedDepartment}
                 onChange={(e) => setSelectedDepartment(e.target.value)}
@@ -723,35 +923,23 @@ export default function StudentManagement() {
               />
             </div>
 
-            <div className="flex gap-2">
-              {/* FIX #4: all buttons now functional */}
-              <button
-                onClick={() => setShowImportModal(true)}
-                className="bg-cstcolor text-white px-3 py-1.5 rounded-lg text-sm hover:bg-cstcolor3"
-              >
-                Import
-              </button>
-              <button
-                onClick={handleExport}
-                className="bg-cstcolor text-white px-3 py-1.5 rounded-lg text-sm hover:bg-cstcolor3"
-              >
-                Export
-              </button>
-              {selectedStudents.length > 0 && (
-                <button
-                  onClick={requestDeleteSelectedStudents}
-                  className="bg-red-500 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-red-600"
-                >
-                  Delete ({selectedStudents.length})
-                </button>
-              )}
-              <button
-                onClick={() => setShowAddModal(true)}
-                className="bg-cstcolor text-white px-3 py-1.5 rounded-lg text-sm hover:bg-cstcolor3"
-              >
-                Add
-              </button>
-            </div>
+            {/* Action buttons – hidden for counselors */}
+            {!isViewOnly && (
+              <div className="flex gap-2">
+                <button onClick={() => setShowImportModal(true)} className="bg-cstcolor text-white px-3 py-1.5 rounded-lg text-sm hover:bg-cstcolor3">Import</button>
+                <button onClick={handleExport} className="bg-cstcolor text-white px-3 py-1.5 rounded-lg text-sm hover:bg-cstcolor3">Export</button>
+                {selectedStudents.length > 0 && (
+                  <button onClick={requestDeleteSelectedStudents} className="bg-red-500 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-red-600">
+                    Delete ({selectedStudents.length})
+                  </button>
+                )}
+                <button onClick={() => setShowAddModal(true)} className="bg-cstcolor text-white px-3 py-1.5 rounded-lg text-sm hover:bg-cstcolor3">Add</button>
+              </div>
+            )}
+            {/* For counselors, show a read-only badge */}
+            {isViewOnly && (
+              <span className="text-xs text-gray-400 bg-gray-100 px-3 py-1 rounded-full">Read‑only</span>
+            )}
           </div>
         </div>
 
@@ -766,7 +954,8 @@ export default function StudentManagement() {
                       type="checkbox"
                       checked={selectedStudents.length === students.length && students.length > 0}
                       onChange={handleSelectAll}
-                      className="rounded"
+                      disabled={isViewOnly}
+                      className={`rounded ${isViewOnly ? "cursor-not-allowed opacity-50" : ""}`}
                     />
                   </th>
                   <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Student Number</th>
@@ -774,22 +963,15 @@ export default function StudentManagement() {
                   <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Email</th>
                   <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Role</th>
                   <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Department</th>
-                  {/* FIX #6: Year header with bulk promote/demote buttons */}
                   <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                     <div className="flex items-center gap-1">
                       <span>Year</span>
-                      <div className="flex flex-col ml-1">
-                        <button
-                          onClick={handleHeaderPromote}
-                          title="Promote selected"
-                          className="text-green-600 text-xs leading-none hover:text-green-800"
-                        >▲</button>
-                        <button
-                          onClick={handleHeaderDemote}
-                          title="Demote selected"
-                          className="text-red-600 text-xs leading-none hover:text-red-800"
-                        >▼</button>
-                      </div>
+                      {!isViewOnly && (
+                        <div className="flex flex-col ml-1">
+                          <button onClick={() => requestBulkYearAction("promote")} title="Promote selected" className="text-green-600 text-xs leading-none hover:text-green-800">▲</button>
+                          <button onClick={() => requestBulkYearAction("demote")} title="Demote selected" className="text-red-600 text-xs leading-none hover:text-red-800">▼</button>
+                        </div>
+                      )}
                     </div>
                   </th>
                   <th className="px-2 py-2 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Phone</th>
@@ -810,28 +992,25 @@ export default function StudentManagement() {
                         type="checkbox"
                         checked={selectedStudents.includes(student.id)}
                         onChange={() => handleSelectStudent(student.id)}
-                        className="rounded"
+                        disabled={isViewOnly}
+                        className={`rounded ${isViewOnly ? "cursor-not-allowed opacity-50" : ""}`}
                       />
                     </td>
 
-                    <td className="px-2 py-2 text-sm font-medium text-gray-900">
-                      {renderEditableCell(student, "studentNumber", student.studentNumber)}
-                    </td>
-                    <td className="px-2 py-2 text-sm text-gray-700">
-                      {renderEditableCell(student, "name", student.name)}
-                    </td>
-                    <td className="px-2 py-2 text-sm text-gray-500">
-                      {renderEditableCell(student, "email", student.email)}
-                    </td>
+                    <td className="px-2 py-2 text-sm font-medium text-gray-900">{renderEditableCell(student, "studentNumber", student.studentNumber)}</td>
+                    <td className="px-2 py-2 text-sm text-gray-700">{renderEditableCell(student, "name", student.name)}</td>
+                    <td className="px-2 py-2 text-sm text-gray-500">{renderEditableCell(student, "email", student.email)}</td>
 
-                    {/* Role Dropdown — value comes from normalised student.role */}
+                    {/* Role dropdown — disabled for counselors */}
                     <td className="px-2 py-2 text-sm">
                       <select
                         value={student.role}
                         onChange={(e) => requestRoleChange(student, e.target.value)}
-                        className="border border-gray-300 rounded px-2 py-1 text-sm text-gray-900 bg-white w-full focus:ring-2 focus:ring-blue-500"
+                        disabled={isViewOnly}
+                        className={`border border-gray-300 rounded px-2 py-1 text-sm text-gray-900 bg-white w-full focus:ring-2 focus:ring-blue-500 ${
+                          isViewOnly ? "cursor-not-allowed opacity-80" : ""
+                        }`}
                       >
-                        {/* Placeholder shown when DB value doesn't match any option */}
                         {!roleOptions.includes(student.role) && (
                           <option value={student.role}>{student.role || "— unknown —"}</option>
                         )}
@@ -839,71 +1018,58 @@ export default function StudentManagement() {
                       </select>
                     </td>
 
-                    {/* Department dropdown — value is the exact string from DB */}
+                    {/* Department dropdown — disabled for counselors */}
                     <td className="px-2 py-2 text-sm">
                       <select
                         value={student.department}
                         onChange={(e) => requestDepartmentChange(student, e.target.value)}
-                        className="border border-gray-300 rounded px-2 py-1 text-sm text-gray-900 bg-white w-full focus:ring-2 focus:ring-blue-500"
+                        disabled={isViewOnly}
+                        className={`border border-gray-300 rounded px-2 py-1 text-sm text-gray-900 bg-white w-full focus:ring-2 focus:ring-blue-500 ${
+                          isViewOnly ? "cursor-not-allowed opacity-80" : ""
+                        }`}
                       >
-                        {/* Show whatever the DB has, even if it doesn't match our list */}
                         {!departments.filter(d => d !== "All").includes(student.department) && (
                           <option value={student.department}>{student.department || "— select —"}</option>
                         )}
-                        {departments.filter(d => d !== "All").map(d => (
-                          <option key={d} value={d}>{d}</option>
-                        ))}
+                        {departments.filter(d => d !== "All").map(d => <option key={d} value={d}>{d}</option>)}
                       </select>
                     </td>
 
-                    {/* FIX #6: Year shown before the buttons */}
                     <td className="px-2 py-2 text-sm">
                       <div className="flex items-center gap-1">
                         <span className="font-medium text-gray-800">{student.year}</span>
-                        <div className="flex flex-col">
-                          <button
-                            onClick={() => promoteStudent(student)}
-                            className="text-green-600 text-xs leading-none hover:text-green-800"
-                          >▲</button>
-                          <button
-                            onClick={() => demoteStudent(student)}
-                            className="text-red-600 text-xs leading-none hover:text-red-800"
-                          >▼</button>
-                        </div>
+                        {!isViewOnly && (
+                          <div className="flex flex-col">
+                            <button onClick={() => promoteStudent(student)} className="text-green-600 text-xs leading-none hover:text-green-800">▲</button>
+                            <button onClick={() => demoteStudent(student)} className="text-red-600 text-xs leading-none hover:text-red-800">▼</button>
+                          </div>
+                        )}
                       </div>
                     </td>
 
-                    <td className="px-2 py-2 text-sm text-gray-700">
-                      {renderEditableCell(student, "phoneNumber", student.phoneNumber)}
-                    </td>
+                    <td className="px-2 py-2 text-sm text-gray-700">{renderEditableCell(student, "phoneNumber", student.phoneNumber)}</td>
 
-                    {/* FIX #3: Gender button opens confirmation modal to change */}
                     <td className="px-2 py-2">
                       <button
                         onClick={() => requestGenderChange(student)}
+                        disabled={isViewOnly}
                         className={`px-3 py-1 rounded-full text-xs font-medium capitalize ${
-                          student.gender === "male"
-                            ? "bg-blue-100 text-blue-800 hover:bg-blue-200"
-                            : "bg-pink-100 text-pink-800 hover:bg-pink-200"
-                        }`}
+                          student.gender === "male" ? "bg-blue-100 text-blue-800 hover:bg-blue-200" : "bg-pink-100 text-pink-800 hover:bg-pink-200"
+                        } ${isViewOnly ? "cursor-not-allowed opacity-60" : ""}`}
                       >
                         {student.gender?.toUpperCase() || "-"}
                       </button>
                     </td>
 
-                    {/* FIX #2: Toggle reads normalised boolean */}
                     <td className="px-2 py-2">
                       <button
                         onClick={() => toggleStatus(student)}
+                        disabled={isViewOnly}
                         className={`relative inline-flex h-5 w-10 items-center rounded-full transition-colors focus:outline-none ${
                           student.isActive ? "bg-green-600" : "bg-gray-300"
-                        }`}
+                        } ${isViewOnly ? "cursor-not-allowed opacity-60" : ""}`}
                       >
-                        <span
-                          className={`inline-block h-4 w-4 bg-white rounded-full transition-transform ${
-                            student.isActive ? "translate-x-5" : "translate-x-1"
-                          }`}
-                        />
+                        <span className={`inline-block h-4 w-4 bg-white rounded-full transition-transform ${student.isActive ? "translate-x-5" : "translate-x-1"}`} />
                       </button>
                     </td>
                   </tr>
@@ -913,29 +1079,36 @@ export default function StudentManagement() {
           </div>
 
           <div ref={loadMoreRef} className="py-8 text-center text-gray-500">
-            {loadingMore
-              ? "Loading more students..."
-              : hasMore
-                ? "Scroll to load more"
-                : "No more students"}
+            {loadingMore ? "Loading more students..." : hasMore ? "Scroll to load more" : "No more students"}
           </div>
         </div>
       </div>
 
-      {/* ── Confirmation Modals ─────────────────────────────────────────── */}
-      {/* FIX #4: Add modal rendered */}
-      <AddStudentModal
-        isOpen={showAddModal}
-        onClose={() => setShowAddModal(false)}
-        onAdd={requestAddStudent}
-      />
+      {/* ── Modals ──────────────────────────────────────────────────────── */}
+      {/* Only render modals if admin, but the modal components themselves will not open if isViewOnly */}
+      {!isViewOnly && (
+        <>
+          <AddStudentModal
+            isOpen={showAddModal}
+            onClose={() => setShowAddModal(false)}
+            onAdd={requestAddStudent}
+          />
 
-      {/* FIX #4: Import modal rendered */}
-      <ImportModal
-        isOpen={showImportModal}
-        onClose={() => setShowImportModal(false)}
-        onImport={requestImportStudents}
-      />
+          <ImportModal
+            isOpen={showImportModal}
+            onClose={() => setShowImportModal(false)}
+            onImport={requestImportStudents}
+          />
+
+          <AssignHostelModal
+            isOpen={hostelModal.open}
+            studentName={hostelModal.studentName}
+            userId={hostelModal.userId}
+            onAssign={handleAssignHostel}
+            onClose={() => setHostelModal({ open: false, userId: null, studentName: "" })}
+          />
+        </>
+      )}
 
       {confirmationDialog}
     </div>

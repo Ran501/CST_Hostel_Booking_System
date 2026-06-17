@@ -1,11 +1,52 @@
 "use client";
 
 import HostelCard from "./hostel_card";
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import { X } from "lucide-react";
 import { useConfirmation } from "../../components/useConfirmation";
 
+// ─── Custom hook to read user from localStorage ────────────────────────────
+function useUser() {
+  const [user, setUser] = useState(null);
+  const [loading, setLoading] = useState(true);
+
+  const loadUser = useCallback(() => {
+    const raw = localStorage.getItem("session");
+    if (raw) {
+      try {
+        const session = JSON.parse(raw);
+        setUser(session);
+      } catch {
+        setUser(null);
+      }
+    } else {
+      setUser(null);
+    }
+    setLoading(false);
+  }, []);
+
+  useEffect(() => {
+    loadUser();
+
+    const handleStorage = (e) => {
+      if (e.key === "session") {
+        loadUser();
+      }
+    };
+    window.addEventListener("storage", handleStorage);
+    return () => window.removeEventListener("storage", handleStorage);
+  }, [loadUser]);
+
+  return { user, loading };
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
 export default function HostelPage() {
+  const { user, loading: userLoading } = useUser();
+  const isAdmin    = user?.role === "admin";
+  const isCounselor = user?.role === "counselor";
+  const canEdit    = isAdmin; // only admins can edit
+
   const [hostels,         setHostels]         = useState([]);
   const [loading,         setLoading]         = useState(true);
   const [error,           setError]           = useState(null);
@@ -59,6 +100,7 @@ export default function HostelPage() {
 
   function requestHostelUpdate(updatedHostel, message) {
     if (!selectedHostel || updatedHostel.id !== selectedHostel.id) return;
+    if (!canEdit) return; // counselors cannot edit
 
     confirm({
       message,
@@ -68,7 +110,7 @@ export default function HostelPage() {
   }
 
   // ── Loading skeleton ────────────────────────────────────────────────────────
-  if (loading) {
+  if (loading || userLoading) {
     return (
       <section className="p-4 min-h-screen bg-white">
         <div className="flex justify-between items-center mb-4">
@@ -107,6 +149,15 @@ export default function HostelPage() {
 
   const activeCount = hostels.filter((h) => h.status === "active").length;
 
+  // ── Handle card click ──────────────────────────────────────────────────────
+  const handleCardClick = (hostel) => {
+    // Only admins can open the detail modal
+    if (canEdit) {
+      setSelectedHostel(hostel);
+    }
+    // Counselors: do nothing (card is already non-interactive)
+  };
+
   return (
     <section className="p-4 min-h-screen bg-white">
 
@@ -129,13 +180,14 @@ export default function HostelPage() {
             roomCount={hostel.roomCount}
             capacity={hostel.capacity}
             numberOfFloor={hostel.numberOfFloor}
-            onClick={() => setSelectedHostel(hostel)}
+            onClick={() => handleCardClick(hostel)}
+            isClickable={canEdit}   // ← counselors get false
           />
         ))}
       </div>
 
-      {/* Detail modal */}
-      {selectedHostel && (
+      {/* Detail modal – only for admins */}
+      {canEdit && selectedHostel && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-3 sm:px-4 py-4">
           
           <div className="
@@ -286,6 +338,7 @@ export default function HostelPage() {
           </div>
         </div>
       )}
+
       {confirmationDialog}
     </section>
   );

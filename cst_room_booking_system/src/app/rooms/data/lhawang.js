@@ -1,4 +1,6 @@
-export const LHAWANG_NAME = "Lhawang";
+export const LHAWANG_HOSTEL_NAME = "Lhawang";
+
+export const LHAWANG_NAME = "LH";
 export const LHAWANG_FLOOR_META = {
   1: { totalRooms: 2, totalBeds: 14 },
   2: { totalRooms: 7, totalBeds: 14 },

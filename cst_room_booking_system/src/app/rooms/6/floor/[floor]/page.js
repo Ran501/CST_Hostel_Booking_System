@@ -208,26 +208,22 @@ export default function HcFloorPage({ params }) {
     }
   }
 
-  const validateFloorYear = async () => {
+  const validateFloorYear = (roomNo) => {
     if (!currentUser?.year) {
       showToast("Student year not found. Please log in again.");
       return false;
     }
 
-    try {
-      const res = await fetch(`/api/floor-allocation?building=HC&floor=${floorNum}`);
-      const data = await res.json();
+    const roomInfo = getRoomInfo(roomNo);
+    if (!roomInfo) return true; // fallback if no specific information is stored
 
-      if (data.success && data.allocatedYear && data.allocatedYear != currentUser.year) {
-        showToast(`Access Denied: This floor is reserved for Year ${data.allocatedYear} students.`);
-        return false;
-      }
-
-      return true;
-    } catch (err) {
-      console.error("Floor validation error:", err);
-      return true;
+    // Safe string conversion comparison to avoid type mismatches (e.g., "2" vs 2)
+    if (roomInfo.year && String(roomInfo.year).trim() !== String(currentUser.year).trim()) {
+      showToast(`Access Denied: This room is reserved for Year ${roomInfo.year} students.`);
+      return false;
     }
+
+    return true;
   };
 
   const validateGender = (roomNo) => {
@@ -268,7 +264,7 @@ export default function HcFloorPage({ params }) {
       return;
     }
 
-    const isCorrectYear = await validateFloorYear();
+    const isCorrectYear = validateFloorYear(selectedRoom);
     if (!isCorrectYear) return;
 
     const isCorrectGender = validateGender(selectedRoom);
@@ -361,7 +357,7 @@ export default function HcFloorPage({ params }) {
             {room}
           </span>
           <span className={`text-[9px] xs:text-[10px] sm:text-[11px] whitespace-nowrap ${textColorClass}`}>
-            {isYourBooking ? (canUnbook ? "Tap to Unbook" : "Your Booking") : statusText}
+            {isYourBooking ? (canUnbook ? "Your Room" : "Your Room") : statusText}
           </span>
         </div>
         <div className="pointer-events-none absolute inset-0 rounded-xl ring-0 transition group-hover:ring-1 group-hover:ring-slate-300/60" />
