@@ -116,18 +116,19 @@ function Floor1Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoa
       </div>
 
       {/* Entrance & Stair - Centered row */}
-      <div className="flex items-center justify-center gap-6 sm:gap-8 md:gap-10 mb-4 sm:mb-6">
-        <div className="flex items-center gap-1.5">
-          <span className="text-[10px] xs:text-xs sm:text-sm text-slate-600 font-medium">Entrance</span>
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M13 6l6 6-6 6" />
-          </svg>
+      <div className="flex items-stretch gap-3 sm:gap-4 md:gap-5 w-full mb-4 sm:mb-6">
+        {/* Entrance above left column (112) */}
+        <div className="flex-1 flex justify-center">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] xs:text-xs sm:text-sm text-slate-400 font-medium uppercase tracking-wider italic">MAIN ENTRANCE</span>
+          </div>
         </div>
-        <div className="flex items-center gap-1.5">
-          <span className="text-[10px] xs:text-xs sm:text-sm text-slate-600 font-medium">Stair</span>
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-slate-500" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M13 6l6 6-6 6" />
-          </svg>
+
+        {/* Stair above right column (101) */}
+        <div className="flex-1 flex justify-center">
+          <div className="flex items-center gap-1.5">
+            <span className="text-[10px] xs:text-xs sm:text-sm text-slate-400 font-medium uppercase tracking-wider italic">Stairs</span>
+          </div>
         </div>
       </div>
 
@@ -210,7 +211,7 @@ function Floor2Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoa
 
       {/* Balcony label - Left aligned like HF */}
       <div className="flex justify-start mt-3 mb-3 pl-2">
-        <span className="text-[10px] xs:text-xs sm:text-sm text-slate-500 font-medium uppercase tracking-wider italic">
+        <span className="text-[10px] xs:text-xs sm:text-sm text-slate-400 font-medium uppercase tracking-wider italic">
           Balcony
         </span>
       </div>
@@ -238,28 +239,16 @@ function Floor2Plan({ getRoomInfo, selectedRoom, currentUser, onRoomClick, isLoa
 
       {/* Balcony (left) | Stairs (right) */}
       <div className="flex items-center justify-between mt-3 mb-3 px-2">
-        <span className="text-[10px] xs:text-xs sm:text-sm text-slate-500 font-medium uppercase tracking-wider italic">
+        <span className="text-[10px] xs:text-xs sm:text-sm text-slate-400 font-medium uppercase tracking-wider italic">
           Balcony
         </span>
         <div className="flex items-center gap-1.5">
-          <span className="text-[10px] xs:text-xs sm:text-sm text-slate-500 font-medium uppercase tracking-wider italic">
+          <span className="text-[10px] xs:text-xs sm:text-sm text-slate-400 font-medium uppercase tracking-wider italic">
             Stairs
           </span>
-          <svg xmlns="http://www.w3.org/2000/svg" className="h-3.5 w-3.5 sm:h-4 sm:w-4 text-slate-400" fill="none" viewBox="0 0 24 24" stroke="currentColor" strokeWidth={2}>
-            <path strokeLinecap="round" strokeLinejoin="round" d="M5 12h14M13 6l6 6-6 6" />
-          </svg>
         </div>
       </div>
-          
-      <div className="flex justify-end mb-3 pr-2">
-        <div className="w-[28px] xs:w-[30px] sm:w-[32px] h-[132px] xs:h-[140px] sm:h-[148px] md:h-[156px] lg:h-[164px] border-2 border-dashed border-blue-400 bg-blue-50 rounded-lg flex items-center justify-center">
-          <span className="text-[7px] xs:text-[8px] sm:text-[9px] text-blue-700 font-medium rotate-180 tracking-wide" 
-                style={{ writingMode: "vertical-rl", textOrientation: "mixed" }}>
-            Washroom
-          </span>
-        </div>
-      </div>
-
+        
       {/* SECTION 3 - Bottom section with Washroom */}
       <div className="grid grid-cols-2 gap-4 sm:gap-6 md:gap-8 lg:gap-10">
         {/* Left Column */}
@@ -597,16 +586,18 @@ export default function HeFloorPage({ params }) {
           </div>
         )}
 
-        <FloorBookingsView
+        {/* MOBILE HEADER */}
+        <div className="md:hidden flex items-center justify-between mb-4">
+          <BackArrow />
+
+          <FloorBookingsView
           building={HE_NAME}
           floor={floorNum}
           currentUser={currentUser}
           onDenied={(message) => showToast(message)}
         />
 
-        {/* MOBILE HEADER */}
-        <div className="md:hidden flex items-center justify-between mb-4">
-          <BackArrow />
+
           <h1 className="flex-1 text-center text-base xs:text-lg font-semibold tracking-wide">
             {HE_NAME} {floorLabel(floorNum)} floor
           </h1>
@@ -660,7 +651,15 @@ export default function HeFloorPage({ params }) {
                 <span className="font-medium">Total Beds:</span> {meta.totalBeds}
               </span>
             </div>
+            
           </div>
+          <FloorBookingsView
+          building={HE_NAME}
+          floor={floorNum}
+          currentUser={currentUser}
+          onDenied={(message) => showToast(message)}
+        />
+
         </div>
 
         {/* BODY: SIDEBAR + FLOOR PLAN */}
