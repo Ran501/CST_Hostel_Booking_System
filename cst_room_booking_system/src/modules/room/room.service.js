@@ -2,7 +2,6 @@
 import { roomRepository } from "./room.repository";
 import { prisma } from "../../app/lib/prisma";
 import { sendBookingEmail } from "../../app/lib/mail";
-import { cache } from "../../app/lib/cache";
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
@@ -40,18 +39,8 @@ export const roomService = {
   // ── GET rooms ─────────────────────────────────────────────────────────────
   async getRoomsByHostel(hostelId, floor) {
     if (!hostelId) throw { status: 400, message: "hostelId is required" };
-    
-    const cacheKey = `rooms:${hostelId}:${floor !== undefined && floor !== null ? floor : "all"}`;
-    const cached = cache.get(cacheKey);
-    if (cached !== null && cached !== undefined) {
-      return cached;
-    }
-
     const rooms = await roomRepository.findAllByHostel(hostelId, floor);
-    const formatted = rooms.map(formatRoom);
-    
-    cache.set(cacheKey, formatted, 300); // 5 minutes TTL
-    return formatted;
+    return rooms.map(formatRoom);
   },
 
   // ── DISABLE rooms ─────────────────────────────────────────────────────────
@@ -77,12 +66,6 @@ export const roomService = {
     }
 
     await roomRepository.bulkUpdateStatus(roomIds, "disabled");
-
-    // Invalidate caches ONLY on success
-    cache.delPattern("rooms:*");
-    cache.del("stats:dashboard");
-    cache.del("reports:admin");
-
     return { disabled: roomIds.length, reason: reason ?? "" };
   },
 
@@ -90,12 +73,6 @@ export const roomService = {
   async enableRooms(roomIds) {
     if (!roomIds?.length) throw { status: 400, message: "No rooms selected" };
     await roomRepository.bulkUpdateStatus(roomIds, "available");
-
-    // Invalidate caches ONLY on success
-    cache.delPattern("rooms:*");
-    cache.del("stats:dashboard");
-    cache.del("reports:admin");
-
     return { enabled: roomIds.length };
   },
 
@@ -129,11 +106,6 @@ export const roomService = {
       where: { id: { in: roomIds } },
       data,
     });
-
-    // Invalidate caches ONLY on success
-    cache.delPattern("rooms:*");
-    cache.del("stats:dashboard");
-    cache.del("reports:admin");
 
     return { updated: roomIds.length };
   },
@@ -218,6 +190,7 @@ export const roomService = {
     );
 
     // ── SEND EMAILS (NON-BLOCKING SAFE) ─────────────────────────────────────
+    
     await Promise.all(
       bookings.map(async (b) => {
         try {
@@ -236,11 +209,6 @@ export const roomService = {
       })
     );
 
-    // Invalidate caches ONLY on successful bookings creation/email handling
-    cache.delPattern("rooms:*");
-    cache.del("stats:dashboard");
-    cache.del("reports:admin");
-
     // ── RETURN RESPONSE ─────────────────────────────────────────────────────
     return bookings.map((b) => ({
       bookingId: b.id,
@@ -258,28 +226,20 @@ export const roomService = {
       throw { status: 400, message: "Provide bookingIds or roomIds" };
     }
 
-    let resultCount = 0;
-
     if (bookingIds?.length) {
       const result = await prisma.booking.deleteMany({
         where: { id: { in: bookingIds } },
       });
-      resultCount = result.count;
-    } else {
-      const result = await prisma.booking.deleteMany({
-        where: {
-          roomId: { in: roomIds },
-          checkOut: { gt: new Date() },
-        },
-      });
-      resultCount = result.count;
+      return { deallocated: result.count };
     }
 
-    // Invalidate caches ONLY on success
-    cache.delPattern("rooms:*");
-    cache.del("stats:dashboard");
-    cache.del("reports:admin");
+    const result = await prisma.booking.deleteMany({
+      where: {
+        roomId: { in: roomIds },
+        checkOut: { gt: new Date() },
+      },
+    });
 
-    return { deallocated: resultCount };
+    return { deallocated: result.count };
   },
 };

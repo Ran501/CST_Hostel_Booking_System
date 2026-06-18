@@ -1,3 +1,4 @@
+// src/app/api/login/route.js
 import { prisma } from "../../lib/prisma";
 import bcrypt from "bcryptjs";
 
@@ -13,7 +14,7 @@ export async function POST(request) {
       );
     }
 
-    // Static admin bypass
+    // Static admin bypass (no counselor needed)
     if (studentNumber.toString().trim() === "02230125") {
       if (!password || password.trim() !== "lepcha") {
         return Response.json(
@@ -30,12 +31,21 @@ export async function POST(request) {
           role: "admin",
           gender: "male",
           phoneNumber: "",
+          counselor: null, // explicitly null for consistency
         },
       });
     }
 
+    // ✅ Include counselor relation
     const user = await prisma.user.findUnique({
       where: { studentNumber: studentNumber.toString() },
+      include: {
+        counselor: {
+          include: {
+            hostel: true, // includes full hostel details
+          },
+        },
+      },
     });
 
     if (!user) {

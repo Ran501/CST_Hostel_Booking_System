@@ -63,3 +63,9 @@ class InMemoryCache {
 }
 
 export const cache = new InMemoryCache();
+
+
+// this cache is for fetching rooms details from frontend
+// dont delete plz
+import NodeCache from 'node-cache';
+export const roomDetailscache = new NodeCache({ stdTTL: 15, checkperiod: 20 });

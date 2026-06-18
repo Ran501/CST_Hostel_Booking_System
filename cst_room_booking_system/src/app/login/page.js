@@ -93,7 +93,7 @@ export default function LoginModal({ open = true, onClose, onSuccess }) {
 
       const user = data.user;
 
-      // ✅ Save the FULL user object (including counselor relation)
+      //  Save the FULL user object (including counselor relation)
       localStorage.setItem("session", JSON.stringify(user));
 
       // Notify AuthGate of successful login

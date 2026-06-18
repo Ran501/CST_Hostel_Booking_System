@@ -22,6 +22,7 @@
     "lucide-react": "^1.11.0",
     "maplibre-gl": "^5.24.0",
     "next": "16.2.4",
+    "node-cache": "^5.1.2",
     "nodemailer": "^8.0.7",
     "papaparse": "^5.5.3",
     "pg": "^8.20.0",
