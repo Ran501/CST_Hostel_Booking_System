@@ -4,24 +4,31 @@ import { useState, useCallback, useMemo, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 
-export const HostelCard = ({ hostel, onClose, onBook }) => {
+export const HostelCard = ({ hostel, onClose, onBook, refreshTrigger, onBookingComplete }) => {
   const [currentImageIndex, setCurrentImageIndex] = useState(0);
   const [isLoading, setIsLoading] = useState(false);
   const [stats, setStats] = useState(null);
+  const [isStatsLoading, setIsStatsLoading] = useState(true);
+
   const router = useRouter();
   const timeoutRef = useRef(null);
 
-  const totalRooms = stats?.totalRooms ?? hostel.totalRooms ?? 0;
-  const availableRooms = stats?.availableRooms ?? hostel.availableRooms ?? 0;
-  const occupiedRooms = useMemo(() => {
-    if (stats?.occupiedRooms != null) return stats.occupiedRooms;
-    return Math.max(0, totalRooms - availableRooms);
-  }, [availableRooms, stats?.occupiedRooms, totalRooms]);
+  // Dynamic data from API
+  const totalBeds = stats?.totalBeds ?? hostel.totalBeds ?? hostel.capacity ?? 0;
+  const availableBeds = stats?.availableBeds ?? hostel.availableBeds ?? 0;
+  const occupiedBeds = useMemo(() => {
+    if (stats?.occupiedBeds != null) return stats.occupiedBeds;
+    if (hostel.occupiedBeds != null) return hostel.occupiedBeds;
+    if (totalBeds > 0 && availableBeds >= 0) {
+      return Math.max(0, totalBeds - availableBeds);
+    }
+    return 0;
+  }, [stats, hostel, totalBeds, availableBeds]);
 
   const bookedPercentage = useMemo(() => {
-    if (!totalRooms || totalRooms === 0) return 0;
-    return Math.round((occupiedRooms / totalRooms) * 100);
-  }, [occupiedRooms, totalRooms]);
+    if (!totalBeds || totalBeds === 0) return 0;
+    return Math.round((occupiedBeds / totalBeds) * 100);
+  }, [occupiedBeds, totalBeds]);
 
   const imageAlt = useMemo(() => 
     `${hostel.name} at ${hostel.college} - Photo ${currentImageIndex + 1} of ${hostel.images?.length || 0}`
@@ -41,8 +48,53 @@ export const HostelCard = ({ hostel, onClose, onBook }) => {
     }
   }, [hostel.images]);
 
+  // Function to fetch stats
+  const fetchStats = useCallback(async () => {
+    try {
+      setIsStatsLoading(true);
+      const res = await fetch(
+        `/api/hostel-stats?id=${encodeURIComponent(hostel.id)}&name=${encodeURIComponent(hostel.name)}`,
+        {
+          cache: 'no-store',
+        }
+      );
+      const data = await res.json().catch(() => null);
+
+      console.log('API Response:', data);
+
+      if (!res.ok || !data?.success || !data?.stats) {
+        console.log('No stats data from API');
+        setIsStatsLoading(false);
+        return;
+      }
+
+      const next = {
+        totalBeds: Number(data.stats.totalBeds ?? 0),
+        occupiedBeds: Number(data.stats.occupiedBeds ?? 0),
+        availableBeds: Number(data.stats.availableBeds ?? 0),
+        occupancyRate: Number(data.stats.occupancyRate ?? 0),
+      };
+
+      console.log('Processed stats:', next);
+      setStats(next);
+      setIsStatsLoading(false);
+    } catch (error) {
+      console.error('Error fetching stats:', error);
+      setIsStatsLoading(false);
+    }
+  }, [hostel.id, hostel.name]);
+
+  // Fetch stats on mount and when refreshTrigger changes
+  useEffect(() => {
+    fetchStats();
+  }, [fetchStats, refreshTrigger]); // ← refreshTrigger added here
+
   const handleBookNow = useCallback(() => {
     setIsLoading(true);
+
+    if (onBookingComplete) {
+      onBookingComplete(); // This will refresh stats
+    }
     
     if (onBook) {
       onBook();
@@ -50,70 +102,30 @@ export const HostelCard = ({ hostel, onClose, onBook }) => {
       router.push(`/rooms/${hostel.id}/floor/1`);
     }
     
-    // Clear any existing timeout
     if (timeoutRef.current) {
       clearTimeout(timeoutRef.current);
     }
     
-    // Set new timeout
     timeoutRef.current = setTimeout(() => {
       onClose();
       setIsLoading(false);
     }, 500);
   }, [hostel.id, onBook, onClose, router]);
 
-  // Preload adjacent images for smoother carousel experience
+  // Preload adjacent images via Next's image optimizer (NOT the raw originals),
+  // so navigation is instant without downloading full-size source files.
   useEffect(() => {
     const images = hostel.images;
     if (images && images.length > 1) {
       const nextIndex = (currentImageIndex + 1) % images.length;
       const prevIndex = (currentImageIndex - 1 + images.length) % images.length;
-      
-      // Preload next and previous images
+
       [nextIndex, prevIndex].forEach(index => {
         const img = new window.Image();
-        img.src = images[index];
+        img.src = `/_next/image?url=${encodeURIComponent(images[index])}&w=640&q=85`;
       });
     }
   }, [currentImageIndex, hostel.images]);
-
-  useEffect(() => {
-    let cancelled = false;
-
-    const fetchStats = async () => {
-      try {
-        const res = await fetch(
-          `/api/hostel-stats?id=${encodeURIComponent(hostel.id)}&name=${encodeURIComponent(hostel.name)}`,
-          {
-          cache: 'no-store',
-          }
-        );
-        const data = await res.json().catch(() => null);
-
-        if (!res.ok || !data?.success || !data?.stats) {
-          return;
-        }
-
-        const next = {
-          totalRooms: Number(data.stats.totalRooms ?? 0),
-          occupiedRooms: Number(data.stats.occupiedRooms ?? 0),
-          availableRooms: Number(data.stats.availableRooms ?? 0),
-          occupancyRate: Number(data.stats.occupancyRate ?? 0),
-        };
-
-        if (cancelled) return;
-        setStats(next);
-      } catch {
-        if (cancelled) return;
-      }
-    };
-
-    fetchStats();
-
-    return () => {
-      cancelled = true;
-    };
-  }, [hostel.id, hostel.name]);
 
   // Cleanup on unmount
   useEffect(() => {
@@ -143,24 +155,22 @@ export const HostelCard = ({ hostel, onClose, onBook }) => {
       </button>
 
       {/* Image Carousel */}
-      
       <div className="relative h-56 sm:h-64 md:h-72 lg:h-80 bg-gray-200 shrink-0 mb-0 sm:mb-0 sm:pb-0">
-      {currentImage && currentImage.trim() ? (
+        {currentImage && currentImage.trim() ? (
           <>
             <div className="relative w-full h-full">
               <Image
-              src={currentImage}
-              alt={imageAlt}
-              fill
-              className="object-cover"
-              sizes="100vw" // let Next.js generate full-width responsive images
-              quality={100} // keep higher quality
-              priority={currentImageIndex === 0}
-              loading={currentImageIndex === 0 ? "eager" : "lazy"}
-            />
+                src={currentImage}
+                alt={imageAlt}
+                fill
+                className="object-cover"
+                sizes="(max-width: 640px) 100vw, 384px"
+                quality={85}
+                priority={currentImageIndex === 0}
+                loading={currentImageIndex === 0 ? "eager" : "lazy"}
+              />
             </div>
             
-            {/* Navigation Arrows - only show if multiple images */}
             {hasMultipleImages && (
               <>
                 <button
@@ -184,7 +194,6 @@ export const HostelCard = ({ hostel, onClose, onBook }) => {
               </>
             )}
 
-            {/* Image Indicators - only show if multiple images */}
             {hasMultipleImages && (
               <div className="absolute bottom-3 left-1/2 -translate-x-1/2 flex gap-1.5">
                 {hostel.images.map((_, idx) => (
@@ -213,12 +222,23 @@ export const HostelCard = ({ hostel, onClose, onBook }) => {
         <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 mb-1 sm:mb-2">{hostel.name}</h2>
         <p className="text-[10px] sm:text-sm text-gray-600 mb-2 sm:mb-3 md:mb-4 line-clamp-1 sm:line-clamp-2">{hostel.college}</p>
         
-        {totalRooms > 0 && (
+        {isStatsLoading ? (
+          // Loading skeleton
           <div className="mb-3 sm:mb-4 md:mb-5">
             <div className="flex items-center justify-between mb-1.5 sm:mb-2">
-              <span className="text-[10px] sm:text-sm font-medium text-gray-700">Room booked</span>
+              <span className="text-[10px] sm:text-sm font-medium text-gray-700">Occupancy</span>
+              <span className="text-[10px] sm:text-sm font-semibold text-gray-300 animate-pulse">Loading...</span>
+            </div>
+            <div className="w-full bg-gray-200 rounded-full h-2 sm:h-3 overflow-hidden">
+              <div className="bg-gray-300 h-full rounded-full w-0 animate-pulse" />
+            </div>
+          </div>
+        ) : totalBeds > 0 ? (
+          <div className="mb-3 sm:mb-4 md:mb-5">
+            <div className="flex items-center justify-between mb-1.5 sm:mb-2">
+              <span className="text-[10px] sm:text-sm font-medium text-gray-700">Occupancy</span>
               <span className="text-[10px] sm:text-sm font-semibold text-cstcolor">
-                {occupiedRooms} / {totalRooms}
+                {occupiedBeds} / {totalBeds}
               </span>
             </div>
             <div className="w-full bg-gray-200 rounded-full h-2 sm:h-3 overflow-hidden">
@@ -234,9 +254,13 @@ export const HostelCard = ({ hostel, onClose, onBook }) => {
               />
             </div>
             <div className="flex items-center justify-between mt-1 text-[9px] sm:text-xs text-gray-500">
-              <span>{availableRooms} Available</span>
+              <span>{availableBeds} Beds Available</span>
               <span className="text-cstcolor font-medium">{bookedPercentage}% Booked</span>
             </div>
+          </div>
+        ) : (
+          <div className="mb-3 sm:mb-4 md:mb-5 text-center text-gray-400 text-sm">
+            No availability data
           </div>
         )}
         

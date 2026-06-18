@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef } from "react";
+import { useEffect, useRef, useState } from "react"; 
 import maplibregl from 'maplibre-gl';
 import 'maplibre-gl/dist/maplibre-gl.css';
 
@@ -18,6 +18,7 @@ import { initializeMap, addHostelMarkers, addGateMarker } from './utils/map-init
 
 export default function CampusMap() {
   const containerRef = useRef(null);
+  const [refreshStats, setRefreshStats] = useState(0);
   
   const {
     mapRef,
@@ -32,6 +33,10 @@ export default function CampusMap() {
   } = useCampusMap();
 
   const { stats } = useMapStats(hostels);
+
+  const handleBookingComplete = () => {
+    setRefreshStats(prev => prev + 1); // This triggers stats refresh
+  };
 
   // Initialize map - FIRST PRIORITY
   useEffect(() => {
@@ -136,6 +141,8 @@ useEffect(() => {
         <HostelCard 
           hostel={selectedHostel} 
           onClose={handleCloseHostelCard}
+          refreshTrigger={refreshStats}  
+          onBookingComplete={handleBookingComplete}  
         />
       )}
     </div>
