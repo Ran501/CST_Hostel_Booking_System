@@ -261,11 +261,22 @@ export default function LoginModal({ open = true, onClose, onSuccess }) {
                       </button>
                     </div>
 
-                    <div className="text-center pt-2">
+                    <div className="pt-2">
+                      <div className="flex items-center gap-3">
+                        <div className="flex-1 h-px bg-white/20"></div>
+                        <span className="text-xs text-white/40 font-medium">or</span>
+                        <div className="flex-1 h-px bg-white/20"></div>
+                      </div>
+                    </div>
+
+                    <div className="pb-1">
+                      <p className="text-center text-sm text-white/60 mb-3">
+                        Haven&apos;t activated your account?
+                      </p>
                       <button
                         type="button"
                         onClick={handleActivateAccount}
-                        className="text-sm text-cstcolor3 hover:text-cstcolor2 transition-colors font-medium"
+                        className="w-full cursor-pointer rounded-xl border border-cstcolor3/50 bg-cstcolor3/10 px-5 py-2.5 text-sm font-semibold text-cstcolor3 hover:bg-cstcolor3/20 hover:border-cstcolor3 hover:scale-[1.02] active:scale-[0.98] transition-all duration-200"
                       >
                         Activate Account
                       </button>
