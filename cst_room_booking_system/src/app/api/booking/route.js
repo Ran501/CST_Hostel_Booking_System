@@ -1,5 +1,6 @@
 import { prisma } from "../../lib/prisma";
 import { sendBookingEmail } from "../../lib/mail";
+import { roomDetailscache } from "../../lib/cache";
 
 function isBookableRoom(room) {
   const roomStatus = String(room.status ?? "").toLowerCase().trim();
@@ -48,7 +49,7 @@ export async function DELETE(request) {
       return Response.json({ success: false, error: "Missing studentNumber" }, { status: 400 });
     }
 
-    // ✅ CHANGED: Only check if booking period is active, ignore dates
+    //Only check if booking period is active, ignore dates
     const period = await prisma.bookingPeriod.findFirst({
       where: { isActive: true },
     });
@@ -68,7 +69,24 @@ export async function DELETE(request) {
       return Response.json({ success: false, error: "No booking found for this student." }, { status: 404 });
     }
 
+    // get rooms details before deleting 
+    const room = await prisma.room.findUnique({
+      where: {id: booking.roomId},
+      include:{hostel: true},
+    });
+
     await prisma.booking.delete({ where: { id: booking.id } });
+
+    // invalidate cache for this floor
+    if(room){
+      const building = room.hostel?.hostelName;
+      const floor = room.floor;
+      if(building && floor !== undefined){
+        const cacheKey = `rooms_${building}_${floor}`;
+        roomDetailscache.del(cacheKey);
+        console.log(`Unbooking invalidated cache for ${cacheKey}`);
+      }
+    }
 
     return Response.json({ success: true, message: "Room unbooked successfully." });
 
@@ -91,7 +109,7 @@ export async function POST(request) {
       );
     }
 
-    // ✅ CHANGED: Only look for an explicitly active booking period
+    // only look for an explicitly active booking period
     const period = await prisma.bookingPeriod.findFirst({
       where: { isActive: true },
     });
@@ -179,6 +197,7 @@ export async function POST(request) {
       }
     }
 
+      // Gender validation
       const roomGender = String(lockedRoom.hostel?.gender ?? "").toLowerCase().trim();
       const userGender = String(user.gender ?? "").toLowerCase().trim();
 
@@ -228,6 +247,10 @@ export async function POST(request) {
         success: true,
         booking,
         email: user.email,
+        _invalidationData:{
+          hostelName: lockedRoom.hostel?.hostelName,
+          floor: lockedRoom.floor,
+        },
         emailDetails: {
           roomNumber: lockedRoom.roomNumber,
           userId: user.studentNumber,
@@ -237,6 +260,16 @@ export async function POST(request) {
         },
       });
     });
+
+    // INVALIDATE CACHE 
+    if (result.body.success && result.body._invalidationData) {
+      const { hostelName, floor } = result.body._invalidationData;
+      if (hostelName && floor !== undefined) {
+        const cacheKey = `rooms_${hostelName}_${floor}`;
+        roomDetailscache.del(cacheKey);
+        console.log(`🧹 Booking invalidated cache for ${cacheKey}`);
+      }
+    }
 
     if (result.body.success && result.body.email) {
       try {

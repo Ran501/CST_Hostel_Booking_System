@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { prisma } from "../../lib/prisma"; // Adjust this path to your prisma client
+import { roomDetailscache } from "../../lib/cache";
 
 export async function GET(req) {
   try {
@@ -11,6 +12,21 @@ export async function GET(req) {
       return NextResponse.json(
         { success: false, error: "Missing floor or building parameters" },
         { status: 400 }
+      );
+    }
+
+    // Checking server cache
+    const cacheKey = `rooms_${building}_${floor}`;
+    const cacheData = roomDetailscache.get(cacheKey);
+    if(cacheData){
+      return NextResponse.json(
+        {success:true, rooms: cacheData},
+        {
+          status:200,
+          headers:{
+            'cache-control': 'public, s-maxage = 10, stale-while-revalidate=30',
+          },
+        }
       );
     }
 
@@ -74,8 +90,17 @@ export async function GET(req) {
       };
     });
 
+    roomDetailscache.set(cacheKey, formattedRooms);
 
-    return NextResponse.json({ success: true, rooms: formattedRooms });
+    return NextResponse.json(
+      { success: true, rooms: formattedRooms },
+      {
+        status:200,
+        headers:{
+          'cache-control': 'public, s-maxage=10, stale-while-revalidate = 30',
+        },
+      }
+    );
   } catch (error) {
   console.error("DETAILED_PRISMA_ERROR:", error);
   return NextResponse.json(
