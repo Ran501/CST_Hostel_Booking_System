@@ -3,7 +3,6 @@ import bcrypt from "bcryptjs";
 import { parse } from "csv-parse/sync";
 import { stringify } from "csv-stringify/sync";
 import { studentRepository } from "./student.repository";
-import { cache } from "../../app/lib/cache";
 
 // ── Constants ──────────────────────────────────────────────────────────────
 const SALT_ROUNDS = 10;
@@ -70,7 +69,6 @@ function hashPassword(plain) {
   return bcrypt.hash(plain, SALT_ROUNDS);
 }
 
-// normalise CSV active field
 function parseBoolean(val, defaultValue = true) {
   if (val === undefined || val === null || val === "") return defaultValue;
   if (typeof val === "boolean") return val;
@@ -122,10 +120,18 @@ function validateStudentPayload(raw, rowLabel = "") {
 }
 
 // ── Prisma error → friendly message ───────────────────────────────────────
+/**
+ * Prisma unique-constraint violations come back as a PrismaClientKnownRequestError
+ * with code "P2002". The `meta.target` array tells us which field(s) caused it.
+ * We map those to human-readable labels here so the frontend never has to
+ * parse raw Prisma messages.
+ */
 function friendlyPrismaError(err) {
+  // P2002 = Unique constraint violation
   if (err.code === "P2002") {
     const targets = err.meta?.target ?? [];
 
+    // Map DB column names → readable labels
     const FIELD_LABELS = {
       studentNumber: "student number",
       email:         "email address",
@@ -142,25 +148,33 @@ function friendlyPrismaError(err) {
     return "A student with one of these details already exists. Please check student number, email, and phone number.";
   }
 
+  // P2025 = Record not found (e.g. update/delete on missing ID)
   if (err.code === "P2025") {
     return "Student not found. They may have already been deleted.";
   }
 
+  // P2003 = Foreign key constraint (e.g. related record missing)
   if (err.code === "P2003") {
     return "A related record was not found. Please refresh and try again.";
   }
 
+  // Fall back to the original message for anything else
   return err.message;
 }
 
+/**
+ * Wraps any async repository call and converts known Prisma errors
+ * into friendly Error objects before re-throwing.
+ */
 async function withFriendlyErrors(fn) {
   try {
     return await fn();
   } catch (err) {
+    // Prisma known request errors always have a numeric `code` starting with "P"
     if (err.code?.startsWith?.("P")) {
       throw new Error(friendlyPrismaError(err));
     }
-    throw err;
+    throw err; // unknown errors bubble up unchanged
   }
 }
 
@@ -193,12 +207,9 @@ export const studentService = {
     if (payload.password) {
       payload.password = await hashPassword(payload.password);
     }
-    const result = await withFriendlyErrors(() => studentRepository.create(payload));
-    
-    // Invalidate reports cache
-    cache.del("reports:admin");
-    
-    return result;
+    // Wrap in friendlyErrors so duplicate student number/email/phone
+    // shows a clean message instead of a raw Prisma stack trace
+    return withFriendlyErrors(() => studentRepository.create(payload));
   },
 
   // ── Update a student ─────────────────────────────────────────────────
@@ -217,33 +228,18 @@ export const studentService = {
     if (fields.gender   !== undefined) fields.gender   = fields.gender.trim().toLowerCase();
     if (fields.isActive !== undefined) fields.isActive = parseBoolean(fields.isActive);
 
-    const result = await withFriendlyErrors(() => studentRepository.update(id, fields));
-    
-    // Invalidate reports cache
-    cache.del("reports:admin");
-
-    return result;
+    return withFriendlyErrors(() => studentRepository.update(id, fields));
   },
 
   // ── Delete ───────────────────────────────────────────────────────────
   async deleteStudent(id) {
     if (!id) throw new Error("Student id is required");
-    const result = await withFriendlyErrors(() => studentRepository.delete(id));
-    
-    // Invalidate reports cache
-    cache.del("reports:admin");
-
-    return result;
+    return withFriendlyErrors(() => studentRepository.delete(id));
   },
 
   async deleteStudents(ids) {
     if (!Array.isArray(ids) || ids.length === 0) throw new Error("No ids provided");
-    const result = await withFriendlyErrors(() => studentRepository.deleteMany(ids));
-    
-    // Invalidate reports cache
-    cache.del("reports:admin");
-
-    return result;
+    return withFriendlyErrors(() => studentRepository.deleteMany(ids));
   },
 
   // ── Bulk create (JSON) ────────────────────────────────────────────────
@@ -263,10 +259,6 @@ export const studentService = {
     );
 
     const result = await withFriendlyErrors(() => studentRepository.createMany(validated));
-    
-    // Invalidate reports cache
-    cache.del("reports:admin");
-
     return {
       created: result.count,
       skipped: rawStudents.length - result.count,
@@ -320,13 +312,12 @@ export const studentService = {
     let skipped = 0;
 
     if (validRecords.length > 0) {
+      // createMany with skipDuplicates won't throw on duplicates — it just skips them.
+      // No need for withFriendlyErrors here, but wrap anyway for safety.
       const result = await withFriendlyErrors(() => studentRepository.createMany(validRecords));
       created = result.count;
       skipped = validRecords.length - result.count;
     }
-
-    // Invalidate reports cache
-    cache.del("reports:admin");
 
     return {
       total:   records.length,
