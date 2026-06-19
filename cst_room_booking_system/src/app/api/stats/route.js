@@ -68,11 +68,28 @@ async function getRoomStats() {
     return capacity > 0 && occupied < capacity;
   }).length;
 
+  // Bed-level totals across all active rooms (a room can hold several beds).
+  let totalBeds = 0;
+  let occupiedBeds = 0;
+  for (const room of activeRooms) {
+    const capacity = Number(room.capacity) || 0;
+    const occupied = occupiedByRoom.get(room.id) || 0;
+    totalBeds += capacity;
+    // Never count more occupied beds than the room can hold.
+    occupiedBeds += Math.min(occupied, capacity);
+  }
+  const availableBeds = Math.max(0, totalBeds - occupiedBeds);
+
   const data = {
     totalRooms,
     totalAvailableRooms: availableRooms,
     bookedRooms: fullyBookedRooms,
-    occupancyRate: totalRooms > 0 ? Math.round((fullyBookedRooms / totalRooms) * 100) : 0,
+    totalBeds,
+    occupiedBeds,
+    availableBeds,
+    // Bed-based occupancy so it moves as individual beds are booked
+    // (room-based only counted *fully* booked rooms, so it stuck at 0).
+    occupancyRate: totalBeds > 0 ? Math.round((occupiedBeds / totalBeds) * 100) : 0,
   };
 
   roomStatsCache = {
@@ -126,6 +143,9 @@ export async function GET(request) {
         occupancyRate: roomStats.occupancyRate,
         totalRooms: roomStats.totalRooms,
         bookedRooms: roomStats.bookedRooms,
+        totalBeds: roomStats.totalBeds,
+        occupiedBeds: roomStats.occupiedBeds,
+        availableBeds: roomStats.availableBeds,
       },
     });
   } catch (error) {
@@ -138,6 +158,9 @@ export async function GET(request) {
           totalAvailableRooms: 0,
           bookedRoom: "None",
           occupancyRate: 0,
+          totalBeds: 0,
+          occupiedBeds: 0,
+          availableBeds: 0,
         },
       },
       { status: 200 }

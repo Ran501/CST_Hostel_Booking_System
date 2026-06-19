@@ -1,12 +1,10 @@
 // src/app/components/statsCard.js
 
-//TODO: Update the StatsCards to show the real time data properly
 export const StatsCards = ({ stats }) => {
-  // stats already has loading property, so we use stats.loading
   return (
     <div className="pointer-events-auto absolute bottom-0 left-1/2 -translate-x-1/2 z-10 w-[calc(100%-2rem)] max-w-md sm:max-w-none sm:w-auto sm:bottom-6 md:bottom-7">
       <div className="flex flex-row gap-2 sm:gap-3">
-        {/* Total Available Rooms */}
+        {/* Available Beds */}
         <div className="bg-white rounded-lg shadow-lg py-2 sm:px-4 sm:py-3 flex-1 min-w-0 flex flex-col items-center justify-center sm:flex-row sm:aspect-auto sm:min-w-35 md:min-w-40 mb-10 sm:mb-0">
           <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-green-100 flex items-center justify-center shrink-0 mb-1 sm:mb-0">
             <svg
@@ -27,19 +25,21 @@ export const StatsCards = ({ stats }) => {
           </div>
           <div className="text-center sm:text-left min-w-0 flex-1 sm:ml-2">
             <div className="text-[9px] sm:text-xs text-gray-500 font-medium">
-              Available
+              Available Beds
             </div>
             {stats.loading ? (
               <div className="h-4 sm:h-6 w-8 sm:w-12 bg-gray-200 animate-pulse rounded mx-auto sm:mx-0"></div>
             ) : (
-              <div className="text-sm sm:text-xl md:text-xl font-bold text-gray-900">
-                {stats.totalAvailableRooms} rooms
-              </div>
+              <>
+                <div className="text-sm sm:text-xl md:text-xl font-bold text-gray-900">
+                  {stats.availableBeds || 0}
+                </div>
+              </>
             )}
           </div>
         </div>
 
-        {/* Total Rooms */}
+        {/* Booked Beds */}
         <div className="bg-white rounded-lg shadow-lg py-2 sm:px-4 sm:py-3 flex-1 aspect-square flex flex-col items-center justify-center sm:flex-row sm:aspect-auto sm:min-w-35 md:min-w-40 mb-10 sm:mb-0">
           <div className="w-8 h-8 sm:w-10 sm:h-10 rounded-full bg-blue-100 flex items-center justify-center shrink-0 mb-1 sm:mb-0">
             <svg
@@ -62,13 +62,13 @@ export const StatsCards = ({ stats }) => {
           </div>
           <div className="text-center sm:text-left min-w-0 flex-1 sm:ml-2">
             <div className="text-[9px] sm:text-xs text-gray-500 font-medium">
-              You booked
+              Booked Beds
             </div>
             {stats.loading ? (
               <div className="h-4 sm:h-6 w-8 sm:w-12 bg-gray-200 animate-pulse rounded mx-auto sm:mx-0"></div>
             ) : (
-                <div className="text-sm sm:text-xl md:text-xl font-bold text-gray-900">
-                {stats.bookedRoom}
+              <div className="text-sm sm:text-xl md:text-xl font-bold text-gray-900">
+                {stats.occupiedBeds || 0}
               </div>
             )}
           </div>
@@ -102,8 +102,7 @@ export const StatsCards = ({ stats }) => {
               <div className="h-4 sm:h-6 w-8 sm:w-12 bg-gray-200 animate-pulse rounded mx-auto sm:mx-0"></div>
             ) : (
               <div className="text-sm sm:text-xl md:text-xl font-bold text-gray-900">
-                {stats.occupancyRate}%
-        
+                {stats.occupancyRate || 0}%
               </div>
             )}
           </div>

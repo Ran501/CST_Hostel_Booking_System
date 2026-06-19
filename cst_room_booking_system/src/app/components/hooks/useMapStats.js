@@ -4,6 +4,9 @@ import { calculateStats } from "../utils/stats-utils";
 export const useMapStats = (hostels) => {
   const [stats, setStats] = useState({
     totalAvailableRooms: 0,
+    availableBeds: 0,
+    occupiedBeds: 0,
+    totalBeds: 0,
     bookedRoom: "",
     occupancyRate: 0,
     loading: true,
@@ -38,6 +41,9 @@ export const useMapStats = (hostels) => {
 
       const nextStats = {
         totalAvailableRooms: Number(data.stats.totalAvailableRooms ?? 0),
+        availableBeds: Number(data.stats.availableBeds ?? 0),
+        occupiedBeds: Number(data.stats.occupiedBeds ?? 0),
+        totalBeds: Number(data.stats.totalBeds ?? 0),
         bookedRoom: data.stats.bookedRoom ?? "None",
         occupancyRate: Number(data.stats.occupancyRate ?? 0),
       };
@@ -48,6 +54,13 @@ export const useMapStats = (hostels) => {
         totalAvailableRooms: Number.isFinite(nextStats.totalAvailableRooms)
           ? nextStats.totalAvailableRooms
           : calculatedStats.totalAvailableRooms,
+        availableBeds: Number.isFinite(nextStats.availableBeds)
+          ? nextStats.availableBeds
+          : 0,
+        occupiedBeds: Number.isFinite(nextStats.occupiedBeds)
+          ? nextStats.occupiedBeds
+          : 0,
+        totalBeds: Number.isFinite(nextStats.totalBeds) ? nextStats.totalBeds : 0,
         bookedRoom:
           nextStats.bookedRoom && typeof nextStats.bookedRoom === "string"
             ? nextStats.bookedRoom
@@ -63,6 +76,7 @@ export const useMapStats = (hostels) => {
       const calculatedStats = calculateStats(hostels);
       setStats({
         totalAvailableRooms: calculatedStats.totalAvailableRooms,
+        availableBeds: 0, // No bed data available in the offline fallback
         bookedRoom: "None", // Since API failed, assume no booking info
         occupancyRate: calculatedStats.occupancyRate,
         loading: false,
