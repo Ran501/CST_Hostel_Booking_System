@@ -1,15 +1,14 @@
 // src/app/api/admin/hostel/route.js
 // NOTE: Next.js App Router — named exports only, no default export.
 import { NextResponse } from "next/server";
-import { prisma }         from "../../../../app/lib/prisma";
-
+import { prisma } from "../../../../app/lib/prisma";
+import { invalidateAdminReportCache } from "../../../../modules/report/report.service";
 
 // ── Helper: compute real capacity by summing all room capacities ──────────────
-// This replaces the stale `capacity` column on Hostel with a live aggregate.
 async function computeCapacity(hostelId) {
   const result = await prisma.room.aggregate({
-    where:  { hostel_id: hostelId },
-    _sum:   { capacity: true },
+    where: { hostel_id: hostelId },
+    _sum: { capacity: true },
   });
   return result._sum.capacity ?? 0;
 }
@@ -41,7 +40,7 @@ export async function GET(request) {
 
     const include = {
       floorAllocations: { orderBy: { floor: "asc" } },
-      _count:           { select: { rooms: true } },
+      _count: { select: { rooms: true } },
     };
 
     if (name) {
@@ -104,17 +103,20 @@ export async function PUT(request) {
     }
 
     const updated = await prisma.hostel.update({
-      where:   { id },
-      data:    updates,
+      where: { id },
+      data: updates,
       include: {
         floorAllocations: { orderBy: { floor: "asc" } },
-        _count:           { select: { rooms: true } },
+        _count: { select: { rooms: true } },
       },
     });
 
+    // ✅ Invalidate the report cache because hostel details (gender/status) changed
+    invalidateAdminReportCache();
+
     return NextResponse.json({
       success: true,
-      data:    await buildHostelResponse(updated),
+      data: await buildHostelResponse(updated),
     });
   } catch (err) {
     console.error("[PUT /api/admin/hostel]", err);

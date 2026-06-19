@@ -178,12 +178,9 @@ export default function RoomCard({
       {isDisabled && (
         <div className="mt-4 border border-dashed border-gray-400 rounded-lg p-4 text-center">
 
-          <p className="text-xs text-gray-500 mb-1">
-            Reason for Disabling
-          </p>
 
           <p className="font-semibold text-gray-700 uppercase tracking-wide">
-            {disabledReason || "RESERVED"}
+            {disabledReason || "Inactive"}
           </p>
 
         </div>
