@@ -112,7 +112,7 @@ export default function RoomCard({
             ? "cursor-pointer hover:shadow-md"
             : "cursor-pointer opacity-90"
         }
-        ${selected ? "border-blue-600 ring-2 ring-blue-600 shadow-lg shadow-blue-100" : ""}
+        ${selected ? "border-cstcolor ring-2 ring-cstcolor shadow-lg shadow-blue-100" : ""}
       `}
     >
 
@@ -126,7 +126,7 @@ export default function RoomCard({
           e.stopPropagation();
           onSelect?.();
         }}
-        className="absolute top-4 left-4 z-10 h-5 w-5 cursor-pointer rounded border-gray-300 accent-blue-600"
+        className="absolute top-4 left-4 z-10 h-5 w-5 cursor-pointer rounded border-gray-300 accent-cstcolor"
       />
 
       {/* Header */}

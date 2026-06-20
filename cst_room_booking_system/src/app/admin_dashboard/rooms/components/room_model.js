@@ -1020,44 +1020,6 @@ export default function RoomManagement() {
 
       {/* ─── Modals ──────────────────────────────────────────────────────────── */}
 
-      {disableReasonOpen && (
-        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
-          <div className="w-full max-w-md rounded-2xl overflow-hidden shadow-2xl">
-            <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-5 text-center">
-              <h2 className="text-xl font-bold text-white">Disable Rooms</h2>
-              <p className="text-sm text-blue-100 mt-1">Provide a reason for disabling selected rooms</p>
-              <div className="mt-3 inline-block px-3 py-1 text-xs rounded-full bg-white/20 text-white">
-                {selectedRooms.length} room(s) selected
-              </div>
-            </div>
-            <div className="bg-white px-6 py-5">
-              <label className="block text-sm font-medium text-gray-700 mb-2">Reason</label>
-              <textarea
-                value={reason}
-                onChange={(e) => setReason(e.target.value)}
-                placeholder="Enter reason for disabling rooms…"
-                className="w-full rounded-xl border border-blue-200 bg-blue-50 p-3 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
-                rows={4}
-              />
-              <div className="flex justify-end gap-3 mt-6">
-                <button
-                  onClick={() => setDisableReasonOpen(false)}
-                  className="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition text-sm"
-                >
-                  Cancel
-                </button>
-                <button
-                  onClick={confirmDisable}
-                  className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition shadow-sm text-sm"
-                >
-                  Confirm Disable
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      )}
-
       <DisableGuardModal
         isOpen={disableGuardOpen}
         onClose={() => setDisableGuardOpen(false)}
