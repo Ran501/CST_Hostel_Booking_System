@@ -233,7 +233,6 @@ export default function RoomManagement() {
   const [editModalOpen, setEditModalOpen] = useState(false);
   const [allocateOpen, setAllocateOpen] = useState(false);
   const [deallocateOpen, setDeallocateOpen] = useState(false);
-  const [disableReasonOpen, setDisableReasonOpen] = useState(false);
   const [disableGuardOpen, setDisableGuardOpen] = useState(false);
   const [previewOpen, setPreviewOpen] = useState(false);
 
@@ -241,7 +240,6 @@ export default function RoomManagement() {
   const [guardDisabled, setGuardDisabled] = useState([]);
 
   const [allocateRoom, setAllocateRoom] = useState(null);
-  const [reason, setReason] = useState("");
   const [downloading, setDownloading] = useState(false);
   const { confirm, confirmationDialog } = useConfirmation();
 
@@ -396,7 +394,6 @@ export default function RoomManagement() {
     (actionType) => {
       if (isAdmin) return true;
       if (isCounselor) {
-        // Counselors can only edit
         return actionType === "edit";
       }
       return false;
@@ -410,7 +407,6 @@ export default function RoomManagement() {
       if (selectedRooms.length === 0) return;
       setActionsOpen(false);
 
-      // Check permission
       if (!isActionAllowed(type)) {
         toast.error("You are not authorized to perform this action.");
         return;
@@ -460,7 +456,24 @@ export default function RoomManagement() {
           setDisableGuardOpen(true);
           return;
         }
-        setDisableReasonOpen(true);
+
+        // ── Direct confirmation without reason modal ──
+        const ids = [...selectedRooms];
+        confirm({
+          message: `Disable ${ids.length} selected room${ids.length !== 1 ? "s" : ""}?`,
+          confirmText: "Disable",
+          onConfirm: async () => {
+            setRooms((prev) => prev.map((r) => (ids.includes(r.id) ? { ...r, status: "disabled" } : r)));
+            try {
+              await callAction({ action: "disable", roomIds: ids, reason: "Disabled by admin" });
+              clearSelection();
+              await fetchRooms();
+            } catch (err) {
+              await fetchRooms();
+              throw err;
+            }
+          },
+        });
         return;
       }
 
@@ -487,14 +500,12 @@ export default function RoomManagement() {
     const room = rooms.find((r) => r.id === roomId);
     if (!room) return;
     if (room.status === "disabled") {
-      // Only admins can enable rooms; counselors cannot
       if (isCounselor) {
         toast.error("You are not authorized to enable rooms.");
         return;
       }
       requestEnableRooms([roomId], `Enable room ${room.room}?`);
     } else {
-      // Allocation is not allowed for counselors
       if (isCounselor) {
         toast.error("You are not authorized to allocate students.");
         return;
@@ -530,29 +541,6 @@ export default function RoomManagement() {
     },
     [confirm, enableRooms]
   );
-
-  // ── Disable ──────────────────────────────────────────────────────────────
-  const confirmDisable = () => {
-    const ids = [...selectedRooms];
-    const reasonText = reason;
-
-    confirm({
-      message: `Disable ${ids.length} selected room${ids.length !== 1 ? "s" : ""}?`,
-      confirmText: "Disable",
-      onConfirm: async () => {
-        setRooms((prev) => prev.map((r) => (ids.includes(r.id) ? { ...r, status: "disabled" } : r)));
-        try {
-          await callAction({ action: "disable", roomIds: ids, reason: reasonText });
-          setDisableReasonOpen(false);
-          clearSelection();
-          setReason("");
-        } catch (err) {
-          await fetchRooms();
-          throw err;
-        }
-      },
-    });
-  };
 
   // ── Edit save ──────────────────────────────────────────────────────────
   const handleEditSave = (data) => {
@@ -665,7 +653,7 @@ export default function RoomManagement() {
     const onKey = (e) => {
       const key = e.key.toLowerCase();
       const modalOpen =
-        editModalOpen || allocateOpen || disableReasonOpen || disableGuardOpen || previewOpen;
+        editModalOpen || allocateOpen || disableGuardOpen || previewOpen;
 
       if (modalOpen || isTypingTarget(e.target)) return;
 
@@ -709,7 +697,6 @@ export default function RoomManagement() {
     allocateOpen,
     clearSelection,
     disableGuardOpen,
-    disableReasonOpen,
     editModalOpen,
     handleBulkAction,
     previewOpen,
@@ -1036,7 +1023,7 @@ export default function RoomManagement() {
       {disableReasonOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
           <div className="w-full max-w-md rounded-2xl overflow-hidden shadow-2xl">
-            <div className="bg-gradient-to-r from-cstcolor to-cstcolor2 px-6 py-5 text-center">
+            <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-5 text-center">
               <h2 className="text-xl font-bold text-white">Disable Rooms</h2>
               <p className="text-sm text-blue-100 mt-1">Provide a reason for disabling selected rooms</p>
               <div className="mt-3 inline-block px-3 py-1 text-xs rounded-full bg-white/20 text-white">
@@ -1049,19 +1036,19 @@ export default function RoomManagement() {
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 placeholder="Enter reason for disabling rooms…"
-                className="w-full rounded-xl border border-blue-200 bg-blue-50 p-3 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cstcolor focus:border-cstcolor transition"
+                className="w-full rounded-xl border border-blue-200 bg-blue-50 p-3 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
                 rows={4}
               />
               <div className="flex justify-end gap-3 mt-6">
                 <button
                   onClick={() => setDisableReasonOpen(false)}
-                  className="cursor-pointer px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition text-sm"
+                  className="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition text-sm"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={confirmDisable}
-                  className="cursor-pointer px-4 py-2 rounded-lg bg-cstcolor text-white hover:bg-cstcolor2 transition shadow-sm text-sm"
+                  className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition shadow-sm text-sm"
                 >
                   Confirm Disable
                 </button>

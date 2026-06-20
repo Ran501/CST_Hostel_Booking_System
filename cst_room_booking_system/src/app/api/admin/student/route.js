@@ -53,7 +53,6 @@ export async function GET(req) {
       return Response.json(payload);
     }
 
-    // Default: cursor-paginated list
     const data = await studentService.getStudents({
       cursor:     searchParams.get("cursor")     || null,
       limit:      searchParams.get("limit")      || 50,
@@ -72,9 +71,6 @@ export async function GET(req) {
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Room-allocation handler (Caller B)
-//
-// Queries Prisma directly — bypasses studentService pagination so we can
-// apply gender/year/unallocated filters without touching studentService.
 // ─────────────────────────────────────────────────────────────────────────────
 async function handleRoomAllocationGet(searchParams) {
   try {
@@ -88,18 +84,15 @@ async function handleRoomAllocationGet(searchParams) {
       isActive: true,
     };
 
-    // Fetch specific students by number (used by the download button)
     if (studentNumbers) {
       const nums = studentNumbers.split(",").map((s) => s.trim()).filter(Boolean);
       where.studentNumber = { in: nums };
     }
 
-    // Gender filter
     if (gender) {
       where.gender = { equals: gender, mode: "insensitive" };
     }
 
-    // Year filter (from FloorAllocation.studentYear)
     if (allowedYears) {
       const years = allowedYears
         .split(",")
@@ -111,7 +104,6 @@ async function handleRoomAllocationGet(searchParams) {
       }
     }
 
-    // Text search
     if (search) {
       where.OR = [
         { name:          { contains: search, mode: "insensitive" } },
@@ -119,7 +111,6 @@ async function handleRoomAllocationGet(searchParams) {
       ];
     }
 
-    // Unallocated: exclude students that already have an active booking
     if (unallocated) {
       const now            = new Date();
       const activeBookings = await prisma.booking.findMany({
@@ -130,7 +121,6 @@ async function handleRoomAllocationGet(searchParams) {
 
       if (bookedNums.length > 0) {
         if (where.studentNumber?.in) {
-          // Intersect: requested list minus already-booked
           where.studentNumber.in = where.studentNumber.in.filter(
             (sn) => !bookedNums.includes(sn)
           );
@@ -153,7 +143,6 @@ async function handleRoomAllocationGet(searchParams) {
         phoneNumber:   true,
       },
       orderBy: { name: "asc" },
-      // Cap results for the allocate modal; no cap for the download path
       ...(!studentNumbers ? { take: 100 } : {}),
     });
 
@@ -169,7 +158,6 @@ export async function POST(req) {
   try {
     const contentType = req.headers.get("content-type") || "";
 
-    // CSV import (sent as text/csv from the ImportModal)
     if (contentType.includes("text/csv")) {
       const csvText = await req.text();
       if (!csvText.trim()) return errorResponse("CSV body is empty");
@@ -179,7 +167,6 @@ export async function POST(req) {
       return Response.json(result, { status: 201 });
     }
 
-    // JSON: bulk array or single student
     const body = await req.json();
 
     if (Array.isArray(body.students)) {

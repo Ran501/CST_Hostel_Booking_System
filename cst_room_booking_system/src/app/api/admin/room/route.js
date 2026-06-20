@@ -1,6 +1,7 @@
 // src/app/api/admin/room/route.js
 import { NextResponse } from "next/server";
 import { roomService } from "../../../../modules/room/room.service";
+import { invalidateAdminReportCache } from "../../../../modules/report/report.service";
 
 function errorResponse(err) {
   console.error("[/api/admin/room]", err);
@@ -65,52 +66,36 @@ export async function POST(request) {
     switch (action) {
       case "allocate": {
         const { roomId, studentNumbers, checkIn, checkOut } = body;
-
         result = await roomService.allocateStudents(
           roomId,
           studentNumbers,
           checkIn,
           checkOut
         );
-
-        // Email is handled INSIDE service
-        return NextResponse.json(
-          { success: true, data: result },
-          { status: 201 }
-        );
+        break;
       }
 
       case "disable": {
         const { roomIds, reason } = body;
-
         result = await roomService.disableRooms(roomIds, reason);
         break;
       }
 
       case "enable": {
         const { roomIds } = body;
-
         result = await roomService.enableRooms(roomIds);
         break;
       }
 
       case "edit": {
         const { roomIds, capacity, year } = body;
-
-        result = await roomService.editRooms(roomIds, {
-          capacity,
-          year,
-        });
+        result = await roomService.editRooms(roomIds, { capacity, year });
         break;
       }
 
       case "deallocate": {
         const { bookingIds, roomIds } = body;
-
-        result = await roomService.deallocateStudents({
-          bookingIds,
-          roomIds,
-        });
+        result = await roomService.deallocateStudents({ bookingIds, roomIds });
         break;
       }
 
@@ -120,6 +105,9 @@ export async function POST(request) {
           { status: 400 }
         );
     }
+
+    // All actions above change data used in reports → invalidate cache
+    invalidateAdminReportCache();
 
     return NextResponse.json({
       success: true,
