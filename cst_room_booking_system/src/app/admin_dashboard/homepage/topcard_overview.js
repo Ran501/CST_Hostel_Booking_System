@@ -50,7 +50,7 @@ export default function TopCards({ stats }) {
     {
       title:         "Total Beds Capacity",
       value:         animVals.totalCapacity,
-      color:         "text-blue-600",
+      color:         "text-cstcolor",
       wide:          true,
       subtitle:      "Sum of all room capacities across every hostel",
       badge:         avgBeds > 0 ? `~${Math.round(avgBeds)} beds / hostel avg` : null,

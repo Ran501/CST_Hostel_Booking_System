@@ -89,10 +89,10 @@ export default function EditRoomsModal({
       <div className="w-full max-w-lg rounded-2xl overflow-hidden shadow-2xl bg-white">
 
         {/* Header */}
-        <div className="relative bg-gradient-to-r from-blue-600 to-blue-500 text-white px-6 py-8 text-center">
+        <div className="relative bg-gradient-to-r from-cstcolor to-cstcolor2 text-white px-6 py-8 text-center">
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 text-white/80 hover:text-white"
+            className="cursor-pointer absolute top-4 right-4 text-white/80 hover:text-white"
           >
             <X size={20} />
           </button>
@@ -118,7 +118,7 @@ export default function EditRoomsModal({
               {rooms.map((r) => (
                 <span
                   key={r.id}
-                  className="text-xs bg-blue-50 text-blue-700 border px-2.5 py-1 rounded-full"
+                  className="text-xs bg-blue-50 text-cstcolor border px-2.5 py-1 rounded-full"
                 >
                   {r.room} · Cap {r.capacity}
                 </span>
@@ -161,7 +161,7 @@ export default function EditRoomsModal({
   placeholder:text-gray-400 focus:ring-2 transition
   ${errors.capacity
     ? "border-red-400 focus:ring-red-200"
-    : "border-blue-300 focus:ring-blue-200 focus:border-blue-400"
+    : "border-cstcolor focus:ring-cstcolor focus:border-cstcolor"
   }`}
             />
 
@@ -187,8 +187,8 @@ export default function EditRoomsModal({
               <select
                 value={year}
                 onChange={(e) => setYear(e.target.value)}
-                className="w-full px-4 py-3 rounded-xl border-2 border-blue-300 bg-white text-gray-900
-  appearance-none focus:ring-2 focus:ring-blue-200 focus:border-blue-400 outline-none transition"
+                className="cursor-pointer w-full px-4 py-3 rounded-xl border-2 border-cstcolor bg-white text-gray-900
+  appearance-none focus:ring-2 focus:ring-cstcolor focus:border-cstcolor outline-none transition"
               >
                 <option value="">Leave unchanged</option>
                 <option value="1">1st Year</option>
@@ -215,7 +215,7 @@ export default function EditRoomsModal({
 
             <button
               onClick={handleSave}
-              className="px-5 py-2.5 bg-blue-600 text-white rounded-xl"
+              className="cursor-pointer px-5 py-2.5 bg-cstcolor text-white rounded-xl"
             >
               Save Changes
             </button>

@@ -162,7 +162,7 @@ function DisableGuardModal({ isOpen, onClose, occupiedRooms, alreadyDisabledRoom
           <div className="flex justify-end pt-2">
             <button
               onClick={onClose}
-              className="px-5 py-2 rounded-xl bg-gray-200 text-gray-700 hover:bg-gray-300 transition text-sm font-medium"
+              className="cursor-pointer px-5 py-2 rounded-xl bg-gray-200 text-gray-700 hover:bg-gray-300 transition text-sm font-medium"
             >
               OK
             </button>
@@ -752,7 +752,7 @@ export default function RoomManagement() {
                   <div className="relative" data-dropdown>
                     <button
                       onClick={() => setHostelOpen((p) => !p)}
-                      className="flex items-center text-[#2b7cff] text-[20px] md:text-[22px]"
+                      className="cursor-pointer flex items-center text-cstcolor text-[20px] md:text-[22px]"
                     >
                       {hostel?.hostelName ?? hostel?.name ?? "Select Hostel"}
                       <ChevronDown size={16} className="ml-1" />
@@ -767,9 +767,9 @@ export default function RoomManagement() {
                               setFloorIndex(1);
                               setHostelOpen(false);
                             }}
-                            className={`w-full text-left px-4 py-2.5 text-base hover:bg-blue-50 transition-colors ${
+                            className={`cursor-pointer w-full text-left px-4 py-2.5 text-base hover:bg-blue-50 transition-colors ${
                               item.id === hostelId
-                                ? "text-blue-600 font-medium bg-blue-50"
+                                ? "text-cstcolor font-medium bg-blue-50"
                                 : "text-gray-700"
                             }`}
                           >
@@ -780,7 +780,7 @@ export default function RoomManagement() {
                     )}
                   </div>
                 ) : (
-                  <span className="text-[#2b7cff] text-[20px] md:text-[22px] font-medium">
+                  <span className="text-cstcolor text-[20px] md:text-[22px] font-medium">
                     {hostel?.hostelName ?? hostel?.name ?? "Hostel"}
                   </span>
                 )}
@@ -796,7 +796,7 @@ export default function RoomManagement() {
                     {hostel?.status === "active" ? "Active" : hostel?.status ?? "—"}
                   </Badge>
                   {hostelGender && (
-                    <Badge color="bg-[#9957f6] text-white">
+                    <Badge color="bg-cstcolor text-white">
                       {hostelGender.charAt(0).toUpperCase() + hostelGender.slice(1)} only
                     </Badge>
                   )}
@@ -812,7 +812,7 @@ export default function RoomManagement() {
                 <button
                   onClick={() => setPreviewOpen(true)}
                   disabled={!hostelId}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-white border border-gray-300 hover:bg-gray-50 shadow-sm transition text-base disabled:opacity-50"
+                  className="cursor-pointer flex items-center gap-2 px-4 py-2 rounded-lg bg-white border border-gray-300 hover:bg-gray-50 shadow-sm transition text-base disabled:opacity-50"
                 >
                   <Eye size={18} />
                   <span>Preview</span>
@@ -820,7 +820,7 @@ export default function RoomManagement() {
                 <button
                   onClick={handleDownload}
                   disabled={downloading || !hostelId}
-                  className="flex items-center gap-2 px-4 py-2 rounded-lg bg-blue-600 text-white hover:bg-blue-700 shadow-sm transition text-base disabled:opacity-60"
+                  className="cursor-pointer flex items-center gap-2 px-4 py-2 rounded-lg bg-cstcolor text-white hover:bg-cstcolor2 shadow-sm transition text-base disabled:opacity-60"
                 >
                   <Download size={18} />
                   <span>{downloading ? "Downloading…" : "Download"}</span>
@@ -834,7 +834,7 @@ export default function RoomManagement() {
                 <div className="relative" data-dropdown>
                   <button
                     onClick={() => setFloorOpen((p) => !p)}
-                    className="text-[#2b7cff] flex items-center gap-1"
+                    className="cursor-pointer text-cstcolor flex items-center gap-1"
                   >
                     Floor {floorIndex}
                     <ChevronDown size={16} />
@@ -850,9 +850,9 @@ export default function RoomManagement() {
                               setFloorIndex(num);
                               setFloorOpen(false);
                             }}
-                            className={`w-full text-left px-4 py-2.5 hover:bg-blue-50 transition-colors flex items-center justify-between ${
+                            className={`cursor-pointer w-full text-left px-4 py-2.5 hover:bg-blue-50 transition-colors flex items-center justify-between ${
                               num === floorIndex
-                                ? "text-blue-600 font-medium bg-blue-50"
+                                ? "text-cstcolor font-medium bg-blue-50"
                                 : "text-gray-700"
                             }`}
                           >
@@ -875,7 +875,7 @@ export default function RoomManagement() {
                 {selectionMode && selectedRooms.length > 0 && (
                   <>
                     <span className="text-gray-400">•</span>
-                    <span className="text-blue-600 font-medium text-base">
+                    <span className="text-cstcolor font-medium text-base">
                       {selectedRooms.length} selected
                     </span>
                     <button
@@ -896,7 +896,7 @@ export default function RoomManagement() {
                       onClick={() => setActionsOpen((p) => !p)}
                       aria-haspopup="menu"
                       aria-expanded={actionsOpen}
-                      className="inline-flex items-center gap-2 rounded-lg bg-blue-600 px-4 py-2 text-base font-medium text-white shadow-sm transition hover:bg-blue-700"
+                      className="cursor-pointer inline-flex items-center gap-2 rounded-lg bg-cstcolor px-4 py-2 text-base font-medium text-white shadow-sm transition hover:bg-cstcolor2"
                     >
                       Actions
                       <ChevronDown size={16} />
@@ -921,7 +921,7 @@ export default function RoomManagement() {
                           type="button"
                           role="menuitem"
                           onClick={() => handleBulkAction("edit")}
-                          className="w-full px-4 py-2.5 text-left text-gray-700 transition hover:bg-blue-50 hover:text-blue-700"
+                          className="cursor-pointer w-full px-4 py-2.5 text-left text-gray-700 transition hover:bg-blue-50 hover:text-blue-700"
                         >
                           Edit Selected Rooms
                         </button>
@@ -932,7 +932,7 @@ export default function RoomManagement() {
                           role="menuitem"
                           onClick={() => handleBulkAction("disable")}
                           disabled={!isActionAllowed("disable")}
-                          className={`w-full px-4 py-2.5 text-left transition ${
+                          className={`cursor-pointer w-full px-4 py-2.5 text-left transition ${
                             isActionAllowed("disable")
                               ? "text-gray-700 hover:bg-red-50 hover:text-red-600"
                               : "cursor-not-allowed text-gray-300"
@@ -947,7 +947,7 @@ export default function RoomManagement() {
                           role="menuitem"
                           onClick={() => handleBulkAction("enable")}
                           disabled={!isActionAllowed("enable")}
-                          className={`w-full px-4 py-2.5 text-left transition ${
+                          className={`cursor-pointer w-full px-4 py-2.5 text-left transition ${
                             isActionAllowed("enable")
                               ? "text-gray-700 hover:bg-green-50 hover:text-green-700"
                               : "cursor-not-allowed text-gray-300"
@@ -962,7 +962,7 @@ export default function RoomManagement() {
                           role="menuitem"
                           onClick={() => handleBulkAction("deallocate")}
                           disabled={!isActionAllowed("deallocate") || selectedOccupantCount === 0}
-                          className={`w-full px-4 py-2.5 text-left transition ${
+                          className={`cursor-pointer w-full px-4 py-2.5 text-left transition ${
                             isActionAllowed("deallocate") && selectedOccupantCount > 0
                               ? "text-gray-700 hover:bg-amber-50 hover:text-amber-700"
                               : "cursor-not-allowed text-gray-300"
@@ -1013,8 +1013,9 @@ export default function RoomManagement() {
                   />
                 ))}
           </div>
+          <div> </div>
 
-          <div className="mt-6 inline-flex flex-wrap gap-4 bg-[#f3f3f3] px-3 py-3 border rounded-sm text-[18px] text-gray-600">
+          <div className="flex flex-wrap justify-center gap-2 xs:gap-3 sm:gap-4 text-xs xs:text-sm md:text-base text-slate-700 ">
             {[
               { color: "bg-green-500", label: "Available" },
               { color: "bg-orange-400", label: "Partially Occupied" },
@@ -1035,7 +1036,7 @@ export default function RoomManagement() {
       {disableReasonOpen && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
           <div className="w-full max-w-md rounded-2xl overflow-hidden shadow-2xl">
-            <div className="bg-gradient-to-r from-blue-600 to-blue-700 px-6 py-5 text-center">
+            <div className="bg-gradient-to-r from-cstcolor to-cstcolor2 px-6 py-5 text-center">
               <h2 className="text-xl font-bold text-white">Disable Rooms</h2>
               <p className="text-sm text-blue-100 mt-1">Provide a reason for disabling selected rooms</p>
               <div className="mt-3 inline-block px-3 py-1 text-xs rounded-full bg-white/20 text-white">
@@ -1048,19 +1049,19 @@ export default function RoomManagement() {
                 value={reason}
                 onChange={(e) => setReason(e.target.value)}
                 placeholder="Enter reason for disabling rooms…"
-                className="w-full rounded-xl border border-blue-200 bg-blue-50 p-3 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-blue-500 transition"
+                className="w-full rounded-xl border border-blue-200 bg-blue-50 p-3 text-gray-800 placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-cstcolor focus:border-cstcolor transition"
                 rows={4}
               />
               <div className="flex justify-end gap-3 mt-6">
                 <button
                   onClick={() => setDisableReasonOpen(false)}
-                  className="px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition text-sm"
+                  className="cursor-pointer px-4 py-2 rounded-lg bg-gray-200 text-gray-700 hover:bg-gray-300 transition text-sm"
                 >
                   Cancel
                 </button>
                 <button
                   onClick={confirmDisable}
-                  className="px-4 py-2 rounded-lg bg-red-600 text-white hover:bg-red-700 transition shadow-sm text-sm"
+                  className="cursor-pointer px-4 py-2 rounded-lg bg-cstcolor text-white hover:bg-cstcolor2 transition shadow-sm text-sm"
                 >
                   Confirm Disable
                 </button>

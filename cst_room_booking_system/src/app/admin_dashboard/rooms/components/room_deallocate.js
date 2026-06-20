@@ -55,10 +55,10 @@ export default function DeallocateStudents({
       <div className="w-full max-w-2xl bg-white rounded-3xl shadow-xl overflow-hidden flex flex-col max-h-[90vh]">
 
         {/* Header */}
-        <div className="relative bg-gradient-to-r from-blue-600 to-blue-500 text-white text-center py-8 px-6 flex-shrink-0">
+        <div className="relative bg-gradient-to-r from-cstcolor to-cstcolor2 text-white text-center py-8 px-6 flex-shrink-0">
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 text-white/70 hover:text-white transition"
+            className="cursor-pointer absolute top-4 right-4 text-white/70 hover:text-white transition"
           >
             <X size={20} />
           </button>
@@ -85,7 +85,7 @@ export default function DeallocateStudents({
             </span>
             <button
               onClick={toggleAll}
-              className="text-sm text-blue-600 hover:text-blue-800 font-medium transition"
+              className="text-sm text-cstcolor hover:text-cstcolor2 font-medium transition"
             >
               {allSelected ? "Deselect all" : "Select all"}
             </button>
@@ -124,7 +124,7 @@ export default function DeallocateStudents({
                           ${!hasBooking
                             ? "opacity-40 cursor-not-allowed border-gray-200 bg-gray-50"
                             : isSelected
-                            ? "border-blue-500 bg-blue-50 shadow-sm cursor-pointer"
+                            ? "border-cstcolor bg-blue-50 shadow-sm cursor-pointer"
                             : "border-gray-200 bg-gray-100 hover:bg-gray-200 cursor-pointer"
                           }`}
                       >
@@ -132,7 +132,7 @@ export default function DeallocateStudents({
                         <div
                           className={`w-6 h-6 flex-shrink-0 flex items-center justify-center rounded-full border-2 transition-colors
                             ${isSelected
-                              ? "bg-blue-500 border-blue-500 text-white"
+                              ? "bg-cstcolor border-cstcolor text-white"
                               : "border-gray-300 bg-white"
                             }`}
                         >
@@ -169,7 +169,7 @@ export default function DeallocateStudents({
                         <span
                           className={`flex-shrink-0 text-xs font-medium px-2.5 py-1 rounded-full ${
                             isSelected
-                              ? "bg-blue-100 text-blue-700"
+                              ? "bg-blue-100 text-cstcolor"
                               : "bg-gray-200 text-gray-600"
                           }`}
                         >
@@ -188,7 +188,7 @@ export default function DeallocateStudents({
         <div className="flex items-center justify-between gap-3 px-5 py-4 border-t border-gray-200 bg-gray-50 flex-shrink-0">
           <button
             onClick={onClose}
-            className="px-6 py-2.5 rounded-xl bg-gray-200 text-gray-700 hover:bg-gray-300 transition text-sm font-medium"
+            className="cursor-pointer px-6 py-2.5 rounded-xl bg-gray-200 text-gray-700 hover:bg-gray-300 transition text-sm font-medium"
           >
             Cancel
           </button>
@@ -199,7 +199,7 @@ export default function DeallocateStudents({
               if (confirmed !== false) setSelected([]);
             }}
             disabled={selected.length === 0}
-            className={`px-6 py-2.5 rounded-xl text-white text-sm font-medium transition shadow-sm ${
+            className={`cursor-pointer px-6 py-2.5 rounded-xl text-white text-sm font-medium transition shadow-sm ${
               selected.length > 0
                 ? "bg-red-500 hover:bg-red-600"
                 : "bg-red-300 cursor-not-allowed"

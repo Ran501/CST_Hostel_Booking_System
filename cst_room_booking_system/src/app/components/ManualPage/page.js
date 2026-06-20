@@ -10,6 +10,7 @@ export default function ManualPage() {
     { id: "introduction", title: "Introduction" },
     { id: "overview", title: "System Overview" },
     { id: "requirements", title: "System Requirements" },
+    { id: "activation", title: "First-Time Setup" },
     { id: "procedure", title: "Booking Procedure" },
     { id: "logout", title: "Logout Procedure" },
     { id: "conclusion", title: "Conclusion" },
@@ -170,7 +171,8 @@ export default function ManualPage() {
                   
                   <ul className="space-y-3 mb-8">
                     {[
-                      "Log in securely using their phone number",
+                      "Activate their account using a one-time password (OTP) sent to their email",
+                      "Log in securely using their student number and password",
                       "View available hostels",
                       "Check room availability and occupancy details",
                       "Select and book hostel rooms",
@@ -280,8 +282,8 @@ export default function ManualPage() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                           </svg>
                         ),
-                        title: "Valid Phone Number",
-                        description: "Required for login and authentication"
+                        title: "Student Number & Email",
+                        description: "Your student number is used to log in; your registered email receives the activation OTP"
                       }
                     ].map((req, index) => (
                       <div key={index} className="bg-slate-50 rounded-lg p-5 border border-slate-200">
@@ -296,14 +298,111 @@ export default function ManualPage() {
                 </div>
               </section>
 
-              {/* Section 4: Booking Procedure */}
-              <section 
-                id="procedure" 
-                className={`p-6 sm:p-8 ${activeSection === "procedure" ? "block" : "hidden"}`}
+              {/* Section 4: First-Time Setup (Account Activation) */}
+              <section
+                id="activation"
+                className={`p-6 sm:p-8 ${activeSection === "activation" ? "block" : "hidden"}`}
               >
                 <div className="flex items-center gap-3 mb-6">
                   <div className="h-10 w-10 rounded-full bg-cstcolor/10 flex items-center justify-center">
                     <span className="text-cstcolor font-bold">4</span>
+                  </div>
+                  <h2 className="text-2xl font-bold text-slate-900">First-Time Setup</h2>
+                </div>
+
+                <div className="prose prose-slate max-w-none">
+                  <p className="text-lg text-slate-700 mb-6">
+                    Before you can log in for the first time, you must <strong>activate your account</strong> and <strong>set a password</strong>. You only need to do this once.
+                  </p>
+
+                  <div className="space-y-8">
+                    {/* Activation Step 1 */}
+                    <div className="relative">
+                      <div className="absolute left-0 top-0 h-full w-8 flex items-start justify-center">
+                        <div className="h-8 w-8 rounded-full bg-cstcolor flex items-center justify-center text-white font-bold">
+                          1
+                        </div>
+                      </div>
+                      <div className="ml-12">
+                        <h3 className="text-xl font-semibold text-slate-900 mb-3">Step 1: Request an OTP</h3>
+                        <ol className="space-y-3 text-slate-700 ml-5">
+                          <li className="flex items-start gap-2">
+                            <span className="h-5 w-5 rounded-full bg-slate-200 flex items-center justify-center text-xs flex-shrink-0 mt-0.5">1</span>
+                            <span>On the <strong className="text-cstcolor">Login Page</strong>, click <strong className="text-cstcolor">Activate Account</strong></span>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <span className="h-5 w-5 rounded-full bg-slate-200 flex items-center justify-center text-xs flex-shrink-0 mt-0.5">2</span>
+                            <span>Enter your <strong>student number</strong> and click <strong className="text-cstcolor">Send OTP</strong></span>
+                          </li>
+                          <li className="flex items-start gap-2">
+                            <span className="h-5 w-5 rounded-full bg-slate-200 flex items-center justify-center text-xs flex-shrink-0 mt-0.5">3</span>
+                            <span>A <strong>6-digit OTP</strong> will be sent to your registered college email</span>
+                          </li>
+                        </ol>
+                      </div>
+                    </div>
+
+                    {/* Activation Step 2 */}
+                    <div className="relative">
+                      <div className="absolute left-0 top-0 h-full w-8 flex items-start justify-center">
+                        <div className="h-8 w-8 rounded-full bg-cstcolor flex items-center justify-center text-white font-bold">
+                          2
+                        </div>
+                      </div>
+                      <div className="ml-12">
+                        <h3 className="text-xl font-semibold text-slate-900 mb-3">Step 2: Verify the OTP</h3>
+                        <p className="text-slate-700">
+                          Enter the 6-digit code from your email to verify your identity and activate your account.
+                        </p>
+                        <div className="mt-4 bg-amber-50 border border-amber-200 rounded-lg p-4">
+                          <div className="flex items-start gap-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-amber-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+                            </svg>
+                            <p className="text-amber-800 text-sm">
+                              The OTP <strong>expires in 10 minutes</strong>. If it expires or doesn&apos;t arrive, check your spam folder or request a new one (up to 3 requests within 10 minutes).
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Activation Step 3 */}
+                    <div className="relative">
+                      <div className="absolute left-0 top-0 h-full w-8 flex items-start justify-center">
+                        <div className="h-8 w-8 rounded-full bg-cstcolor flex items-center justify-center text-white font-bold">
+                          3
+                        </div>
+                      </div>
+                      <div className="ml-12">
+                        <h3 className="text-xl font-semibold text-slate-900 mb-3">Step 3: Set Your Password</h3>
+                        <p className="text-slate-700">
+                          After your account is activated, create a password (<strong>at least 6 characters</strong>). You will use this password together with your student number every time you log in.
+                        </p>
+                        <div className="mt-4 bg-emerald-50 border border-emerald-200 rounded-lg p-4">
+                          <div className="flex items-start gap-3">
+                            <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-emerald-600 flex-shrink-0 mt-0.5" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+                            </svg>
+                            <p className="text-emerald-800 text-sm">
+                              Once your password is set, you&apos;re ready to log in and book a room. Keep your password private.
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </section>
+
+              {/* Section 5: Booking Procedure */}
+              <section
+                id="procedure"
+                className={`p-6 sm:p-8 ${activeSection === "procedure" ? "block" : "hidden"}`}
+              >
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="h-10 w-10 rounded-full bg-cstcolor/10 flex items-center justify-center">
+                    <span className="text-cstcolor font-bold">5</span>
                   </div>
                   <h2 className="text-2xl font-bold text-slate-900">Booking Procedure</h2>
                 </div>
@@ -351,7 +450,7 @@ export default function ManualPage() {
                         <h3 className="text-xl font-semibold text-slate-900 mb-4">Step 2: Login</h3>
                         <div className="space-y-3">
                           <p className="text-slate-700">
-                            Enter your <strong>phone number</strong> in the login field and submit the form to access the system dashboard.
+                            Enter your <strong>student number</strong> and <strong>password</strong>, then click <strong className="text-cstcolor">Login</strong> to access the system dashboard.
                           </p>
                           <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
                             <div className="flex items-start gap-3">
@@ -359,8 +458,8 @@ export default function ManualPage() {
                                 <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 16h-1v-4h-1m1-4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
                               </svg>
                               <div>
-                                <p className="text-slate-800 font-medium">Note</p>
-                                <p className="text-slate-600 text-sm">User authentication is required to access all system features</p>
+                                <p className="text-slate-800 font-medium">First time here?</p>
+                                <p className="text-slate-600 text-sm">If you haven&apos;t activated your account yet, click <strong>Activate Account</strong> first and follow the <strong>First-Time Setup</strong> steps to get your OTP and set a password.</p>
                               </div>
                             </div>
                           </div>
@@ -545,7 +644,7 @@ export default function ManualPage() {
               >
                 <div className="flex items-center gap-3 mb-6">
                   <div className="h-10 w-10 rounded-full bg-cstcolor/10 flex items-center justify-center">
-                    <span className="text-cstcolor font-bold">5</span>
+                    <span className="text-cstcolor font-bold">6</span>
                   </div>
                   <h2 className="text-2xl font-bold text-slate-900">Logout Procedure</h2>
                 </div>
@@ -589,7 +688,7 @@ export default function ManualPage() {
               >
                 <div className="flex items-center gap-3 mb-6">
                   <div className="h-10 w-10 rounded-full bg-cstcolor/10 flex items-center justify-center">
-                    <span className="text-cstcolor font-bold">6</span>
+                    <span className="text-cstcolor font-bold">7</span>
                   </div>
                   <h2 className="text-2xl font-bold text-slate-900">Conclusion</h2>
                 </div>
@@ -621,7 +720,7 @@ export default function ManualPage() {
                         </svg>
                       </div>
                       <h4 className="font-semibold text-slate-900 mb-1">Secure</h4>
-                      <p className="text-slate-600 text-sm">Phone-based authentication</p>
+                      <p className="text-slate-600 text-sm">OTP activation &amp; password login</p>
                     </div>
                     
                     <div className="text-center p-4">

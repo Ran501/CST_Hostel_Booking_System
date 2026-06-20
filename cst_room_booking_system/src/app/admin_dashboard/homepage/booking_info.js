@@ -296,7 +296,7 @@ export default function BookingInfo() {
           <div className="mt-3 text-sm">
             <span className="text-green-600 font-medium">{availableBeds}</span>
             {" / "}
-            <span className="text-blue-600 font-medium">{totalBeds}</span>
+            <span className="text-cstcolor font-medium">{totalBeds}</span>
           </div>
           <p className="text-xs text-gray-500 mt-1">Available / Total beds</p>
           <p className="text-xs text-gray-500 mt-1">
@@ -310,13 +310,13 @@ export default function BookingInfo() {
           <p className="text-xs text-gray-500 mb-3">Active bookings by student gender</p>
 
           <div className="w-full h-3 bg-gray-200 rounded-full overflow-hidden relative">
-            <animated.div className="h-full bg-blue-500 absolute left-0"  style={maleSpring} />
+            <animated.div className="h-full bg-cstcolor absolute left-0"  style={maleSpring} />
             <animated.div className="h-full bg-pink-500 absolute right-0" style={femaleSpring} />
           </div>
 
           <div className="flex justify-between text-sm mt-2 text-gray-700">
             <span>
-              <span className="inline-block w-2 h-2 rounded-full bg-blue-500 mr-1" />
+              <span className="inline-block w-2 h-2 rounded-full bg-cstcolor mr-1" />
               Male: <strong>{male}</strong>
             </span>
             <span>

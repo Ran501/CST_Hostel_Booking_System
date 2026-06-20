@@ -16,7 +16,7 @@ model User {
   role           String     @default("user")
   year           Int
   gender         String
-  phoneNumber    String     @unique
+  phoneNumber    String?    @unique
   department     String
   hasSetPassword Boolean    @default(false)
   isActive       Boolean    @default(false)

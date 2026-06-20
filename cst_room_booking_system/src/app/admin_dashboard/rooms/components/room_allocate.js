@@ -120,10 +120,10 @@ export default function AllocateStudents({
       <div className="w-full max-w-2xl max-h-[90vh] bg-white rounded-2xl shadow-2xl flex flex-col overflow-hidden">
 
         {/* Header */}
-        <div className="relative bg-gradient-to-r from-blue-600 to-blue-500 text-white px-6 py-8 text-center flex-shrink-0">
+        <div className="relative bg-gradient-to-r from-cstcolor to-cstcolor2 text-white px-6 py-8 text-center flex-shrink-0">
           <button
             onClick={onClose}
-            className="absolute top-4 right-4 text-white/80 hover:text-white"
+            className="cursor-pointer absolute top-4 right-4 text-white/80 hover:text-white"
           >
             <X size={20} />
           </button>
@@ -154,7 +154,7 @@ export default function AllocateStudents({
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder="Search by student number or name…"
-              className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-blue-200 bg-white text-gray-700 focus:ring-2 focus:ring-blue-300 focus:border-blue-400 outline-none transition"
+              className="w-full pl-12 pr-4 py-3 rounded-xl border-2 border-blue-200 bg-white text-gray-700 focus:ring-2 focus:ring-cstcolor focus:border-cstcolor2 outline-none transition"
             />
           </div>
 
@@ -191,8 +191,8 @@ export default function AllocateStudents({
                     onClick={() => toggleStudent(studentNumber)}
                     className={`w-full text-left rounded-2xl border p-4 transition-all ${
                       isSelected
-                        ? "bg-blue-600 border-blue-600 text-white"
-                        : "bg-white border-gray-200 hover:border-blue-300 hover:shadow-sm"
+                        ? "bg-cstcolor border-cstcolor text-white"
+                        : "bg-white border-gray-200 hover:border-cstcolor hover:shadow-sm"
                     }`}
                   >
                     <div className="flex justify-between items-center">
@@ -207,23 +207,23 @@ export default function AllocateStudents({
                           isSelected ? "bg-white border-white" : "border-gray-300"
                         }`}
                       >
-                        {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-blue-600" />}
+                        {isSelected && <div className="w-2.5 h-2.5 rounded-full bg-cstcolor" />}
                       </div>
                     </div>
 
                     <div className="mt-3 flex flex-wrap gap-2 text-xs">
                       {student.gender && (
-                        <span className={`px-2 py-1 rounded-full ${isSelected ? "bg-blue-500 text-white" : "bg-gray-100 text-gray-600"}`}>
+                        <span className={`px-2 py-1 rounded-full ${isSelected ? "bg-cstcolor2 text-white" : "bg-gray-100 text-gray-600"}`}>
                           {student.gender}
                         </span>
                       )}
                       {student.year && (
-                        <span className={`px-2 py-1 rounded-full ${isSelected ? "bg-blue-500 text-white" : "bg-gray-100 text-gray-600"}`}>
+                        <span className={`px-2 py-1 rounded-full ${isSelected ? "bg-cstcolor2 text-white" : "bg-gray-100 text-gray-600"}`}>
                           Year {student.year}
                         </span>
                       )}
                       {student.department && (
-                        <span className={`px-2 py-1 rounded-full ${isSelected ? "bg-blue-500 text-white" : "bg-gray-100 text-gray-600"}`}>
+                        <span className={`px-2 py-1 rounded-full ${isSelected ? "bg-cstcolor2 text-white" : "bg-gray-100 text-gray-600"}`}>
                           {student.department}
                         </span>
                       )}
@@ -245,16 +245,16 @@ export default function AllocateStudents({
           <div className="flex gap-3">
             <button
               onClick={onClose}
-              className="px-5 py-2 rounded-xl bg-gray-200 text-gray-700 hover:bg-gray-300 transition text-sm"
+              className="cursor-pointer px-5 py-2 rounded-xl bg-gray-200 text-gray-700 hover:bg-gray-300 transition text-sm"
             >
               Cancel
             </button>
             <button
               onClick={() => onNext({ studentNumbers: selectedStudents })}
               disabled={selectedStudents.length === 0 || selectedStudents.length > availableBeds}
-              className={`px-5 py-2 rounded-xl text-white transition shadow-sm text-sm ${
+              className={`cursor-pointer px-5 py-2 rounded-xl text-white transition shadow-sm text-sm ${
                 selectedStudents.length > 0 && selectedStudents.length <= availableBeds
-                  ? "bg-blue-600 hover:bg-blue-700"
+                  ? "bg-cstcolor hover:bg-cstcolor2"
                   : "bg-blue-300 cursor-not-allowed"
               }`}
             >

@@ -105,10 +105,10 @@ export default function Navbar() {
             {navItems.map((item) => (
               <span
                 key={item}
-                className={`cursor-pointer relative font-medium transition-colors duration-300 ${
+                className={`cursor-pointer relative font-medium transition-colors duration-300 px-3 py-1 rounded-full ${
                   isActive(item)
-                    ? "text-blue-600 font-bold"
-                    : "text-gray-700 hover:text-blue-600"
+                    ? "bg-cstcolor text-white font-bold"
+                    : "text-gray-700 hover:text-cstcolor2"
                 }`}
                 onClick={() => handleNavClick(item)}
               >
@@ -197,7 +197,7 @@ export default function Navbar() {
         }}
         className={`cursor-pointer text-left py-3 px-3 rounded-lg transition-colors w-full ${
           isActive(item)
-            ? "bg-blue-50 text-blue-600 font-semibold"
+            ? "bg-blue-50 cstcolor font-semibold"
             : "text-gray-700 hover:bg-gray-100"
         }`}
       >
