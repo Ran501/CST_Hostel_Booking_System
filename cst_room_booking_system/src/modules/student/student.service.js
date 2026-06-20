@@ -33,7 +33,7 @@ const CSV_COLUMNS = [
     aliases: ["sex"],
   },
   {
-    field: "phoneNumber", header: "Phone Number", required: true,
+    field: "phoneNumber", header: "Phone Number", required: false,
     aliases: ["phone", "phonenumber", "phone_number", "mobile", "contact", "contact number", "contactnumber"],
   },
   {
@@ -112,7 +112,10 @@ function validateStudentPayload(raw, rowLabel = "") {
     password:      raw.password ? String(raw.password) : "",
     year,
     gender:        genderNorm,
-    phoneNumber:   String(raw.phoneNumber).trim(),
+    // Phone is optional — store null when blank so records import without one.
+    phoneNumber:   raw.phoneNumber != null && String(raw.phoneNumber).trim() !== ""
+      ? String(raw.phoneNumber).trim()
+      : null,
     department:    String(raw.department).trim(),
     role,
     isActive:      parseBoolean(raw.isActive, false),
@@ -223,12 +226,55 @@ export const studentService = {
     }
 
     if (fields.year     !== undefined) fields.year     = Number(fields.year);
+    if (fields.phoneNumber !== undefined) {
+      const phone = String(fields.phoneNumber).trim();
+      fields.phoneNumber = phone === "" ? null : phone;
+    }
     if (fields.email    !== undefined) fields.email    = fields.email.trim().toLowerCase();
     if (fields.role     !== undefined) fields.role     = fields.role.trim().toLowerCase();
     if (fields.gender   !== undefined) fields.gender   = fields.gender.trim().toLowerCase();
     if (fields.isActive !== undefined) fields.isActive = parseBoolean(fields.isActive);
 
     return withFriendlyErrors(() => studentRepository.update(id, fields));
+  },
+
+  // ── Bulk year promote/demote ─────────────────────────────────────────
+  // Server-authoritative version of the client's getMaxYear().
+  async bulkUpdateYear({ ids, action }) {
+    if (!Array.isArray(ids) || ids.length === 0) {
+      throw new Error("No students selected");
+    }
+    if (action !== "promote" && action !== "demote") {
+      throw new Error("Invalid action — expected 'promote' or 'demote'");
+    }
+
+    const maxYearFor = (department) => (department === "Architecture" ? 5 : 4);
+
+    const students = await studentRepository.findYearInfoByIds(ids);
+
+    // Group ids by their computed target year; skip anyone already at the limit.
+    const groups = new Map();
+    let skipped = 0;
+    for (const s of students) {
+      const current = Number(s.year) || 1;
+      const target =
+        action === "promote"
+          ? Math.min(current + 1, maxYearFor(s.department))
+          : Math.max(current - 1, 1);
+
+      if (target === current) {
+        skipped++;
+        continue;
+      }
+      if (!groups.has(target)) groups.set(target, []);
+      groups.get(target).push(s.id);
+    }
+
+    const updated = await withFriendlyErrors(() =>
+      studentRepository.setYearsByGroups(groups)
+    );
+
+    return { updated, skipped, total: students.length };
   },
 
   // ── Delete ───────────────────────────────────────────────────────────

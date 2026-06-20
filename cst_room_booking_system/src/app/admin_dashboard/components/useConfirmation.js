@@ -1,6 +1,7 @@
 "use client";
 
 import { useCallback, useRef, useState } from "react";
+import toast from "react-hot-toast";
 import ConfirmationDialog from "../../confirmation";
 
 const initialConfirmation = {
@@ -67,8 +68,11 @@ export function useConfirmation() {
       const result = await confirmation.onConfirm();
       resolveConfirmation(result === undefined ? true : result);
     } catch (error) {
-      console.error(error);
-      alert(error?.message || "Action failed");
+      // Expected validation messages (e.g. "student already exists") land here.
+      // Use console.warn (not console.error) so it doesn't trip Next's red error
+      // overlay, and show a normal toast instead of a browser alert().
+      console.warn("Confirmed action failed:", error);
+      toast.error(error?.message || "Action failed");
       resolveConfirmation(false);
     } finally {
       setIsLoading(false);
@@ -86,5 +90,5 @@ export function useConfirmation() {
     />
   ) : null;
 
-  return { confirm, confirmationDialog };
+  return { confirm, confirmationDialog, isConfirmOpen: confirmation.isOpen };
 }

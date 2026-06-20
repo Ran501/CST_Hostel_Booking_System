@@ -120,7 +120,7 @@ export default function Navbar() {
           <div className="flex items-center gap-2 relative">
             <button
               onClick={() => setUserMenuOpen((prev) => !prev)}
-              className="flex items-center gap-2 rounded-full bg-gray-100 p-1.5 hover:bg-gray-200 transition"
+              className="cursor-pointer flex items-center gap-2 rounded-full bg-gray-100 p-1.5 hover:bg-gray-200 transition"
             >
               <div className="h-7 w-7 sm:h-9 sm:w-9 rounded-full bg-cstcolor overflow-hidden">
                 <img
@@ -150,7 +150,7 @@ export default function Navbar() {
                   </div>
 
                   <button
-                    className="w-full px-4 py-2 text-left text-red-600 hover:bg-red-100"
+                    className="cursor-pointer w-full px-4 py-2 text-left text-red-600 hover:bg-red-100"
                     onClick={() => {
                       setUserMenuOpen(false);
                       confirm({

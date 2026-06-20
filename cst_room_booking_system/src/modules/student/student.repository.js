@@ -12,7 +12,13 @@ function buildWhere({ search = "", department = "", year = "" }) {
     where.department = { equals: department, mode: "insensitive" };
   }
 
-  if (year) where.year = Number(year);
+  // Only apply the year filter when it's a real integer. A non-numeric value
+  // (e.g. an "all" option) would make Number(year) === NaN, which Prisma
+  // rejects with "Argument `year` is missing".
+  if (year !== undefined && year !== null && String(year).trim() !== "") {
+    const yearNum = Number(year);
+    if (Number.isInteger(yearNum)) where.year = yearNum;
+  }
 
   if (search) {
     where.OR = [
@@ -128,5 +134,31 @@ export const studentRepository = {
 
   async deleteMany(ids) {
     return prisma.user.deleteMany({ where: { id: { in: ids } } });
+  },
+
+  // ── Bulk year promote/demote ───────────────────────────────────────────
+  /** Minimal fields needed to compute a new year for each selected student. */
+  async findYearInfoByIds(ids) {
+    return prisma.user.findMany({
+      where:  { id: { in: ids } },
+      select: { id: true, department: true, year: true },
+    });
+  },
+
+  /**
+   * Apply new years in bulk. `groups` is a Map<newYear, ids[]> — typically only
+   * a handful of distinct target years, so this is a few `updateMany`s run
+   * together in one transaction, regardless of how many students were selected.
+   */
+  async setYearsByGroups(groups) {
+    const entries = [...groups.entries()];
+    if (entries.length === 0) return 0;
+
+    const results = await prisma.$transaction(
+      entries.map(([year, ids]) =>
+        prisma.user.updateMany({ where: { id: { in: ids } }, data: { year } })
+      )
+    );
+    return results.reduce((sum, r) => sum + r.count, 0);
   },
 };

@@ -1,5 +1,6 @@
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";
+import ToasterProvider from "./components/ToasterProvider";
 // import Chatbot from "./Chatbot";
 
 const geistSans = Geist({
@@ -28,6 +29,9 @@ export default function RootLayout({ children }) {
         suppressHydrationWarning={true}
       >
         {children}
+
+        {/* Renders all react-hot-toast notifications (success/error toasts) */}
+        <ToasterProvider />
 
         {/* Global AI Chatbot */}
         {/* <Chatbot /> */}

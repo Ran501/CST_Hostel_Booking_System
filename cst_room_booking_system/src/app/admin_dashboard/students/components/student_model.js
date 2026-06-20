@@ -13,6 +13,31 @@ const departments = [
 
 const roleOptions = ["student", "admin", "counselor"];
 
+// Export helpers ────────────────────────────────────────────────────────────
+const YEAR_NAMES = {
+  1: "First Year", 2: "Second Year", 3: "Third Year",
+  4: "Fourth Year", 5: "Fifth Year"
+};
+
+// Columns written to each exported sheet, in order.
+const EXPORT_HEADERS = [
+  "studentNumber", "name", "email",
+  "department", "year", "phoneNumber", "gender",
+];
+
+// Excel sheet names: max 31 chars, no \ / ? * [ ] : , and must be unique.
+function safeSheetName(name, used) {
+  let base = String(name).replace(/[\\/?*[\]:]/g, " ").trim().slice(0, 31) || "Sheet";
+  let candidate = base;
+  let i = 1;
+  while (used.has(candidate)) {
+    const suffix = ` (${++i})`;
+    candidate = base.slice(0, 31 - suffix.length) + suffix;
+  }
+  used.add(candidate);
+  return candidate;
+}
+
 const SkeletonRow = () => (
   <tr className="animate-pulse">
     <td className="px-2 py-2"><div className="w-4 h-4 bg-gray-200 rounded" /></td>
@@ -56,12 +81,11 @@ function useUser() {
 }
 
 // ── Inline error banner ────────────────────────────────────────────────────
-// Reusable red banner shown inside modals for field-level / API errors.
+
 function ErrorBanner({ message }) {
   if (!message) return null;
   return (
     <div className="mb-3 flex items-start gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-sm text-red-700">
-      {/* simple ✕ icon using SVG so we don't need an extra import */}
       <svg className="w-4 h-4 mt-0.5 flex-shrink-0" fill="currentColor" viewBox="0 0 20 20">
         <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
       </svg>
@@ -181,19 +205,20 @@ function AddStudentModal({ isOpen, onClose, onAdd }) {
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState("");
 
-  // Clear error whenever the modal re-opens
   useEffect(() => { if (isOpen) setError(""); }, [isOpen]);
 
   if (!isOpen) return null;
 
+  const getMaxYear = (department) => {
+    return department === "Architecture" ? 5 : 4;
+  };
+
   const handleChange = (key, value) => {
     setForm(f => ({ ...f, [key]: value }));
-    // Clear error as soon as the user starts correcting
     if (error) setError("");
   };
 
   const handleSubmit = async () => {
-    // ── Client-side validation (shown inline only, no toast for these) ──
     if (!form.studentNumber.trim()) { setError("Student number is required."); return; }
     if (!form.name.trim())          { setError("Name is required."); return; }
     if (!form.email.trim())         { setError("Email is required."); return; }
@@ -211,11 +236,8 @@ function AddStudentModal({ isOpen, onClose, onAdd }) {
         phoneNumber: "", gender: "male", isActive: true,
       });
     } catch (err) {
-      // The service now returns clean messages for all Prisma errors,
-      // so we just display whatever comes back.
       const msg = err.message || "Failed to add student. Please try again.";
       setError(msg);
-      // Use a long-duration error toast so it's hard to miss
       toast.error(msg, { duration: 6000 });
     } finally {
       setSaving(false);
@@ -233,7 +255,6 @@ function AddStudentModal({ isOpen, onClose, onAdd }) {
           </div>
         )}
 
-        {/* Inline error — shown for both validation and API errors */}
         <ErrorBanner message={error} />
 
         <div className="grid grid-cols-2 gap-3">
@@ -258,7 +279,11 @@ function AddStudentModal({ isOpen, onClose, onAdd }) {
             <label className="block text-xs font-medium text-gray-600 mb-1">Department</label>
             <select
               value={form.department}
-              onChange={(e) => handleChange("department", e.target.value)}
+              onChange={(e) => {
+                handleChange("department", e.target.value);
+                // Reset year to 1 when department changes
+                handleChange("year", 1);
+              }}
               className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm text-gray-900"
             >
               {departments.filter(d => d !== "All").map(d => <option key={d} value={d}>{d}</option>)}
@@ -278,12 +303,15 @@ function AddStudentModal({ isOpen, onClose, onAdd }) {
 
           <div>
             <label className="block text-xs font-medium text-gray-600 mb-1">Year</label>
-            <input
-              type="number" min={1} max={6}
+            <select
               value={form.year}
               onChange={(e) => handleChange("year", Number(e.target.value))}
               className="w-full border border-gray-300 rounded px-2 py-1.5 text-sm text-gray-900"
-            />
+            >
+              {Array.from({ length: getMaxYear(form.department) }, (_, i) => i + 1).map(y => (
+                <option key={y} value={y}>Year {y}</option>
+              ))}
+            </select>
           </div>
 
           <div>
@@ -326,6 +354,7 @@ function ImportModal({ isOpen, onClose, onImport }) {
   const [fileName, setFileName] = useState("");
   const [fileText, setFileText] = useState("");
   const [preview, setPreview] = useState([]);
+  const [sheetInfo, setSheetInfo] = useState("");
   const [importing, setImporting] = useState(false);
   const [importResult, setImportResult] = useState(null);
   const [error, setError] = useState("");
@@ -335,30 +364,74 @@ function ImportModal({ isOpen, onClose, onImport }) {
 
   if (!isOpen) return null;
 
-  const handleFile = (e) => {
+  const setCsvPreview = (csvText, info = "") => {
+    setFileText(csvText);
+    setPreview(csvText.split("\n").filter(l => l.trim()).slice(0, 5));
+    setSheetInfo(info);
+  };
+
+  const handleFile = async (e) => {
     const f = e.target.files[0];
     if (!f) return;
     setFileName(f.name);
     setImportResult(null);
     setError("");
-    const reader = new FileReader();
-    reader.onload = (ev) => {
-      const text = ev.target.result;
-      setFileText(text);
-      const lines = text.split("\n").filter(l => l.trim());
-      setPreview(lines.slice(0, 5));
-    };
-    reader.onerror = () => {
-      const msg = "Could not read the file. Please try selecting it again.";
+    setSheetInfo("");
+
+    const isExcel = /\.(xlsx|xls)$/i.test(f.name);
+
+    // ── CSV: read as text (unchanged behaviour) ─────────────────────────────
+    if (!isExcel) {
+      const reader = new FileReader();
+      reader.onload = (ev) => setCsvPreview(ev.target.result);
+      reader.onerror = () => {
+        const msg = "Could not read the file. Please try selecting it again.";
+        setError(msg);
+        toast.error(msg);
+      };
+      reader.readAsText(f);
+      return;
+    }
+
+    // ── Excel: merge EVERY tab into one CSV, then reuse the CSV import path ──
+    try {
+      const buf = await f.arrayBuffer();
+      const xlsxModule = await import("xlsx");
+      const XLSX = xlsxModule.default ?? xlsxModule;
+      const wb = XLSX.read(new Uint8Array(buf), { type: "array" });
+
+      let allRows = [];
+      for (const sheetName of wb.SheetNames) {
+        const rows = XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval: "", raw: false });
+        allRows = allRows.concat(rows);
+      }
+
+      if (allRows.length === 0) {
+        const msg = "No rows found in any sheet of this workbook.";
+        setError(msg);
+        toast.error(msg);
+        setFileText("");
+        setPreview([]);
+        return;
+      }
+
+      // json_to_sheet builds a unified header row across all tabs.
+      const combined = XLSX.utils.json_to_sheet(allRows);
+      const csv = XLSX.utils.sheet_to_csv(combined);
+      setCsvPreview(csv, `${wb.SheetNames.length} tab(s) combined · ${allRows.length} rows`);
+    } catch (err) {
+      console.error("Excel parse error:", err);
+      const msg = "Could not read this Excel file. Make sure it's a valid .xlsx/.xls workbook.";
       setError(msg);
       toast.error(msg);
-    };
-    reader.readAsText(f);
+      setFileText("");
+      setPreview([]);
+    }
   };
 
   const handleImport = async () => {
     if (!fileText) {
-      const msg = "Please select a CSV file first.";
+      const msg = "Please select a CSV or Excel file first.";
       setError(msg);
       toast.error(msg);
       return;
@@ -388,6 +461,7 @@ function ImportModal({ isOpen, onClose, onImport }) {
     setFileName("");
     setFileText("");
     setPreview([]);
+    setSheetInfo("");
     setImportResult(null);
     setError("");
     onClose();
@@ -396,11 +470,13 @@ function ImportModal({ isOpen, onClose, onImport }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40">
       <div className="bg-white rounded-xl shadow-xl w-full max-w-lg mx-4 p-6">
-        <h2 className="text-lg font-bold text-gray-900 mb-1">Import Students (CSV)</h2>
+        <h2 className="text-lg font-bold text-gray-900 mb-1">Import Students (CSV or Excel)</h2>
         <p className="text-xs text-gray-500 mb-4">
-          Required columns: <code>studentNumber, name, email, year, gender, phoneNumber, department</code>
+          Required columns: <code>studentNumber, name, email, year, gender, department</code>
           <br />
-          Optional: <code>role</code> (default: student), <code>isActive / status</code> (default: disabled), <code>password</code>
+          Optional: <code>phoneNumber</code>, <code>role</code> (default: student), <code>isActive / status</code> (default: disabled), <code>password</code>
+          <br />
+          Excel (.xlsx/.xls): every tab is imported and combined — each row keeps its own year &amp; department.
         </p>
 
         <ErrorBanner message={error} />
@@ -409,8 +485,9 @@ function ImportModal({ isOpen, onClose, onImport }) {
           onClick={() => fileRef.current.click()}
           className="border-2 border-dashed border-gray-300 rounded-lg p-8 text-center cursor-pointer hover:border-blue-400 transition-colors"
         >
-          <input ref={fileRef} type="file" accept=".csv,.CSV" className="hidden" onChange={handleFile} />
-          {fileName ? <p className="text-sm text-gray-700 font-medium">{fileName}</p> : <p className="text-sm text-gray-400">Click to select a CSV file</p>}
+          <input ref={fileRef} type="file" accept=".csv,.CSV,.xlsx,.xls" className="hidden" onChange={handleFile} />
+          {fileName ? <p className="text-sm text-gray-700 font-medium">{fileName}</p> : <p className="text-sm text-gray-400">Click to select a CSV or Excel file</p>}
+          {sheetInfo && <p className="text-xs text-green-600 mt-1">{sheetInfo}</p>}
         </div>
 
         {preview.length > 0 && (
@@ -463,8 +540,14 @@ export default function StudentManagement() {
   const [selectedDepartment, setSelectedDepartment] = useState("All");
   const [selectedYear, setSelectedYear] = useState("All");
   const [searchTerm, setSearchTerm] = useState("");
+  // Debounced copy of searchTerm — the actual fetch keys off this, so typing
+  // doesn't fire a request on every keystroke (only ~300ms after you stop).
+  const [debouncedSearch, setDebouncedSearch] = useState("");
 
   const [selectedStudents, setSelectedStudents] = useState([]);
+  // Power-user selection: anchor row for range-select, focus row for Shift+Arrow.
+  const selectionAnchorRef = useRef(null);
+  const [focusIndex, setFocusIndex] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const [showImportModal, setShowImportModal] = useState(false);
   const { confirm, confirmationDialog } = useConfirmation();
@@ -476,6 +559,24 @@ export default function StudentManagement() {
   const [editingCell, setEditingCell] = useState({ id: null, field: null, value: "" });
   const editConfirmationPending = useRef(false);
   const loadMoreRef = useRef(null);
+
+  // ── Year Helper Functions ──────────────────────────────────────────────
+
+  const getMaxYear = (department) => {
+    return department === "Architecture" ? 5 : 4;
+  };
+
+  const getAvailableYears = (department) => {
+    if (department === "All") {
+      return [1, 2, 3, 4, 5];
+    }
+    const maxYear = getMaxYear(department);
+    const years = [];
+    for (let i = 1; i <= maxYear; i++) {
+      years.push(i);
+    }
+    return years;
+  };
 
   // ── Helpers ──────────────────────────────────────────────────────────────
 
@@ -489,7 +590,8 @@ export default function StudentManagement() {
 
   const normalizeStudents = (arr) => arr.map(normalizeStudent);
 
-  // ── Generic safe API call: parses JSON and throws clean errors ────────────
+  // ── Generic safe API call ──────────────────────────────────────────────
+
   const apiCall = async (url, options = {}) => {
     const res  = await fetch(url, options);
     const text = await res.text();
@@ -509,7 +611,7 @@ export default function StudentManagement() {
     try {
       const params = new URLSearchParams({
         limit: "25",
-        search: searchTerm,
+        search: debouncedSearch,
         department: selectedDepartment === "All" ? "" : selectedDepartment,
         year: selectedYear === "All" ? "" : selectedYear,
       });
@@ -535,7 +637,13 @@ export default function StudentManagement() {
       setLoading(false);
       setLoadingMore(false);
     }
-  }, [selectedDepartment, selectedYear, searchTerm]);
+  }, [selectedDepartment, selectedYear, debouncedSearch]);
+
+  // Copy searchTerm into debouncedSearch ~300ms after the user stops typing.
+  useEffect(() => {
+    const id = setTimeout(() => setDebouncedSearch(searchTerm.trim()), 300);
+    return () => clearTimeout(id);
+  }, [searchTerm]);
 
   useEffect(() => {
     setStudents([]);
@@ -553,7 +661,7 @@ export default function StudentManagement() {
     return () => observer.disconnect();
   }, [hasMore, nextCursor, loadingMore, fetchStudents]);
 
-  // ── Hostels data (for counselor role confirmation message) ────────────────
+  // ── Hostels data ────────────────────────────────────────────────────────
 
   useEffect(() => {
     fetch("/api/admin/hostel")
@@ -581,7 +689,7 @@ export default function StudentManagement() {
       body: JSON.stringify({ userId, hostelId }),
     });
 
-  // ── Role change — pick hostel first if promoting to counselor ────────────
+  // ── Role change ────────────────────────────────────────────────────────
 
   const handleHostelSelectForRoleChange = async (userId, hostelId) => {
     setHostelModal({ open: false, userId: null, studentName: "" });
@@ -617,7 +725,6 @@ export default function StudentManagement() {
   const requestRoleChange = (student, newRole) => {
     if (isViewOnly || newRole === student.role) return;
 
-    // Promoting to counselor → open hostel picker first
     if (newRole === "counselor" && student.role !== "counselor") {
       setPendingRoleChange({ studentId: student.id, studentName: student.name });
       setHostelModal({ open: true, userId: student.id, studentName: student.name });
@@ -639,7 +746,7 @@ export default function StudentManagement() {
     });
   };
 
-  // ── Other actions ─────────────────────────────────────────────────────────
+  // ── Other actions ────────────────────────────────────────────────────────
 
   const promptHostelAssignment = (userId, studentName) => {
     if (!isAdmin) return;
@@ -671,7 +778,6 @@ export default function StudentManagement() {
   };
 
   const handleAddStudent = async (form) => {
-    // apiCall throws with the friendly message from the service layer
     const newStudent = await apiCall("/api/admin/student", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -723,18 +829,49 @@ export default function StudentManagement() {
       const result = await apiCall(`/api/admin/student?${params}`);
       const data = result.data || [];
 
-      const headers = ["studentNumber", "name", "email", "role", "department", "year", "phoneNumber", "gender", "isActive"];
-      const rows = data.map(s => headers.map(h => s[h] ?? "").join(","));
-      const csv = [headers.join(","), ...rows].join("\n");
+      if (data.length === 0) {
+        toast.error("No students match the current filters — nothing to export.");
+        return;
+      }
 
-      const blob = new Blob([csv], { type: "text/csv" });
-      const url  = URL.createObjectURL(blob);
-      const a    = document.createElement("a");
-      a.href     = url;
-      a.download = `students_${new Date().toISOString().slice(0, 10)}.csv`;
-      a.click();
-      URL.revokeObjectURL(url);
-      toast.success("Export downloaded successfully");
+      // Group students by department → one Excel tab per department.
+      const byDept = new Map();
+      for (const s of data) {
+        const dept = s.department || "Unknown";
+        if (!byDept.has(dept)) byDept.set(dept, []);
+        byDept.get(dept).push(s);
+      }
+
+      // Keep the configured department order, then any unexpected ones at the end.
+      const known = departments.filter(d => d !== "All" && byDept.has(d));
+      const extra = [...byDept.keys()].filter(d => !departments.includes(d));
+      const orderedDepts = [...known, ...extra];
+
+      const xlsxModule = await import("xlsx");
+      const XLSX = xlsxModule.default ?? xlsxModule;
+
+      const wb = XLSX.utils.book_new();
+      const usedNames = new Set();
+      for (const dept of orderedDepts) {
+        const rows = byDept.get(dept).map(s => {
+          const row = {};
+          EXPORT_HEADERS.forEach(h => { row[h] = s[h] ?? ""; });
+          return row;
+        });
+        const ws = XLSX.utils.json_to_sheet(rows, { header: EXPORT_HEADERS });
+        XLSX.utils.book_append_sheet(wb, ws, safeSheetName(dept, usedNames));
+      }
+
+      // File named after the selected year, e.g. "First Year.xlsx".
+      const yearLabel = selectedYear === "All"
+        ? "All Years"
+        : (YEAR_NAMES[selectedYear] || `Year ${selectedYear}`);
+
+      XLSX.writeFile(wb, `${yearLabel}.xlsx`);
+      toast.success(
+        `Exported ${data.length} student${data.length !== 1 ? "s" : ""} to ${yearLabel}.xlsx ` +
+        `(${orderedDepts.length} tab${orderedDepts.length !== 1 ? "s" : ""})`
+      );
     } catch (err) {
       toast.error(err.message || "Export failed. Please try again.");
     }
@@ -749,6 +886,16 @@ export default function StudentManagement() {
 
   const saveEdit = (id, field, newValue) => {
     if (isViewOnly || editConfirmationPending.current) return;
+
+    // Only confirm when the value actually changed — otherwise just close the
+    // editor so a no-op click/blur never pops the confirmation dialog.
+    const student  = students.find(s => s.id === id);
+    const original = student?.[field] ?? "";
+    if (String(newValue).trim() === String(original).trim()) {
+      setEditingCell({ id: null, field: null, value: "" });
+      return;
+    }
+
     editConfirmationPending.current = true;
     setEditingCell({ id: null, field: null, value: "" });
     confirm({
@@ -829,10 +976,16 @@ export default function StudentManagement() {
     });
   };
 
+  // ── Year promotion/demotion functions ──────────────────────────────────
+
   const promoteStudent = (student) => {
     if (isViewOnly) return;
-    const maxYear = student.department === "Architecture" ? 6 : 5;
-    if (student.year >= maxYear) return;
+    const maxYear = getMaxYear(student.department);
+    if (student.year >= maxYear) {
+      // react-hot-toast has no .info(); use the base toast with an info icon.
+      toast(`${student.name} is already in their final year (Year ${maxYear}). Can't promote further.`, { icon: "ℹ️" });
+      return;
+    }
     const newYear = student.year + 1;
     confirm({
       message: `Promote ${student.name} from year ${student.year} to year ${newYear}?`,
@@ -843,7 +996,11 @@ export default function StudentManagement() {
 
   const demoteStudent = (student) => {
     if (isViewOnly) return;
-    if (student.year <= 1) return;
+    if (student.year <= 1) {
+      // react-hot-toast has no .info(); use the base toast with an info icon.
+      toast(`${student.name} is already in Year 1. Can't demote further.`, { icon: "ℹ️" });
+      return;
+    }
     const newYear = student.year - 1;
     confirm({
       message: `Demote ${student.name} from year ${student.year} to year ${newYear}?`,
@@ -853,25 +1010,49 @@ export default function StudentManagement() {
   };
 
   const applyBulkYearAction = async (type) => {
-    const targets = students.filter(s => selectedStudents.includes(s.id));
-    const updates = targets.map(s => {
-      const maxYear = s.department === "Architecture" ? 6 : 5;
-      const newYear = type === "promote" ? Math.min(s.year + 1, maxYear) : Math.max(s.year - 1, 1);
-      return { ...s, year: newYear };
-    });
+    const ids = [...selectedStudents];
+    if (ids.length === 0) return;
 
+    // Snapshot for rollback if the single bulk request fails.
+    const snapshot = students;
+
+    // Optimistic local update using the same clamping rules the server applies.
     setStudents(prev => prev.map(s => {
-      const updated = updates.find(u => u.id === s.id);
-      return updated ? { ...s, year: updated.year } : s;
+      if (!ids.includes(s.id)) return s;
+      const maxYear = getMaxYear(s.department);
+      const newYear = type === "promote"
+        ? Math.min(s.year + 1, maxYear)
+        : Math.max(s.year - 1, 1);
+      return { ...s, year: newYear };
     }));
 
-    const results = await Promise.allSettled(updates.map(s => updateStudent(s.id, { year: s.year })));
-    const failures = results.filter(r => r.status === "rejected");
-    if (failures.length > 0) {
-      await fetchStudents();
-      toast.error(`Failed to update ${failures.length} student${failures.length !== 1 ? "s" : ""}. Please try again.`);
-    } else {
-      toast.success(`${type === "promote" ? "Promoted" : "Demoted"} ${updates.length} student${updates.length !== 1 ? "s" : ""}`);
+    try {
+      // One request: the server computes new years (per-department cap) and
+      // applies them with a few grouped updateMany queries in a transaction.
+      const result = await apiCall("/api/admin/student", {
+        method: "PUT",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ ids, action: type }),
+      });
+
+      const updated = result?.updated ?? 0;
+      const skipped = result?.skipped ?? 0;
+
+      if (updated === 0 && skipped > 0) {
+        toast(
+          type === "promote"
+            ? "All selected students are already in their final year."
+            : "All selected students are already in Year 1.",
+          { icon: "ℹ️" },
+        );
+      } else {
+        let msg = `${type === "promote" ? "Promoted" : "Demoted"} ${updated} student${updated !== 1 ? "s" : ""}`;
+        if (skipped > 0) msg += ` · ${skipped} already at the limit`;
+        toast.success(msg);
+      }
+    } catch (err) {
+      setStudents(snapshot); // rollback the optimistic change
+      toast.error(err.message || "Bulk update failed. Please try again.");
     }
   };
 
@@ -930,6 +1111,103 @@ export default function StudentManagement() {
     setSelectedStudents(prev => prev.length === students.length && students.length > 0 ? [] : students.map(s => s.id));
   };
 
+  // ── Power-user selection (range + multi-select) ────────────────────────────
+
+  // Inclusive list of student ids between two row indices.
+  const idsInRange = (a, b) => {
+    const [lo, hi] = a <= b ? [a, b] : [b, a];
+    return students.slice(lo, hi + 1).map(s => s.id);
+  };
+
+  // Checkbox click: Shift extends a contiguous range from the anchor; a plain
+  // click toggles a single row and makes it the new anchor.
+  const handleCheckboxClick = (student, index, e) => {
+    if (isViewOnly) return;
+    if (e.shiftKey && selectionAnchorRef.current !== null) {
+      setSelectedStudents(idsInRange(selectionAnchorRef.current, index));
+    } else {
+      handleSelectStudent(student.id);
+      selectionAnchorRef.current = index;
+    }
+    setFocusIndex(index);
+  };
+
+  // Ctrl/Cmd+Click toggles a row; Shift+Click extends a range — anywhere on the
+  // row except the actual controls (which keep their normal behaviour).
+  const handleRowClick = (student, index, e) => {
+    if (isViewOnly) return;
+    if (!(e.ctrlKey || e.metaKey || e.shiftKey)) return;
+    if (e.target.closest("input, select, button, textarea")) return;
+    if (e.shiftKey && selectionAnchorRef.current !== null) {
+      setSelectedStudents(idsInRange(selectionAnchorRef.current, index));
+    } else {
+      handleSelectStudent(student.id);
+      selectionAnchorRef.current = index;
+    }
+    setFocusIndex(index);
+  };
+
+  // ── Keyboard shortcuts for fast/frequent users ─────────────────────────────
+  useEffect(() => {
+    if (isViewOnly) return;
+
+    const isTypingTarget = (el) =>
+      !!el && (el.isContentEditable || ["INPUT", "TEXTAREA", "SELECT"].includes(el.tagName));
+
+    const onKeyDown = (e) => {
+      // Esc: close an open modal, else cancel an in-progress edit, else clear selection.
+      if (e.key === "Escape") {
+        if (showAddModal) return setShowAddModal(false);
+        if (showImportModal) return setShowImportModal(false);
+        if (hostelModal.open) {
+          setHostelModal({ open: false, userId: null, studentName: "" });
+          if (pendingRoleChange) setPendingRoleChange(null);
+          return;
+        }
+        if (editingCell.id) return setEditingCell({ id: null, field: null, value: "" });
+        if (selectedStudents.length > 0) { setSelectedStudents([]); setFocusIndex(null); }
+        return;
+      }
+
+      // The rest must not fight with typing in a field or an open modal.
+      if (isTypingTarget(e.target)) return;
+      if (showAddModal || showImportModal || hostelModal.open) return;
+
+      // Ctrl/Cmd + A → select every loaded row.
+      if ((e.ctrlKey || e.metaKey) && (e.key === "a" || e.key === "A")) {
+        if (students.length === 0) return;
+        e.preventDefault();
+        setSelectedStudents(students.map(s => s.id));
+        return;
+      }
+
+      // Delete / Backspace → delete the current selection.
+      if ((e.key === "Delete" || e.key === "Backspace") && selectedStudents.length > 0) {
+        e.preventDefault();
+        requestDeleteSelectedStudents();
+        return;
+      }
+
+      // Shift + Arrow Up/Down → extend the selection one row at a time.
+      if (e.shiftKey && (e.key === "ArrowDown" || e.key === "ArrowUp")) {
+        if (students.length === 0) return;
+        e.preventDefault();
+        const current = focusIndex ?? selectionAnchorRef.current ?? 0;
+        if (selectionAnchorRef.current === null) selectionAnchorRef.current = current;
+        const next = Math.max(
+          0,
+          Math.min(students.length - 1, current + (e.key === "ArrowDown" ? 1 : -1)),
+        );
+        setSelectedStudents(idsInRange(selectionAnchorRef.current, next));
+        setFocusIndex(next);
+      }
+    };
+
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [isViewOnly, showAddModal, showImportModal, hostelModal, pendingRoleChange, editingCell, selectedStudents, students, focusIndex]);
+
   // ── Render ───────────────────────────────────────────────────────────────
 
   if (userLoading) return <div className="min-h-screen bg-gray-50 flex items-center justify-center">Loading user...</div>;
@@ -943,25 +1221,56 @@ export default function StudentManagement() {
           <p className="text-gray-500 text-sm mt-1">
             {isViewOnly ? "View‑only mode – you are a counselor." : "Double‑click any cell to edit | Select checkboxes for bulk actions"}
           </p>
+          {!isViewOnly && (
+            <p className="text-gray-400 text-xs mt-1">
+              Shortcuts: <kbd className="font-sans">Ctrl/⌘+A</kbd> select all ·{" "}
+              <kbd className="font-sans">Ctrl/⌘+Click</kbd> multi‑select ·{" "}
+              <kbd className="font-sans">Shift+Click</kbd> / <kbd className="font-sans">Shift+↑↓</kbd> range ·{" "}
+              <kbd className="font-sans">Delete</kbd> remove selected ·{" "}
+              <kbd className="font-sans">Esc</kbd> cancel
+            </p>
+          )}
         </div>
 
         <div className="bg-white rounded-lg shadow-sm p-3 mb-4">
           <div className="flex flex-wrap gap-3 items-center justify-between">
             <div className="flex flex-wrap gap-3 items-center">
-              <select value={selectedDepartment} onChange={(e) => setSelectedDepartment(e.target.value)} className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500">
+              <select 
+                value={selectedDepartment} 
+                onChange={(e) => {
+                  setSelectedDepartment(e.target.value);
+                  setSelectedYear("All");
+                }} 
+                className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500"
+              >
                 {departments.map(dept => <option key={dept} value={dept}>{dept}</option>)}
               </select>
-              <select value={selectedYear} onChange={(e) => setSelectedYear(e.target.value)} className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500">
-                {["All", 1, 2, 3, 4, 5, 6, "Graduated"].map(y => <option key={y} value={y}>{y}</option>)}
+
+              <select 
+                value={selectedYear} 
+                onChange={(e) => setSelectedYear(e.target.value)} 
+                className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm text-gray-900 focus:ring-2 focus:ring-blue-500"
+              >
+                <option value="All">All Years</option>
+                {getAvailableYears(selectedDepartment).map(y => (
+                  <option key={y} value={y}>Year {y}</option>
+                ))}
               </select>
-              <input type="text" value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} placeholder="Search..." className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm w-64 text-gray-900 focus:ring-2 focus:ring-blue-500" />
+
+              <input 
+                type="text" 
+                value={searchTerm} 
+                onChange={(e) => setSearchTerm(e.target.value)} 
+                placeholder="Search..." 
+                className="border border-gray-300 rounded-lg px-3 py-1.5 text-sm w-64 text-gray-900 focus:ring-2 focus:ring-blue-500" 
+              />
             </div>
             {!isViewOnly && (
               <div className="flex gap-2">
-                <button onClick={() => setShowImportModal(true)} className="bg-cstcolor text-white px-3 py-1.5 rounded-lg text-sm hover:bg-cstcolor3">Import</button>
-                <button onClick={handleExport} className="bg-cstcolor text-white px-3 py-1.5 rounded-lg text-sm hover:bg-cstcolor3">Export</button>
-                {selectedStudents.length > 0 && <button onClick={requestDeleteSelectedStudents} className="bg-red-500 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-red-600">Delete ({selectedStudents.length})</button>}
-                <button onClick={() => setShowAddModal(true)} className="bg-cstcolor text-white px-3 py-1.5 rounded-lg text-sm hover:bg-cstcolor3">Add</button>
+                <button onClick={() => setShowImportModal(true)} className="cursor-pointer bg-cstcolor text-white px-3 py-1.5 rounded-lg text-sm hover:bg-cstcolor3">Import</button>
+                <button onClick={handleExport} className="cursor-pointer bg-cstcolor text-white px-3 py-1.5 rounded-lg text-sm hover:bg-cstcolor3">Export</button>
+                {selectedStudents.length > 0 && <button onClick={requestDeleteSelectedStudents} className="cursor-pointer bg-red-500 text-white px-3 py-1.5 rounded-lg text-sm hover:bg-red-600">Delete ({selectedStudents.length})</button>}
+                <button onClick={() => setShowAddModal(true)} className="cursor-pointer bg-cstcolor text-white px-3 py-1.5 rounded-lg text-sm hover:bg-cstcolor3">Add</button>
               </div>
             )}
             {isViewOnly && <span className="text-xs text-gray-400 bg-gray-100 px-3 py-1 rounded-full">Read‑only</span>}
@@ -999,10 +1308,10 @@ export default function StudentManagement() {
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {loading && Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} />)}
-                {!loading && students.map((student) => (
-                  <tr key={student.id} className={`hover:bg-gray-50 transition-colors ${selectedStudents.includes(student.id) ? "bg-blue-50" : ""}`}>
+                {!loading && students.map((student, index) => (
+                  <tr key={student.id} onClick={(e) => handleRowClick(student, index, e)} className={`hover:bg-gray-50 transition-colors ${selectedStudents.includes(student.id) ? "bg-blue-50" : ""} ${index === focusIndex ? "ring-2 ring-inset ring-blue-400" : ""}`}>
                     <td className="px-2 py-2">
-                      <input type="checkbox" checked={selectedStudents.includes(student.id)} onChange={() => handleSelectStudent(student.id)} disabled={isViewOnly} className={`rounded ${isViewOnly ? "cursor-not-allowed opacity-50" : ""}`} />
+                      <input type="checkbox" checked={selectedStudents.includes(student.id)} onClick={(e) => handleCheckboxClick(student, index, e)} onChange={() => {}} disabled={isViewOnly} className={`rounded ${isViewOnly ? "cursor-not-allowed opacity-50" : ""}`} />
                     </td>
                     <td className="px-2 py-2 text-sm font-medium text-gray-900">{renderEditableCell(student, "studentNumber", student.studentNumber)}</td>
                     <td className="px-2 py-2 text-sm text-gray-700">{renderEditableCell(student, "name", student.name)}</td>
@@ -1024,8 +1333,20 @@ export default function StudentManagement() {
                         <span className="font-medium text-gray-800">{student.year}</span>
                         {!isViewOnly && (
                           <div className="flex flex-col">
-                            <button onClick={() => promoteStudent(student)} className="text-green-600 text-xs leading-none hover:text-green-800">▲</button>
-                            <button onClick={() => demoteStudent(student)} className="text-red-600 text-xs leading-none hover:text-red-800">▼</button>
+                            <button 
+                              onClick={() => promoteStudent(student)} 
+                              className={`text-green-600 text-xs leading-none hover:text-green-800 ${student.year >= getMaxYear(student.department) ? 'opacity-40 cursor-not-allowed' : ''}`}
+                              title={student.year >= getMaxYear(student.department) ? 'Already in final year' : 'Promote'}
+                            >
+                              ▲
+                            </button>
+                            <button 
+                              onClick={() => demoteStudent(student)} 
+                              className={`text-red-600 text-xs leading-none hover:text-red-800 ${student.year <= 1 ? 'opacity-40 cursor-not-allowed' : ''}`}
+                              title={student.year <= 1 ? 'Already in Year 1' : 'Demote'}
+                            >
+                              ▼
+                            </button>
                           </div>
                         )}
                       </div>

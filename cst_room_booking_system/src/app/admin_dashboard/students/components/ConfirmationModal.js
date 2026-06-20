@@ -1,6 +1,8 @@
 // components/ConfirmationModal.js
 "use client";
 
+import { useState, useEffect, useRef } from "react";
+
 export default function ConfirmationModal({
   isOpen,
   onClose,
@@ -11,6 +13,35 @@ export default function ConfirmationModal({
   cancelText = "Cancel",
   actionType = "default" // 'default', 'danger'
 }) {
+  const cancelRef  = useRef(null);
+  const confirmRef = useRef(null);
+  // 0 = Cancel, 1 = Confirm. Danger actions start on Cancel for safety.
+  const [activeIndex, setActiveIndex] = useState(actionType === "danger" ? 0 : 1);
+
+  // Reset the highlighted button every time the modal opens.
+  useEffect(() => {
+    if (isOpen) setActiveIndex(actionType === "danger" ? 0 : 1);
+  }, [isOpen, actionType]);
+
+  // Left/Right arrows move between the two buttons; Esc cancels.
+  useEffect(() => {
+    if (!isOpen) return;
+    const onKeyDown = (e) => {
+      if (e.key === "ArrowLeft")  { e.preventDefault(); setActiveIndex(0); }
+      else if (e.key === "ArrowRight") { e.preventDefault(); setActiveIndex(1); }
+      else if (e.key === "Escape")     { e.preventDefault(); onClose(); }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isOpen, onClose]);
+
+  // Keep real DOM focus on the highlighted button so Enter/Space activates it.
+  useEffect(() => {
+    if (!isOpen) return;
+    const ref = activeIndex === 0 ? cancelRef : confirmRef;
+    ref.current?.focus();
+  }, [isOpen, activeIndex]);
+
   if (!isOpen) return null;
 
   const getHeaderColor = () => {
@@ -56,15 +87,17 @@ export default function ConfirmationModal({
           </div>
           
           <div className="flex gap-3 justify-end">
-            <button 
-              onClick={onClose} 
-              className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors cursor-pointer"
+            <button
+              ref={cancelRef}
+              onClick={onClose}
+              className="px-4 py-2 border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-gray-400"
             >
               {cancelText}
             </button>
-            <button 
-              onClick={onConfirm} 
-              className={`px-4 py-2 ${getButtonColor()} text-white rounded-lg font-medium transition-colors cursor-pointer`}
+            <button
+              ref={confirmRef}
+              onClick={onConfirm}
+              className={`px-4 py-2 ${getButtonColor()} text-white rounded-lg font-medium transition-colors cursor-pointer focus:outline-none focus:ring-2 focus:ring-offset-2 ${actionType === 'danger' ? 'focus:ring-red-500' : 'focus:ring-cstcolor'}`}
             >
               {confirmText}
             </button>

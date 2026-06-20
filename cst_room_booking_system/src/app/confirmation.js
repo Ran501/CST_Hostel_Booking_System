@@ -1,6 +1,6 @@
 "use client";
 
-import React from "react";
+import React, { useState, useEffect, useRef } from "react";
 
 export default function ConfirmationDialog({
   message,
@@ -10,6 +10,29 @@ export default function ConfirmationDialog({
   confirmText = "Yes",
   cancelText = "No",
 }) {
+  // Button order in the DOM: 0 = Confirm (left), 1 = Cancel (right).
+  const confirmRef = useRef(null);
+  const cancelRef  = useRef(null);
+  const [activeIndex, setActiveIndex] = useState(0);
+
+  // Left/Right arrows move between the buttons; Esc cancels.
+  useEffect(() => {
+    const onKeyDown = (e) => {
+      if (isLoading) return;
+      if (e.key === "ArrowLeft")  { e.preventDefault(); setActiveIndex(0); }
+      else if (e.key === "ArrowRight") { e.preventDefault(); setActiveIndex(1); }
+      else if (e.key === "Escape")     { e.preventDefault(); onCancel?.(); }
+    };
+    window.addEventListener("keydown", onKeyDown);
+    return () => window.removeEventListener("keydown", onKeyDown);
+  }, [isLoading, onCancel]);
+
+  // Keep real DOM focus on the highlighted button so Enter/Space activates it.
+  useEffect(() => {
+    if (isLoading) return;
+    const ref = activeIndex === 0 ? confirmRef : cancelRef;
+    ref.current?.focus();
+  }, [activeIndex, isLoading]);
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
       <div className="relative w-full max-w-sm sm:max-w-md rounded-2xl bg-white shadow-2xl">
@@ -59,9 +82,10 @@ export default function ConfirmationDialog({
 
           <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
             <button
+              ref={confirmRef}
               onClick={onConfirm}
               disabled={isLoading}
-              className={`cursor-pointer inline-flex w-full sm:w-auto h-10 items-center justify-center rounded-md px-5 text-sm font-medium text-white shadow-sm focus:outline-none focus:ring-2 transition-all duration-300 ${
+              className={`cursor-pointer inline-flex w-full sm:w-auto h-10 items-center justify-center rounded-md px-5 text-sm font-medium text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-300 ${
                 isLoading
                   ? "bg-cstcolor cursor-not-allowed"
                   : "bg-cstcolor hover:bg-cstcolor2 focus:ring-blue-600/40"
@@ -80,9 +104,10 @@ export default function ConfirmationDialog({
             </button>
 
             <button
+              ref={cancelRef}
               onClick={onCancel}
               disabled={isLoading}
-              className={`cursor-pointer inline-flex w-full sm:w-auto h-10 items-center justify-center rounded-md border px-5 text-sm font-medium focus:outline-none focus:ring-2 transition-all duration-300 ${
+              className={`cursor-pointer inline-flex w-full sm:w-auto h-10 items-center justify-center rounded-md border px-5 text-sm font-medium focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-300 ${
                 isLoading
                   ? "border-gray-400 bg-gray-100 text-gray-400 cursor-not-allowed"
                   : "border-cstcolor bg-white text-cstcolor hover:bg-blue-50 focus:ring-blue-600/30"

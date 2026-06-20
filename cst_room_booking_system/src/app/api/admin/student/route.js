@@ -1,9 +1,20 @@
 // src/app/api/admin/student/route.js
 import { studentService } from "../../../../modules/student/student.service";
 import { prisma }         from "../../../../app/lib/prisma";
+import { cache }          from "../../../../app/lib/cache";
 
 function errorResponse(message, status = 400) {
   return Response.json({ error: message }, { status });
+}
+
+// ── Student-list cache ─────────────────────────────────────────────────────
+// Short-lived cache for the paginated/export student list. Every write below
+// calls invalidateStudentList() so admins never see stale data after an edit.
+const STUDENT_LIST_TTL = 30; // seconds
+const STUDENT_LIST_PREFIX = "students_list:";
+
+function invalidateStudentList() {
+  cache.delPattern(`${STUDENT_LIST_PREFIX}*`);
 }
 
 
@@ -24,6 +35,12 @@ export async function GET(req) {
 
     // ── Caller A: original student-page logic ─────────────────────────────────
 
+    // Cache key = the exact query string, so each filter/page combo is cached
+    // separately. Invalidated on every write below.
+    const cacheKey = `${STUDENT_LIST_PREFIX}${searchParams.toString()}`;
+    const cached = cache.get(cacheKey);
+    if (cached) return Response.json(cached);
+
     // ?export=true → full list for Excel export (no pagination)
     if (searchParams.get("export") === "true") {
       const students = await studentService.exportStudents({
@@ -31,7 +48,9 @@ export async function GET(req) {
         year:       searchParams.get("year")       || "",
         search:     searchParams.get("search")     || "",
       });
-      return Response.json({ data: students });
+      const payload = { data: students };
+      cache.set(cacheKey, payload, STUDENT_LIST_TTL);
+      return Response.json(payload);
     }
 
     // Default: cursor-paginated list
@@ -43,6 +62,7 @@ export async function GET(req) {
       year:       searchParams.get("year")       || "",
     });
 
+    cache.set(cacheKey, data, STUDENT_LIST_TTL);
     return Response.json(data);
   } catch (err) {
     console.error("[GET /api/admin/student]", err);
@@ -155,6 +175,7 @@ export async function POST(req) {
       if (!csvText.trim()) return errorResponse("CSV body is empty");
 
       const result = await studentService.importFromCsv(csvText);
+      invalidateStudentList();
       return Response.json(result, { status: 201 });
     }
 
@@ -163,10 +184,12 @@ export async function POST(req) {
 
     if (Array.isArray(body.students)) {
       const result = await studentService.bulkCreateStudents(body.students);
+      invalidateStudentList();
       return Response.json(result, { status: 201 });
     }
 
     const student = await studentService.createStudent(body);
+    invalidateStudentList();
     return Response.json(student, { status: 201 });
   } catch (err) {
     console.error("[POST /api/admin/student]", err);
@@ -174,11 +197,20 @@ export async function POST(req) {
   }
 }
 
-// ── PUT: update one student ────────────────────────────────────────────────────
+// ── PUT: update one student | bulk year promote/demote ─────────────────────────
 export async function PUT(req) {
   try {
-    const body    = await req.json();
+    const body = await req.json();
+
+    // Bulk year action: { ids: [...], action: "promote" | "demote" }
+    if (Array.isArray(body.ids) && (body.action === "promote" || body.action === "demote")) {
+      const result = await studentService.bulkUpdateYear({ ids: body.ids, action: body.action });
+      invalidateStudentList();
+      return Response.json(result);
+    }
+
     const updated = await studentService.updateStudent(body);
+    invalidateStudentList();
     return Response.json(updated);
   } catch (err) {
     console.error("[PUT /api/admin/student]", err);
@@ -199,6 +231,7 @@ export async function DELETE(req) {
       return errorResponse("Provide id or ids");
     }
 
+    invalidateStudentList();
     return Response.json({ message: "Deleted successfully" });
   } catch (err) {
     console.error("[DELETE /api/admin/student]", err);
