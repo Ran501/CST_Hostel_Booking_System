@@ -49,7 +49,7 @@ export default function ManualPage() {
 
           <div className="text-center">
             <h1 className="text-3xl sm:text-4xl md:text-5xl font-bold text-slate-900 mb-4">
-              AFM Room Booking System
+              CST Room Booking System
             </h1>
             <p className="text-lg sm:text-xl text-slate-600 max-w-3xl mx-auto">
               Complete User Guide for Hostel Room Booking
@@ -115,7 +115,7 @@ export default function ManualPage() {
                 
                 <div className="prose prose-slate max-w-none">
                   <p className="text-lg text-slate-700 mb-6">
-                    The <strong className="text-cstcolor">AFM Room Booking System</strong> is a web-based application designed to help users easily view hostel information, check room availability, and book rooms online. This user manual provides step-by-step guidance for end users, from logging into the system to successfully booking a hostel room.
+                    The <strong className="text-cstcolor">CST Room Booking System</strong> is a web-based application designed to help users easily view hostel information, check room availability, and book rooms online. This user manual provides step-by-step guidance for end users, from logging into the system to successfully booking a hostel room.
                   </p>
                   
                   <div className="bg-gradient-to-r from-cstcolor/5 to-slate-50 border-l-4 border-cstcolor p-5 rounded-r-lg mb-6">
@@ -166,7 +166,7 @@ export default function ManualPage() {
                 
                 <div className="prose prose-slate max-w-none">
                   <p className="text-lg text-slate-700 mb-6">
-                    The AFM Room Booking System allows users to:
+                    The CST Room Booking System allows users to:
                   </p>
                   
                   <ul className="space-y-3 mb-8">
@@ -197,8 +197,13 @@ export default function ManualPage() {
                       <div>
                         <h4 className="font-semibold text-amber-900 mb-1">Important Notice</h4>
                         <p className="text-amber-800 text-sm">
-                          The system ensures that hostel bookings follow <strong>gender-based allocation rules</strong>. Users can only book hostels that match their registered gender.
+                          The system ensures that hostel bookings follow <strong>gender-based allocation rules</strong> and <strong>year-wise restrictions</strong>. 
                         </p>
+                        <ul className="text-amber-800 text-sm list-disc list-inside mt-1 space-y-0.5">
+                          <li>Users can only book hostels that match their registered gender</li>
+                          <li>Some hostels may be reserved exclusively for specific year(First Year, Second Year, etc.)</li>
+                          <li>Year-wise restrictions ensure fair accommodation distribution across all batches</li>
+                        </ul>
                       </div>
                     </div>
                   </div>
@@ -207,12 +212,12 @@ export default function ManualPage() {
                     <div className="border border-slate-200 rounded-lg p-5">
                       <h3 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-cstcolor" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 11a4 4 0 11-8 0 4 4 0 018 0zm5-9h4v4m-1.586-2.414l-5.707 5.707M15 5l3.293-3.293" />
                         </svg>
                         Male Hostels
                       </h3>
                       <ul className="space-y-2">
-                        {["Hostel RKA", "Hostel RKB", "Hostel C", "Hostel D", "Hostel NK"].map((hostel) => (
+                        {["Hostel RK-A", "Hostel RK-B", "Hostel A", "Hostel B", "Hostel NK", "Hostel HE", "Lhawang Hostel"].map((hostel) => (
                           <li key={hostel} className="text-slate-700 flex items-center gap-2">
                             <div className="h-2 w-2 rounded-full bg-cstcolor"></div>
                             {hostel}
@@ -222,17 +227,19 @@ export default function ManualPage() {
                     </div>
                     
                     <div className="border border-slate-200 rounded-lg p-5">
-                      <h3 className="font-semibold text-slate-900 mb-3 flex items-center gap-2">
+                      <h3 className="font-semibold text-pink-500 mb-3 flex items-center gap-2">
                         <svg xmlns="http://www.w3.org/2000/svg" className="h-5 w-5 text-pink-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
-                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 14a4 4 0 100-8 4 4 0 000 8zm0 0v6m-3-3h6" />
                         </svg>
                         Female Hostel
                       </h3>
                       <ul className="space-y-2">
-                        <li className="text-slate-700 flex items-center gap-2">
-                          <div className="h-2 w-2 rounded-full bg-pink-500"></div>
-                          Hostel HF
-                        </li>
+                        {["Hostel C", "Hostel D", "Hostel F"].map((hostel) => (
+                          <li key={hostel} className="text-pink-500 flex items-center gap-2">
+                            <div className="h-2 w-2 rounded-full bg-pink-500"></div>
+                            {hostel}
+                          </li>
+                        ))}
                       </ul>
                     </div>
                   </div>
@@ -253,7 +260,7 @@ export default function ManualPage() {
                 
                 <div className="prose prose-slate max-w-none">
                   <p className="text-lg text-slate-700 mb-8">
-                    To use the AFM Room Booking System, ensure that you have:
+                    To use the CST Room Booking System, ensure that you have:
                   </p>
                   
                   <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-6 mb-8">
@@ -282,8 +289,8 @@ export default function ManualPage() {
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M3 5a2 2 0 012-2h3.28a1 1 0 01.948.684l1.498 4.493a1 1 0 01-.502 1.21l-2.257 1.13a11.042 11.042 0 005.516 5.516l1.13-2.257a1 1 0 011.21-.502l4.493 1.498a1 1 0 01.684.949V19a2 2 0 01-2 2h-1C9.716 21 3 14.284 3 6V5z" />
                           </svg>
                         ),
-                        title: "Student Number & Email",
-                        description: "Your student number is used to log in; your registered email receives the activation OTP"
+                        title: "Student Number/ ID Card No. (First Year Students) & Email",
+                        description: "Your student number/ ID Card No. is used to log in; your registered email receives the activation OTP"
                       }
                     ].map((req, index) => (
                       <div key={index} className="bg-slate-50 rounded-lg p-5 border border-slate-200">
@@ -336,7 +343,7 @@ export default function ManualPage() {
                           </li>
                           <li className="flex items-start gap-2">
                             <span className="h-5 w-5 rounded-full bg-slate-200 flex items-center justify-center text-xs flex-shrink-0 mt-0.5">3</span>
-                            <span>A <strong>6-digit OTP</strong> will be sent to your registered college email</span>
+                            <span>A <strong>6-digit OTP</strong> will be sent to your registered college email / personal email(First Year Students)</span>
                           </li>
                         </ol>
                       </div>
@@ -377,7 +384,7 @@ export default function ManualPage() {
                       <div className="ml-12">
                         <h3 className="text-xl font-semibold text-slate-900 mb-3">Step 3: Set Your Password</h3>
                         <p className="text-slate-700">
-                          After your account is activated, create a password (<strong>at least 6 characters</strong>). You will use this password together with your student number every time you log in.
+                          After your account is activated, create a password (<strong>at least 6 characters</strong>). You will use this password together with your student number / ID Card No.   every time you log in.
                         </p>
                         <div className="mt-4 bg-emerald-50 border border-emerald-200 rounded-lg p-4">
                           <div className="flex items-start gap-3">
@@ -425,11 +432,11 @@ export default function ManualPage() {
                           </li>
                           <li className="flex items-start gap-2">
                             <span className="h-5 w-5 rounded-full bg-slate-200 flex items-center justify-center text-xs flex-shrink-0 mt-0.5">2</span>
-                            <span>Visit the official AFM website: <strong className="text-cstcolor">https://afm.rub.edu.bt</strong></span>
+                            <span>Visit the official CST website: <strong className="text-cstcolor">https://cst.edu.bt</strong></span>
                           </li>
                           <li className="flex items-start gap-2">
                             <span className="h-5 w-5 rounded-full bg-slate-200 flex items-center justify-center text-xs flex-shrink-0 mt-0.5">3</span>
-                            <span>On the homepage, click on <strong className="text-cstcolor">Book Logistics</strong></span>
+                            <span>On the homepage, click on <strong className="text-cstcolor">Book Now</strong></span>
                           </li>
                           <li className="flex items-start gap-2">
                             <span className="h-5 w-5 rounded-full bg-slate-200 flex items-center justify-center text-xs flex-shrink-0 mt-0.5">4</span>
@@ -450,7 +457,7 @@ export default function ManualPage() {
                         <h3 className="text-xl font-semibold text-slate-900 mb-4">Step 2: Login</h3>
                         <div className="space-y-3">
                           <p className="text-slate-700">
-                            Enter your <strong>student number</strong> and <strong>password</strong>, then click <strong className="text-cstcolor">Login</strong> to access the system dashboard.
+                            Enter your <strong>student number / ID Card No.</strong> and <strong>password</strong>, then click <strong className="text-cstcolor">Login</strong> to access the system dashboard.
                           </p>
                           <div className="bg-slate-50 border border-slate-200 rounded-lg p-4">
                             <div className="flex items-start gap-3">
@@ -485,7 +492,7 @@ export default function ManualPage() {
                               <div>
                                 <h4 className="font-medium text-slate-900 mb-2">Male Hostels</h4>
                                 <ul className="space-y-1">
-                                  {["Hostel RKA", "Hostel RKB", "Hostel C", "Hostel D", "Hostel NK"].map((hostel) => (
+                                  {["Hostel RKA", "Hostel RKB", "Hostel A", "Hostel B", "Hostel NK", "Hostel HE", "Lhawang Hostel"].map((hostel) => (
                                     <li key={hostel} className="text-sm text-slate-600">• {hostel}</li>
                                   ))}
                                 </ul>
@@ -493,7 +500,9 @@ export default function ManualPage() {
                               <div>
                                 <h4 className="font-medium text-slate-900 mb-2">Female Hostels</h4>
                                 <ul className="space-y-1">
-                                  <li className="text-sm text-slate-600">• HF</li>
+                                  {["Hostel HF", "Hostel D", "Hostel C"].map((hostel) => (
+                                    <li key={hostel} className="text-sm text-slate-600">• {hostel}</li>
+                                  ))}
                                 </ul>
                               </div>
                             </div>
@@ -703,7 +712,7 @@ export default function ManualPage() {
                       </div>
                       <div>
                         <p className="text-lg text-slate-800 mb-4">
-                          The AFM Room Booking System simplifies the hostel booking process for RUB institutions by providing a secure, user-friendly, and efficient online platform.
+                          The CST Room Booking System simplifies the hostel booking process by providing a secure, user-friendly, and efficient online platform.
                         </p>
                         <p className="text-slate-700">
                           By following this manual, users can easily navigate the system and complete their hostel room bookings with confidence.

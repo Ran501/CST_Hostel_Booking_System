@@ -149,6 +149,31 @@ export default function LoginModal({ open = true, onClose, onSuccess }) {
         </div>
       </button>
 
+      {/* User Manual – mirrors the link in the student hamburger menu */}
+      <button
+        onClick={() => router.push("/manual")}
+        className="cursor-pointer absolute left-4 top-16 md:left-6 md:top-20 z-20 text-white hover:text-gray-200 transition-colors group"
+        aria-label="Open user manual"
+      >
+        <div className="flex items-center gap-2 bg-black/30 backdrop-blur-sm rounded-lg px-3 py-2">
+          <svg
+            className="w-5 h-5 md:w-6 md:h-6"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth={2}
+            strokeLinecap="round"
+            strokeLinejoin="round"
+            viewBox="0 0 24 24"
+          >
+            <path d="M4 19.5v-15A2.5 2.5 0 0 1 6.5 2H20v20H6.5a2.5 2.5 0 0 1 0-5H20" />
+            <path d="M9 9h6" />
+            <path d="M9 13h6" />
+            <path d="M9 17h2" />
+          </svg>
+          <span className="text-sm md:text-base font-medium">User Manual</span>
+        </div>
+      </button>
+
       {/* Main content – unchanged */}
       <div className="relative z-10 w-full max-w-6xl px-4">
         <div className="flex flex-col lg:flex-row items-center justify-center min-h-screen">
