@@ -867,7 +867,7 @@ export default function RoomManagement() {
                     </span>
                     <button
                       onClick={clearSelection}
-                      className="text-sm text-gray-400 hover:text-gray-600 underline transition"
+                      className="cursor-pointer text-sm text-gray-400 hover:text-gray-600 underline transition"
                     >
                       Clear
                     </button>
