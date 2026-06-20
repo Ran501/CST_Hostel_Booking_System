@@ -141,7 +141,7 @@ export const HostelCard = ({ hostel, onClose, onBook, refreshTrigger, onBookingC
   const hasMultipleImages = hostel.images && hostel.images.length > 1;
 
   return (
-    <div className="pointer-events-auto fixed left-0 right-0 bottom-0 z-20 bg-white rounded-t-3xl shadow-2xl overflow-y-auto max-h-[55vh] flex flex-col mx-0 sm:absolute sm:inset-x-auto sm:bottom-auto sm:right-4 sm:top-1/2 sm:-translate-y-1/2 sm:w-80 md:w-96 sm:max-h-none sm:rounded-xl sm:flex-none sm:mx-0">
+    <div className="pointer-events-auto fixed left-0 right-0 bottom-0 z-20 bg-white rounded-t-3xl shadow-2xl overflow-hidden max-h-[55vh] flex flex-col mx-0 sm:absolute sm:inset-x-auto sm:bottom-auto sm:right-4 sm:top-1/2 sm:-translate-y-1/2 sm:w-80 md:w-96 sm:max-h-none sm:rounded-xl sm:flex-none sm:mx-0">
       {/* Close Button */}
       <button
         onClick={onClose}
@@ -218,7 +218,7 @@ export const HostelCard = ({ hostel, onClose, onBook, refreshTrigger, onBookingC
       </div>
 
       {/* Hostel Information */}
-      <div className="p-3 sm:p-5 md:p-6 flex-1 overflow-y-auto mt-0">
+      <div className="p-3 sm:p-5 md:p-6 flex-1 min-h-0 overflow-y-auto mt-0">
         <h2 className="text-lg sm:text-xl md:text-2xl font-bold text-gray-900 mb-1 sm:mb-2">{hostel.name}</h2>
         <p className="text-[10px] sm:text-sm text-gray-600 mb-2 sm:mb-3 md:mb-4 line-clamp-1 sm:line-clamp-2">{hostel.college}</p>
         
@@ -263,7 +263,10 @@ export const HostelCard = ({ hostel, onClose, onBook, refreshTrigger, onBookingC
             No availability data
           </div>
         )}
-        
+      </div>
+
+      {/* Book Now — pinned footer so it stays visible on mobile without scrolling */}
+      <div className="shrink-0 p-3 pt-2 border-t border-gray-100 bg-white sm:border-t-0 sm:p-5 sm:pt-0 md:p-6 md:pt-0">
         <button
           onClick={handleBookNow}
           disabled={isLoading}
