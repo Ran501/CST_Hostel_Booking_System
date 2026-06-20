@@ -90,7 +90,7 @@ export default function ActivateAccount() {
             <form onSubmit={handleSubmit} className="space-y-5 px-8 py-6">
               <div>
                 <label className="mb-2 block text-sm font-medium text-white/90">
-                  Student Number
+                  Student Number / ID Card No.(First Year)
                 </label>
                 <div className="relative">
                   <input

@@ -43,7 +43,7 @@ export default function LoginModal({ open = true, onClose, onSuccess }) {
   const handleCancel = () => {
     localStorage.removeItem("session");
     if (onClose) onClose();
-    window.location.href = "https://afm.rub.edu.bt/logistics/";
+    window.location.href = "https://cst.edu.bt";
   };
 
   async function handleSubmit(e) {
@@ -214,7 +214,7 @@ export default function LoginModal({ open = true, onClose, onSuccess }) {
                   <form onSubmit={handleSubmit} className="space-y-5 px-8 py-6">
                     <div>
                       <label className="mb-2 block text-sm font-medium text-white/90">
-                        Student Number
+                        Student Number / ID Card No. (First Year)
                       </label>
                       <div className="relative">
                         <input
