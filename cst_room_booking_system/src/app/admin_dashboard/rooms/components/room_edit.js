@@ -206,13 +206,7 @@ export default function EditRoomsModal({
 
           {/* Actions */}
           <div className="border-t pt-4 flex justify-end gap-3">
-            <button
-              onClick={onClose}
-              className="px-5 py-2.5 bg-gray-100 rounded-xl"
-            >
-              Cancel
-            </button>
-
+            
             <button
               onClick={handleSave}
               className="cursor-pointer px-5 py-2.5 bg-cstcolor text-white rounded-xl"

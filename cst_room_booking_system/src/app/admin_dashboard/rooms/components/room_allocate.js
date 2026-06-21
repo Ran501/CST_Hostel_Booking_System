@@ -244,12 +244,6 @@ export default function AllocateStudents({
 
           <div className="flex gap-3">
             <button
-              onClick={onClose}
-              className="cursor-pointer px-5 py-2 rounded-xl bg-gray-200 text-gray-700 hover:bg-gray-300 transition text-sm"
-            >
-              Cancel
-            </button>
-            <button
               onClick={() => onNext({ studentNumbers: selectedStudents })}
               disabled={selectedStudents.length === 0 || selectedStudents.length > availableBeds}
               className={`cursor-pointer px-5 py-2 rounded-xl text-white transition shadow-sm text-sm ${
