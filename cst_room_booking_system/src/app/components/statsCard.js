@@ -62,13 +62,13 @@ export const StatsCards = ({ stats }) => {
           </div>
           <div className="text-center sm:text-left min-w-0 flex-1 sm:ml-2">
             <div className="text-[9px] sm:text-xs text-gray-500 font-medium">
-              Booked Beds
+              Your Booking
             </div>
             {stats.loading ? (
               <div className="h-4 sm:h-6 w-8 sm:w-12 bg-gray-200 animate-pulse rounded mx-auto sm:mx-0"></div>
             ) : (
               <div className="text-sm sm:text-xl md:text-xl font-bold text-gray-900">
-                {stats.occupiedBeds || 0}
+                 {stats.bookedRoom && stats.bookedRoom !== "None" ? stats.bookedRoom : "None"}
               </div>
             )}
           </div>
