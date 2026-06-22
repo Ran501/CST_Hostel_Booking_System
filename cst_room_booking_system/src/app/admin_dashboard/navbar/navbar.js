@@ -172,7 +172,7 @@ export default function Navbar() {
             onClick={() => setOpen(!open)}
             className="md:hidden cursor-pointer p-2 rounded-lg hover:bg-gray-100 transition-colors"
           >
-            {open ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+            {open ? <X className="w-5 h-5 text-black" /> : <Menu className="w-5 h-5 text-black" />}
           </button>
         </div>
       </div>
@@ -197,8 +197,8 @@ export default function Navbar() {
         }}
         className={`cursor-pointer text-left py-3 px-3 rounded-lg transition-colors w-full ${
           isActive(item)
-            ? "bg-blue-50 cstcolor font-semibold"
-            : "text-gray-700 hover:bg-gray-100"
+            ? "bg-blue-50 text-cstcolor font-semibold"
+            : "text-black hover:bg-gray-100 hover:text-cstcolor"
         }`}
       >
         {item}

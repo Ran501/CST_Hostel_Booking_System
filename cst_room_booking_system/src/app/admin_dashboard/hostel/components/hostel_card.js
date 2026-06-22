@@ -20,6 +20,22 @@ export default function HostelCard({
     }
   };
 
+  const hostelImages = {
+  "RKA": "/rkahostel.jpeg",
+  "RKB": "/rkA/1.jpeg",
+  "Lhawang": "/backgroundimage.jpg",
+  "NK": "/nk/1.jpg",
+  "HA": "/backgroundimage.jpg",
+  "HB": "/backgroundimage.jpg",
+  "HC": "/hc/4.jpeg",
+  "HD": "/hd/1.jpeg",
+  "HE": "/backgroundimage.jpg",
+  "HF": "/hf/9.jpeg",
+};
+
+const imageUrl =
+  hostelImages[hostelName] || "/default-hostel.jpg";
+
   return (
     <div
       onClick={handleClick}
@@ -30,10 +46,10 @@ export default function HostelCard({
         ${!isActive ? "opacity-70 grayscale" : ""}
       `}
       style={{
-        backgroundImage: `url(/rkahostel.jpeg)`,
-        backgroundSize:     "cover",
-        backgroundPosition: "center",
-      }}
+          backgroundImage: `url(${imageUrl})`,
+          backgroundSize: "cover",
+          backgroundPosition: "center",
+        }}
     >
       {/* Dark overlay */}
       <div className="absolute inset-0 bg-black/40 z-0" />
