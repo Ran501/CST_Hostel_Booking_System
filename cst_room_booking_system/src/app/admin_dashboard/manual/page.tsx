@@ -1,5 +1,5 @@
 // src/app/manual/page.tsx
-import ManualPage from "../components/ManualPage/page";
+import ManualPage from "../../manual/page";
 
 export default function ManualPageComponent() {
   return <ManualPage />;
