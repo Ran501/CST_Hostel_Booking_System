@@ -15,11 +15,11 @@ export default function HelpPage() {
     },
     {
       question: "Can I change my booking after confirmation?",
-      answer: "Once a booking is confirmed, changes can only be made by contacting the admin through this help page. Changes are subject to availability."
+      answer: "Yes, you can now cancel or unbook your room directly from the system. Navigate to 'My Bookings' or your booking details page and click the 'Unbook' button. The room will immediately become available for other students to book."
     },
     {
       question: "How long does booking confirmation take?",
-      answer: "Automatic bookings are confirmed instantly."
+      answer: "Automatic bookings are confirmed instantly through the system. You will receive a confirmation email immediately after booking."
     },
     {
       question: "What items are prohibited in hostel rooms?",
@@ -27,7 +27,7 @@ export default function HelpPage() {
     },
     {
       question: "How do I report maintenance issues in my room?",
-      answer: "Report all maintenance issues to the Student Service Officer. You can contact them at +975 17362124 or +975 17379976."
+      answer: "Report all maintenance issues to the Student Service Officer. You can contact them at +975 17362124 or +975 17311764"
     },
   ];
 
@@ -36,25 +36,31 @@ export default function HelpPage() {
       title: "Student Service Officer", 
       contacts: [ 
         "+975 17362124",
-        "+975 17379976",
+        "+975 17311764",
       ],
       emails: [
         "purnabdrmongar.cst@rub.edu.bt",
-        "chimidem.cst@rub.edu.bt",
+        "phublham.cst@rub.edu.bt"
       ],
       icon: ""
     },
     { 
-      title: "IT Support", 
+      title: "Developer Team", 
       contacts: [
         "+975 17844269",
         "+975 17584420", 
-        "+975 77665463"
+        "+975 77665463",
+        "+975 17413091",
+        "+975 17666279", 
+        "+975 77459910"
       ],
       emails: [
         "02230122.cst@rub.edu.bt",
         "02230125.cst@rub.edu.bt",
-        "02230129.cst@rub.edu.bt"
+        "02230129.cst@rub.edu.bt",
+        "02230119.cst@rub.edu.bt",
+        "02220150.cst@rub.edu.bt",
+        "02230135.cst@rub.edu.bt",
       ],
       icon: ""
     },
@@ -296,7 +302,19 @@ export default function HelpPage() {
             </div>
           )}
         </div>
+
+        {/* Developer Credits - Added here */}
+        <div className="mt-8 pt-6 border-t border-gray-200">
+          <p className="text-center text-sm text-gray-500">
+            Developed by: 
+            <span className="text-cstcolor font-medium ml-2">
+              Karma Wangchuk Titung, Gyeltshen Lepcha, Karma Gyeltshen, Bijay Chhetri, Laxu Man Ghalley, Choney Rangdel
+            </span>
+          </p>
+        </div>
+
       </div>
     </div>
   );
+  
 }
