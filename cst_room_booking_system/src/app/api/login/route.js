@@ -54,7 +54,9 @@ export async function POST(request) {
 
     const user = await prisma.user.findUnique({
       where: { studentNumber: studentNumber.toString() },
-      include: { counselor: true },
+      include: { counselor: {
+        include: {hostel: true}
+      } },
     });
 
     if (!user) {
