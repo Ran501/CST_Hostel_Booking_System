@@ -1,10 +1,10 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 
-export default function SetPasswordPage() {
+function SetPasswordPage() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const studentNumber = searchParams.get("studentNumber");
@@ -136,5 +136,19 @@ export default function SetPasswordPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+
+
+export default function SetPasswordPageWrapper() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+        <div className="text-white text-lg">Loading...</div>
+      </div>
+    }>
+      <SetPasswordPage />
+    </Suspense>
   );
 }

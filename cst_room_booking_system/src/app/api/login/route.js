@@ -1,6 +1,20 @@
 // src/app/api/login/route.js
 import { prisma } from "../../lib/prisma";
 import bcrypt from "bcryptjs";
+import { SignJWT } from "jose";
+
+const secret = new TextEncoder().encode(
+  process.env.JWT_SECRET || "fallback-dev-secret-must-change-in-production"
+);
+
+async function createSessionCookie(payload) {
+  const token = await new SignJWT(payload)
+    .setProtectedHeader({ alg: "HS256" })
+    .setExpirationTime("7d")
+    .sign(secret);
+
+  return token;
+}
 
 export async function POST(request) {
   try {

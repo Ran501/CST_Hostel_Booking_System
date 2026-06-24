@@ -1,11 +1,11 @@
 // components/LoginModal.js
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useState, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import toast from "react-hot-toast";
 
-export default function LoginModal({ open = true, onClose, onSuccess }) {
+function LoginModal({ open = true, onClose, onSuccess }) {
   const [studentNumber, setStudentNumber] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
@@ -18,15 +18,6 @@ export default function LoginModal({ open = true, onClose, onSuccess }) {
   const handleActivateAccount = () => {
     router.push("/activate");
   };
-
-  // Reset form when modal opens
-  useEffect(() => {
-    if (open) {
-      setPassword("");
-      setError(null);
-      setStudentNumber("");
-    }
-  }, [open]);
 
   // Show toast messages after activation or password setup
   useEffect(() => {
@@ -243,7 +234,7 @@ export default function LoginModal({ open = true, onClose, onSuccess }) {
                           onChange={(e) => setPassword(e.target.value)}
                           onFocus={(e) => e.target.removeAttribute("readOnly")}
                           readOnly
-                          autoComplete="new-password"
+                          autoComplete="off"
                           placeholder="Enter your password"
                         />
                         <div className="absolute inset-0 rounded-lg border border-transparent pointer-events-none transition-all duration-200 group-focus-within:border-cstcolor/30"></div>
@@ -318,5 +309,17 @@ export default function LoginModal({ open = true, onClose, onSuccess }) {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function LoginModalPage(props) {
+  return (
+    <Suspense fallback={
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-gradient-to-br from-gray-900 via-gray-800 to-gray-900">
+        <div className="text-white text-lg">Loading...</div>
+      </div>
+    }>
+      <LoginModal {...props} />
+    </Suspense>
   );
 }
