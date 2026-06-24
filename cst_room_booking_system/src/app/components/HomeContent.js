@@ -107,15 +107,16 @@ export default function HomeContent() {
         ? "/man2.png"
         : "";
 
-  const handleLogout = () => {
-    // Clear session
-    localStorage.removeItem("session");
-    setShowProfileMenu(false);
-    // Trigger re-authentication
-    setForceReauth(true);
-    // Reload to reset
-    window.location.reload();
-  };
+  const handleLogout = async () => {
+  try {
+    await fetch("/api/logout", { method: "POST" });
+  } catch {
+    // ignore
+  }
+  localStorage.removeItem("session");
+  setShowProfileMenu(false);
+  router.push("/login");
+};
 
   return (
     <main className="min-h-screen w-full bg-slate-50">

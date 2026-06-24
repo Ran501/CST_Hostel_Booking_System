@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { jwtVerify } from "jose";
 
-const PUBLIC_PATHS = ["/login", "/activate", "/set-password"];
+const PUBLIC_PATHS = ["/login", "/activate", "/set-password", "/manual"];
 
 const secret = new TextEncoder().encode(
   process.env.JWT_SECRET || "fallback-dev-secret-must-change-in-production"

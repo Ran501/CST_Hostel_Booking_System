@@ -143,7 +143,7 @@ function LoginModal({ open = true, onClose, onSuccess }) {
       {/* User Manual – mirrors the link in the student hamburger menu */}
       <button
         onClick={() => router.push("/manual")}
-        className="cursor-pointer absolute left-4 top-16 md:left-6 md:top-20 z-20 text-white hover:text-gray-200 transition-colors group"
+        className="cursor-pointer absolute left-[210px] top-4 md:left-6 md:top-20 z-20 text-white hover:text-gray-200 transition-colors group"
         aria-label="Open user manual"
       >
         <div className="flex items-center gap-2 bg-black/30 backdrop-blur-sm rounded-lg px-3 py-2">

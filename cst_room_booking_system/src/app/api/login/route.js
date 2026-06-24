@@ -1,4 +1,3 @@
-// src/app/api/login/route.js
 import { NextResponse } from "next/server";
 import { prisma } from "../../lib/prisma";
 import bcrypt from "bcryptjs";
@@ -13,8 +12,32 @@ async function createSessionCookie(payload) {
     .setProtectedHeader({ alg: "HS256" })
     .setExpirationTime("7d")
     .sign(secret);
-
   return token;
+}
+
+async function hashPassword(password) {
+  return bcrypt.hash(password, 12);
+}
+
+async function verifyPassword(password, hash) {
+  const ok = await bcrypt.compare(password, hash || "");
+  return { ok, needsRehash: false };
+}
+
+async function loginSuccessResponse(user) {
+  const { password, otpHash, otpExpiresAt, ...userWithoutSensitive } = user;
+  const token = await createSessionCookie({
+    studentNumber: userWithoutSensitive.studentNumber,
+    role: userWithoutSensitive.role,
+  });
+  const res = NextResponse.json({ success: true, user: userWithoutSensitive });
+  res.cookies.set("session", token, {
+    httpOnly: true,
+    sameSite: "lax",
+    maxAge: 60 * 60 * 24 * 7,
+    path: "/",
+  });
+  return res;
 }
 
 export async function POST(request) {
@@ -29,7 +52,6 @@ export async function POST(request) {
       );
     }
 
-    // ✅ Include counselor relation
     const user = await prisma.user.findUnique({
       where: { studentNumber: studentNumber.toString() },
       include: { counselor: true },
@@ -42,8 +64,8 @@ export async function POST(request) {
       );
     }
 
-    // ✅ Admin check — if role is admin in the database, accept admin login
     const role = (user.role || "").trim().toLowerCase();
+
     if (role === "admin") {
       if (!password) {
         return Response.json(
@@ -51,14 +73,12 @@ export async function POST(request) {
           { status: 400 }
         );
       }
-
       if (!user.password) {
         return Response.json(
           { success: false, error: "No password set for this admin account" },
           { status: 401 }
         );
       }
-
       const { ok, needsRehash } = await verifyPassword(password, user.password);
       if (!ok) {
         return Response.json(
@@ -66,21 +86,15 @@ export async function POST(request) {
           { status: 401 }
         );
       }
-
       if (needsRehash) {
         await prisma.user.update({
           where: { id: user.id },
-          data: {
-            password: await hashPassword(password),
-            hasSetPassword: true,
-          },
+          data: { password: await hashPassword(password), hasSetPassword: true },
         });
       }
-
       return loginSuccessResponse(user);
     }
 
-    // Check if account is active
     if (!user.isActive) {
       return Response.json(
         {
@@ -92,7 +106,6 @@ export async function POST(request) {
       );
     }
 
-    // Check if user has set password
     if (!user.hasSetPassword) {
       return Response.json(
         {
@@ -105,7 +118,6 @@ export async function POST(request) {
       );
     }
 
-    // Verify password
     if (!password) {
       return Response.json(
         { success: false, error: "Password is required" },
@@ -124,10 +136,7 @@ export async function POST(request) {
     if (needsRehash) {
       await prisma.user.update({
         where: { id: user.id },
-        data: {
-          password: await hashPassword(password),
-          hasSetPassword: true,
-        },
+        data: { password: await hashPassword(password), hasSetPassword: true },
       });
     }
 
