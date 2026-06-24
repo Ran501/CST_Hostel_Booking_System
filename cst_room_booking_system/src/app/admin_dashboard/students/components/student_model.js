@@ -8,7 +8,7 @@ const departments = [
   "All", "Architecture", "Information Technology", "Engineering Geology",
   "Electronics and Communication", "Instrumentation and Control Engineering",
   "Water Resource Engineering", "Electrical Engineering", "Civil Engineering",
-  "Software Engineering", "Mechanical Engineering"
+  "Software Engineering", "Mechanical Engineering", "Administration", "Councillor"
 ];
 
 const roleOptions = ["student", "admin", "counselor"];
@@ -1308,7 +1308,8 @@ export default function StudentManagement() {
               </thead>
               <tbody className="divide-y divide-gray-200">
                 {loading && Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} />)}
-                {!loading && students.map((student, index) => (
+                {!loading && students.filter(student => isCounselor ? student.role === "student" : true) 
+                              .map((student, index) => (
                   <tr key={student.id} onClick={(e) => handleRowClick(student, index, e)} className={`hover:bg-gray-50 transition-colors ${selectedStudents.includes(student.id) ? "bg-blue-50" : ""} ${index === focusIndex ? "ring-2 ring-inset ring-blue-400" : ""}`}>
                     <td className="px-2 py-2">
                       <input type="checkbox" checked={selectedStudents.includes(student.id)} onClick={(e) => handleCheckboxClick(student, index, e)} onChange={() => {}} disabled={isViewOnly} className={`rounded ${isViewOnly ? "cursor-not-allowed opacity-50" : ""}`} />
