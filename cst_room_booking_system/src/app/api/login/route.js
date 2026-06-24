@@ -1,3 +1,5 @@
+// api/login/route.js
+
 import { NextResponse } from "next/server";
 import { prisma } from "../../lib/prisma";
 import bcrypt from "bcryptjs";
@@ -55,7 +57,8 @@ export async function POST(request) {
     const user = await prisma.user.findUnique({
       where: { studentNumber: studentNumber.toString() },
       include: { counselor: {
-        include: {hostel: true}
+        include: {hostel: true, //inlcuded
+        }
       } },
     });
 

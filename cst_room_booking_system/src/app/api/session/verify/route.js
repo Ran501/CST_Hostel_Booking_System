@@ -1,62 +1,69 @@
-import { prisma } from "../../../lib/prisma";
+  //api/session/verify/route.js
 
-export async function POST(request) {
-  try {
-    const body = await request.json();
-    const { studentNumber } = body;
+  import { prisma } from "../../../lib/prisma";
 
-    if (!studentNumber) {
-      return Response.json(
-        { success: false, error: "Student number is required" },
-        { status: 400 }
-      );
-    }
+  export async function POST(request) {
+    try {
+      const body = await request.json();
+      const { studentNumber } = body;
 
-    // Find user by student number
-    const user = await prisma.user.findUnique({
+      if (!studentNumber) {
+        return Response.json(
+          { success: false, error: "Student number is required" },
+          { status: 400 }
+        );
+      }
+
+      // Find user by student number
+      const user = await prisma.user.findUnique({
       where: { studentNumber: studentNumber.toString() },
-    });
+      include: {
+        counselor: {
+          include: { hostel: true },
+        },
+      },
+});
 
-    if (!user) {
-      return Response.json(
-        { success: false, error: "User not found" },
-        { status: 404 }
-      );
-    }
+      if (!user) {
+        return Response.json(
+          { success: false, error: "User not found" },
+          { status: 404 }
+        );
+      }
 
-    // Admins and counselors skip student activation checks
-    if (user.role === "admin" || user.role === "counselor") {
+      // Admins and counselors skip student activation checks
+      if (user.role === "admin" || user.role === "counselor") {
+        const { password, otpHash, otpExpiresAt, ...userWithoutSensitive } = user;
+        return Response.json({
+          success: true,
+          user: userWithoutSensitive,
+        });
+      }
+
+      // Check if account is active
+      if (!user.isActive) {
+        return Response.json(
+          { 
+            success: false, 
+            error: "Account not activated",
+            requiresActivation: true
+          },
+          { status: 403 }
+        );
+      }
+
+      // Return user data (excluding password)
       const { password, otpHash, otpExpiresAt, ...userWithoutSensitive } = user;
+
       return Response.json({
         success: true,
         user: userWithoutSensitive,
       });
-    }
-
-    // Check if account is active
-    if (!user.isActive) {
+    } catch (error) {
+      console.error("Session verify error:", error);
       return Response.json(
-        { 
-          success: false, 
-          error: "Account not activated",
-          requiresActivation: true
-        },
-        { status: 403 }
+        { success: false, error: "Internal server error" },
+        { status: 500 }
       );
     }
-
-    // Return user data (excluding password)
-    const { password, otpHash, otpExpiresAt, ...userWithoutSensitive } = user;
-
-    return Response.json({
-      success: true,
-      user: userWithoutSensitive,
-    });
-  } catch (error) {
-    console.error("Session verify error:", error);
-    return Response.json(
-      { success: false, error: "Internal server error" },
-      { status: 500 }
-    );
   }
-}
