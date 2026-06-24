@@ -141,7 +141,7 @@ export default function HomeContent() {
           {/* Center: Title */}
           <div className="flex-1 min-w-0">
             <h1 className="text-center text-base font-semibold text-gray-900 leading-tight sm:text-lg md:text-xl lg:text-2xl">
-              CST Room Booking System
+              CSTI Room Booking System
             </h1>
           </div>
 
