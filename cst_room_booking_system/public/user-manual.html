@@ -1,0 +1,670 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>CST Room Booking System – User Manual</title>
+  <style>
+    /* ── Reset & Base ── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { font-size: 13px; }
+    body {
+      font-family: 'Segoe UI', Arial, sans-serif;
+      color: #1a1a2e;
+      background: #fff;
+      line-height: 1.7;
+    }
+
+    /* ── Print ── */
+    @media print {
+      body { font-size: 11pt; }
+      .no-print { display: none !important; }
+      .page-break { page-break-before: always; }
+      a { text-decoration: none; color: inherit; }
+      .cover { page-break-after: always; }
+      section { page-break-inside: avoid; }
+    }
+
+    /* ── Colour palette ── */
+    :root {
+      --primary: #1a3c5e;
+      --accent:  #e85d04;
+      --accent2: #f48c06;
+      --light:   #f0f4f8;
+      --border:  #cdd5e0;
+      --success: #2d6a4f;
+      --warn:    #9c6000;
+    }
+
+    /* ── Layout ── */
+    .wrapper { max-width: 900px; margin: 0 auto; padding: 24px 32px; }
+
+    /* ── Cover page ── */
+    .cover {
+      min-height: 100vh;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(160deg, #1a3c5e 0%, #0d1b2a 60%, #e85d04 200%);
+      color: #fff;
+      text-align: center;
+      padding: 60px 40px;
+    }
+    .cover .logo-row {
+      display: flex;
+      align-items: center;
+      gap: 24px;
+      margin-bottom: 40px;
+    }
+    .cover .logo-row img { height: 80px; filter: brightness(0) invert(1); }
+    .cover h1 { font-size: 2.8rem; font-weight: 800; letter-spacing: -0.5px; line-height: 1.2; }
+    .cover h1 span { color: #f48c06; }
+    .cover .subtitle { font-size: 1.15rem; opacity: .75; margin-top: 14px; }
+    .cover .badge {
+      margin-top: 40px;
+      display: inline-block;
+      background: rgba(255,255,255,.12);
+      border: 1px solid rgba(255,255,255,.25);
+      border-radius: 99px;
+      padding: 8px 28px;
+      font-size: .9rem;
+      letter-spacing: .5px;
+    }
+    .cover .meta { margin-top: 60px; font-size: .8rem; opacity: .5; }
+
+    /* ── TOC ── */
+    .toc { background: var(--light); border-radius: 10px; padding: 28px 32px; margin: 32px 0; }
+    .toc h2 { font-size: 1.1rem; color: var(--primary); margin-bottom: 16px; text-transform: uppercase; letter-spacing: 1px; }
+    .toc ol { padding-left: 20px; }
+    .toc li { margin: 6px 0; }
+    .toc a { color: var(--primary); font-weight: 500; text-decoration: none; }
+    .toc a:hover { color: var(--accent); }
+    .toc .sub { padding-left: 20px; font-size: .92rem; color: #555; }
+
+    /* ── Section headings ── */
+    .section-header {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      background: var(--primary);
+      color: #fff;
+      border-radius: 8px 8px 0 0;
+      padding: 14px 20px;
+      margin-top: 40px;
+    }
+    .section-header .num {
+      background: var(--accent);
+      color: #fff;
+      border-radius: 50%;
+      width: 32px; height: 32px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: .95rem;
+      flex-shrink: 0;
+    }
+    .section-header h2 { font-size: 1.15rem; font-weight: 700; }
+
+    .section-body {
+      border: 1px solid var(--border);
+      border-top: none;
+      border-radius: 0 0 8px 8px;
+      padding: 24px 24px 28px;
+      background: #fff;
+    }
+
+    h3 { font-size: 1rem; color: var(--primary); margin: 22px 0 8px; font-weight: 700; }
+    h3::before { content: '▸ '; color: var(--accent); }
+    h4 { font-size: .92rem; color: #444; margin: 14px 0 6px; font-weight: 600; }
+
+    p { margin: 8px 0; color: #333; }
+
+    /* ── Steps ── */
+    .steps { counter-reset: step; list-style: none; padding: 0; margin: 12px 0; }
+    .steps li {
+      counter-increment: step;
+      display: flex;
+      gap: 14px;
+      margin: 10px 0;
+      align-items: flex-start;
+    }
+    .steps li::before {
+      content: counter(step);
+      background: var(--accent);
+      color: #fff;
+      border-radius: 50%;
+      min-width: 26px; height: 26px;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 700; font-size: .82rem;
+      flex-shrink: 0;
+      margin-top: 1px;
+    }
+    .steps li p { margin: 0; }
+
+    /* ── Note / warning / tip boxes ── */
+    .note, .warning, .tip {
+      border-left: 4px solid;
+      border-radius: 0 6px 6px 0;
+      padding: 10px 16px;
+      margin: 14px 0;
+      font-size: .9rem;
+    }
+    .note    { border-color: var(--primary); background: #e8f0fb; color: #1a3c5e; }
+    .warning { border-color: var(--accent);  background: #fff3e0; color: #7c2d00; }
+    .tip     { border-color: var(--success); background: #e8f5e9; color: var(--success); }
+    .note strong, .warning strong, .tip strong { display: block; margin-bottom: 2px; }
+
+    /* ── Tables ── */
+    table { width: 100%; border-collapse: collapse; margin: 14px 0; font-size: .9rem; }
+    th { background: var(--primary); color: #fff; padding: 9px 12px; text-align: left; }
+    td { padding: 8px 12px; border-bottom: 1px solid var(--border); }
+    tr:nth-child(even) td { background: var(--light); }
+
+    /* ── Inline code ── */
+    code {
+      background: #eef2f7;
+      border: 1px solid var(--border);
+      border-radius: 4px;
+      padding: 1px 6px;
+      font-family: 'Cascadia Code', Consolas, monospace;
+      font-size: .88em;
+    }
+
+    /* ── Role badges ── */
+    .role {
+      display: inline-block;
+      border-radius: 99px;
+      padding: 2px 12px;
+      font-size: .78rem;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: .5px;
+      margin-left: 6px;
+      vertical-align: middle;
+    }
+    .role-student  { background: #dbeafe; color: #1e40af; }
+    .role-admin    { background: #fce7f3; color: #9d174d; }
+    .role-counselor{ background: #d1fae5; color: #065f46; }
+
+    /* ── Hostel grid ── */
+    .hostel-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+      margin: 14px 0;
+    }
+    .hostel-card {
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 12px 14px;
+      background: var(--light);
+    }
+    .hostel-card .hname { font-weight: 700; color: var(--primary); font-size: .95rem; }
+    .hostel-card .hdetail { font-size: .82rem; color: #555; margin-top: 4px; }
+
+    /* ── FAQ ── */
+    .faq-item { border-bottom: 1px solid var(--border); padding: 14px 0; }
+    .faq-item:last-child { border-bottom: none; }
+    .faq-q { font-weight: 700; color: var(--primary); margin-bottom: 6px; }
+    .faq-a { color: #444; font-size: .92rem; }
+
+    /* ── Footer ── */
+    footer {
+      margin-top: 60px;
+      text-align: center;
+      font-size: .8rem;
+      color: #999;
+      border-top: 1px solid var(--border);
+      padding-top: 20px;
+      padding-bottom: 40px;
+    }
+
+    /* ── Print button (screen only) ── */
+    .print-btn {
+      position: fixed;
+      bottom: 28px; right: 28px;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 50px;
+      padding: 12px 26px;
+      font-size: .95rem;
+      font-weight: 700;
+      cursor: pointer;
+      box-shadow: 0 4px 16px rgba(0,0,0,.25);
+      z-index: 999;
+    }
+    .print-btn:hover { background: #c74f00; }
+    @media print { .print-btn { display: none; } }
+  </style>
+</head>
+<body>
+
+<button class="print-btn no-print" onclick="window.print()">⬇ Save as PDF</button>
+
+<!-- ══════════════════════════════════════════════════════════
+     COVER PAGE
+══════════════════════════════════════════════════════════ -->
+<div class="cover">
+  <div class="logo-row">
+    <img src="cstlogo.png" alt="CST Logo" onerror="this.style.display='none'" />
+    <img src="rublogo.png" alt="RUB Logo" onerror="this.style.display='none'" />
+  </div>
+  <h1>CST <span>Room Booking</span><br>System</h1>
+  <p class="subtitle">College of Science and Technology — Royal University of Bhutan</p>
+  <div class="badge">USER MANUAL &nbsp;·&nbsp; v1.0</div>
+  <p class="meta">Prepared for Students, Counselors, and Administrators &nbsp;|&nbsp; 2026</p>
+</div>
+
+<!-- ══════════════════════════════════════════════════════════
+     MAIN CONTENT
+══════════════════════════════════════════════════════════ -->
+<div class="wrapper">
+
+  <!-- ── Introduction ── -->
+  <div class="section-header" id="intro">
+    <div class="num">0</div>
+    <h2>Introduction</h2>
+  </div>
+  <div class="section-body">
+    <p>The <strong>CST Room Booking System</strong> is an online hostel room allocation platform for students of the College of Science and Technology (CST), Royal University of Bhutan. It replaces the manual room-assignment process with a fast, transparent, and fair digital system.</p>
+    <h3>Who uses this system?</h3>
+    <table>
+      <thead><tr><th>Role</th><th>Who</th><th>What they can do</th></tr></thead>
+      <tbody>
+        <tr><td><span class="role role-student">Student</span></td><td>All enrolled students</td><td>Activate account, browse hostels, book / unbook a room bed</td></tr>
+        <tr><td><span class="role role-counselor">Counselor</span></td><td>Assigned hostel counselors</td><td>Monitor occupancy and bookings for their assigned hostel</td></tr>
+        <tr><td><span class="role role-admin">Admin</span></td><td>Hostel office staff</td><td>Manage students, rooms, hostels, counselors, booking periods</td></tr>
+      </tbody>
+    </table>
+    <div class="note"><strong>Access URL</strong> Open your browser and go to the system URL provided by your college IT office.</div>
+  </div>
+
+  <!-- ══ SECTION 1 — ACCOUNT ACTIVATION ══ -->
+  <div class="page-break"></div>
+  <div class="section-header" id="activation">
+    <div class="num">1</div>
+    <h2>Getting Started — Account Activation <span class="role role-student">Student</span></h2>
+  </div>
+  <div class="section-body">
+    <p>Every new student must <strong>activate</strong> their account before they can log in. Activation is a one-time process that verifies your college email address.</p>
+
+    <h3>Step-by-step activation</h3>
+    <ol class="steps">
+      <li><p>On the login page, click <strong>"Activate Account"</strong> button (below the Login button).</p></li>
+      <li><p>Enter your <strong>Student Number</strong> (e.g. <code>02230137</code>) and click <strong>Send OTP</strong>.</p></li>
+      <li><p>Check your college email inbox (<code>XXXXXXXX.cst@rub.edu.bt</code>) for a 6-digit One-Time Password (OTP).</p></li>
+      <li><p>Enter the OTP on the verification screen and click <strong>Verify</strong>.</p></li>
+      <li><p>Create a strong password (minimum 6 characters) and click <strong>Set Password</strong>.</p></li>
+      <li><p>You will be redirected to the login page with a success message. You can now log in.</p></li>
+    </ol>
+
+    <div class="warning"><strong>OTP Expiry</strong> The OTP is valid for only <strong>10 minutes</strong>. If it expires, restart the activation process.</div>
+    <div class="tip"><strong>Tip</strong> Check your spam/junk folder if the OTP email does not arrive within 2 minutes.</div>
+    <div class="note"><strong>Rate limit</strong> You can request a maximum of <strong>3 OTPs</strong> within any 10-minute window.</div>
+  </div>
+
+  <!-- ══ SECTION 2 — LOGIN ══ -->
+  <div class="section-header" id="login">
+    <div class="num">2</div>
+    <h2>Logging In <span class="role role-student">Student</span></h2>
+  </div>
+  <div class="section-body">
+    <ol class="steps">
+      <li><p>Navigate to the system URL. You will land on the <strong>Login</strong> page.</p></li>
+      <li><p>Enter your <strong>Student Number</strong> in the first field.</p></li>
+      <li><p>Enter your <strong>Password</strong> in the second field.</p></li>
+      <li><p>Click <strong>Login</strong>.</p></li>
+    </ol>
+
+    <h3>After login</h3>
+    <table>
+      <thead><tr><th>Your Role</th><th>Where you are taken</th></tr></thead>
+      <tbody>
+        <tr><td>Student</td><td>Home Dashboard (<code>/homecontent</code>)</td></tr>
+        <tr><td>Counselor</td><td>Admin Dashboard (<code>/admin_dashboard</code>)</td></tr>
+        <tr><td>Admin</td><td>Admin Dashboard (<code>/admin_dashboard</code>)</td></tr>
+      </tbody>
+    </table>
+
+    <div class="warning"><strong>Account not activated?</strong> If you see "Account not activated", complete the activation process in Section 1 first.</div>
+    <div class="note"><strong>Forgot password?</strong> Contact the hostel office or IT support — password reset must be done through the admin.</div>
+  </div>
+
+  <!-- ══ SECTION 3 — STUDENT DASHBOARD ══ -->
+  <div class="page-break"></div>
+  <div class="section-header" id="dashboard">
+    <div class="num">3</div>
+    <h2>Student Home Dashboard <span class="role role-student">Student</span></h2>
+  </div>
+  <div class="section-body">
+    <p>After logging in, the home dashboard gives you an at-a-glance view of the hostel system.</p>
+
+    <h3>What you see on the dashboard</h3>
+    <table>
+      <thead><tr><th>Section</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>Campus Map</td><td>Interactive map of the CST campus showing hostel locations</td></tr>
+        <tr><td>Hostel Overview</td><td>Cards for all 10 hostels with available beds count</td></tr>
+        <tr><td>Your Booking</td><td>Shows your currently booked room (if any)</td></tr>
+        <tr><td>Quick Stats</td><td>Total rooms, occupied rooms, available rooms</td></tr>
+        <tr><td>Profile Menu</td><td>Your name, student number, and logout button</td></tr>
+      </tbody>
+    </table>
+
+    <h3>Navigation</h3>
+    <ul style="padding-left:20px; color:#333; margin:8px 0;">
+      <li style="margin:5px 0"><strong>View Rooms</strong> — Click any hostel card or use the top navigation to browse rooms</li>
+      <li style="margin:5px 0"><strong>Help</strong> — Access the help page from the navigation menu</li>
+      <li style="margin:5px 0"><strong>Logout</strong> — Click your profile name → Logout</li>
+    </ul>
+  </div>
+
+  <!-- ══ SECTION 4 — BROWSING & BOOKING ══ -->
+  <div class="section-header" id="booking">
+    <div class="num">4</div>
+    <h2>Browsing Hostels &amp; Booking a Room <span class="role role-student">Student</span></h2>
+  </div>
+  <div class="section-body">
+
+    <h3>Available Hostels</h3>
+    <div class="hostel-grid">
+      <div class="hostel-card"><div class="hname">RKA </div><div class="hdetail">4 floors · Mixed capacity</div></div>
+      <div class="hostel-card"><div class="hname">RKB </div><div class="hdetail">4 floors · Mixed capacity</div></div>
+      <div class="hostel-card"><div class="hname">NK </div><div class="hdetail">4 floors · With kitchens</div></div>
+      <div class="hostel-card"><div class="hname">HA </div><div class="hdetail">3 floors</div></div>
+      <div class="hostel-card"><div class="hname">HB </div><div class="hdetail">3 floors</div></div>
+      <div class="hostel-card"><div class="hname">HC </div><div class="hdetail">3 floors</div></div>
+      <div class="hostel-card"><div class="hname">HD </div><div class="hdetail">3 floors</div></div>
+      <div class="hostel-card"><div class="hname">HF </div><div class="hdetail">3 floors</div></div>
+      <div class="hostel-card"><div class="hname">HE</div><div class="hdetail">2 floors</div></div>
+      <div class="hostel-card"><div class="hname">Lhawang</div><div class="hdetail">5 floors</div></div>
+    </div>
+
+    <h3>Room colour legend</h3>
+    <table>
+      <thead><tr><th>Colour</th><th>Meaning</th></tr></thead>
+      <tbody>
+        <tr><td>🟢 Green</td><td>Available — has free beds</td></tr>
+        <tr><td>🔴 Red / Dark</td><td>Full — no beds remaining</td></tr>
+        <tr><td>🔵 Blue / Highlighted</td><td>Your currently booked room</td></tr>
+        <tr><td>⚫ Grey</td><td>Disabled / under maintenance</td></tr>
+      </tbody>
+    </table>
+
+    <h3>How to book a room</h3>
+    <ol class="steps">
+      <li><p>From the dashboard, click <strong>View Rooms</strong> or navigate to a hostel.</p></li>
+      <li><p>Select a <strong>floor</strong> from the sidebar.</p></li>
+      <li><p>The floor plan shows all rooms. Click on any <strong>green (available) room</strong> tile.</p></li>
+      <li><p>A confirmation dialog appears — read the room number, then click <strong>Confirm</strong>.</p></li>
+      <li><p>Wait for the booking to process. A success message appears and a confirmation email is sent to your college email.</p></li>
+    </ol>
+
+    <div class="warning"><strong>Booking restrictions</strong>
+      <ul style="padding-left:16px; margin-top:6px;">
+        <li>You can only book <strong>one room</strong> at a time.</li>
+        <li>The room must match your <strong>academic year</strong> (e.g., Year 1 students can only book Year 1 rooms).</li>
+        <li>The room must match your <strong>gender</strong> (male/female hostels are separate).</li>
+        <li>Bookings are only possible during an <strong>active booking period</strong> set by the admin.</li>
+      </ul>
+    </div>
+    <div class="tip"><strong>Tip</strong> Check your email after booking — a confirmation with your room details will be sent automatically.</div>
+
+    <h3>How to unbook a room</h3>
+    <ol class="steps">
+      <li><p>Navigate to your booked room on the floor plan (shown in blue).</p></li>
+      <li><p>Click on it. A confirmation dialog will ask if you want to <strong>unbook</strong>.</p></li>
+      <li><p>Click <strong>Confirm</strong> to release your booking.</p></li>
+    </ol>
+    <div class="warning"><strong>Unbooking is only allowed</strong> during an active booking period. If the period is closed, contact your hostel admin.</div>
+  </div>
+
+  <!-- ══ SECTION 5 — COUNSELOR ══ -->
+  <div class="page-break"></div>
+  <div class="section-header" id="counselor">
+    <div class="num">5</div>
+    <h2>Counselor Dashboard <span class="role role-counselor">Counselor</span></h2>
+  </div>
+  <div class="section-body">
+    <p>Counselors log in the same way as students but are redirected to the <strong>Admin Dashboard</strong>. From there, they can access their dedicated counselor view.</p>
+
+    <h3>What counselors can see</h3>
+    <table>
+      <thead><tr><th>Feature</th><th>Description</th></tr></thead>
+      <tbody>
+        <tr><td>Hostel Summary</td><td>Total rooms, occupied beds, available beds, and overall occupancy % for your assigned hostel</td></tr>
+        <tr><td>Floor-by-Floor View</td><td>Rooms grouped by floor with individual occupancy bars</td></tr>
+        <tr><td>Student Booking List</td><td>Full list of students who have booked rooms — includes name, student number, department, year, room number, and floor</td></tr>
+      </tbody>
+    </table>
+
+    <div class="note"><strong>Note</strong> Counselors can <em>view</em> data for their assigned hostel only. They cannot modify bookings, rooms, or student records — those are admin-only actions.</div>
+
+    <h3>Logging out</h3>
+    <p>Click the <strong>Logout</strong> button in the top-right corner of the dashboard.</p>
+  </div>
+
+  <!-- ══ SECTION 6 — ADMIN ══ -->
+  <div class="section-header" id="admin">
+    <div class="num">6</div>
+    <h2>Admin Dashboard <span class="role role-admin">Admin</span></h2>
+  </div>
+  <div class="section-body">
+    <p>Administrators have full control over the system. After login, admins land on <code>/admin_dashboard</code>.</p>
+
+    <h3>Dashboard overview</h3>
+    <p>The main dashboard shows recent bookings, system-wide stats (total rooms, occupied, available), and quick-access navigation to all management sections.</p>
+  </div>
+
+  <!-- 6.1 Student Management -->
+  <div class="section-header" id="admin-students" style="margin-top:16px; border-radius:0;">
+    <div class="num" style="background:var(--accent2)">6.1</div>
+    <h2>Student Management <span class="role role-admin">Admin</span></h2>
+  </div>
+  <div class="section-body">
+    <p>Navigate to <strong>Admin Dashboard → Students</strong>.</p>
+
+    <h4>Viewing students</h4>
+    <ul style="padding-left:20px; color:#333;">
+      <li style="margin:4px 0">All students are listed in a paginated table</li>
+      <li style="margin:4px 0">Search by name, student number, department, or year using the search bar</li>
+    </ul>
+
+    <h4>Adding a single student</h4>
+    <ol class="steps">
+      <li><p>Click <strong>Add Student</strong>.</p></li>
+      <li><p>Fill in all required fields: name, student number, email, gender, year, department, phone number.</p></li>
+      <li><p>Click <strong>Save</strong>.</p></li>
+    </ol>
+
+    <h4>Bulk import (CSV / JSON)</h4>
+    <ol class="steps">
+      <li><p>Click <strong>Import</strong>.</p></li>
+      <li><p>Upload a <code>.csv</code> or <code>.json</code> file containing student records.</p></li>
+      <li><p>The system validates and imports all valid records.</p></li>
+    </ol>
+
+    <h4>Editing a student</h4>
+    <p>Click the <strong>Edit</strong> icon on any student row, update the fields, and click <strong>Save</strong>.</p>
+
+    <h4>Deleting a student</h4>
+    <p>Click the <strong>Delete</strong> icon. Confirm the dialog. All associated bookings are also removed.</p>
+
+    <div class="warning"><strong>Caution</strong> Deleting a student permanently removes their account and booking history.</div>
+  </div>
+
+  <!-- 6.2 Room Management -->
+  <div class="page-break"></div>
+  <div class="section-header" id="admin-rooms" style="margin-top:16px; border-radius:0;">
+    <div class="num" style="background:var(--accent2)">6.2</div>
+    <h2>Room Management <span class="role role-admin">Admin</span></h2>
+  </div>
+  <div class="section-body">
+    <p>Navigate to <strong>Admin Dashboard → Rooms</strong>.</p>
+
+    <h4>Viewing rooms</h4>
+    <p>Rooms are listed by hostel and floor. Each row shows room number, capacity, current occupancy, status, and year restriction.</p>
+
+    <h4>Editing room settings</h4>
+    <ol class="steps">
+      <li><p>Click <strong>Edit</strong> on a room row.</p></li>
+      <li><p>Change capacity, year restriction, or gender restriction as needed.</p></li>
+      <li><p>Click <strong>Save</strong>.</p></li>
+    </ol>
+
+    <h4>Disabling / enabling a room</h4>
+    <p>Click the <strong>Disable</strong> toggle to put a room in maintenance mode (students cannot book it). Click again to re-enable.</p>
+
+    <h4>Manually allocating students</h4>
+    <ol class="steps">
+      <li><p>Click <strong>Allocate</strong> on a room.</p></li>
+      <li><p>Search for and select students from the list.</p></li>
+      <li><p>Click <strong>Confirm Allocation</strong>.</p></li>
+    </ol>
+
+    <h4>Deallocating students</h4>
+    <p>Click <strong>Deallocate</strong> on a room, select the students to remove, and confirm.</p>
+
+    <div class="note"><strong>Room status values</strong>
+      <table style="margin-top:8px;">
+        <thead><tr><th>Status</th><th>Meaning</th></tr></thead>
+        <tbody>
+          <tr><td><code>available</code></td><td>Open for booking</td></tr>
+          <tr><td><code>occupied</code></td><td>Fully or partially booked</td></tr>
+          <tr><td><code>disabled</code></td><td>Blocked by admin (no bookings allowed)</td></tr>
+          <tr><td><code>maintenance</code></td><td>Under repair</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- 6.3 Hostel Management -->
+  <div class="section-header" id="admin-hostels" style="margin-top:16px; border-radius:0;">
+    <div class="num" style="background:var(--accent2)">6.3</div>
+    <h2>Hostel Management <span class="role role-admin">Admin</span></h2>
+  </div>
+  <div class="section-body">
+    <p>Navigate to <strong>Admin Dashboard → Hostel</strong>.</p>
+
+    <h4>Viewing hostels</h4>
+    <p>All 10 hostels are listed with current capacity, occupancy rate, gender designation, and status.</p>
+
+    <h4>Editing a hostel</h4>
+    <ol class="steps">
+      <li><p>Click <strong>Edit</strong> on a hostel.</p></li>
+      <li><p>Update gender designation (male/female) or status (active/inactive).</p></li>
+      <li><p>Click <strong>Save</strong>.</p></li>
+    </ol>
+
+    <h4>Floor year allocations</h4>
+    <p>You can restrict specific floors to specific academic years (e.g., Floor 1 → Year 1 only).</p>
+    <ol class="steps">
+      <li><p>Open a hostel and scroll to <strong>Floor Allocations</strong>.</p></li>
+      <li><p>Select the year for each floor.</p></li>
+      <li><p>Click <strong>Save Allocations</strong>.</p></li>
+    </ol>
+    <div class="note"><strong>Special rule</strong> Year 4 allocated floors also allow Year 5 and Year 6 students to book.</div>
+  </div>
+
+  <!-- 6.4 Counselor Assignment -->
+  <div class="section-header" id="admin-counselors" style="margin-top:16px; border-radius:0;">
+    <div class="num" style="background:var(--accent2)">6.4</div>
+    <h2>Counselor Assignment <span class="role role-admin">Admin</span></h2>
+  </div>
+  <div class="section-body">
+    <p>Counselors must be existing users (students) who are promoted to the counselor role and assigned to a hostel.</p>
+
+    <h4>Assigning a counselor</h4>
+    <ol class="steps">
+      <li><p>Navigate to <strong>Admin Dashboard</strong> → Counselor section.</p></li>
+      <li><p>Search for the student by name or student number.</p></li>
+      <li><p>Select an <strong>available hostel</strong> from the dropdown.</p></li>
+      <li><p>Click <strong>Assign</strong>.</p></li>
+    </ol>
+
+    <h4>Removing a counselor</h4>
+    <p>Find the counselor in the list and click <strong>Remove</strong>. The user reverts to the regular student role.</p>
+  </div>
+
+  <!-- ══ SECTION 7 — FAQ ══ -->
+  <div class="page-break"></div>
+  <div class="section-header" id="faq">
+    <div class="num">7</div>
+    <h2>Frequently Asked Questions</h2>
+  </div>
+  <div class="section-body">
+
+    <div class="faq-item">
+      <div class="faq-q">I did not receive the OTP email. What should I do?</div>
+      <div class="faq-a">Check your spam/junk folder first. If it's not there, wait 2 minutes and try requesting a new OTP. Remember you can only request 3 OTPs per 10-minute window. If the problem persists, contact IT support.</div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">I get "Account not activated" when I try to log in.</div>
+      <div class="faq-a">You need to complete the one-time activation process. Click "Activate Account" on the login page and follow the steps in Section 1.</div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">I clicked a room but got "Access Denied" for year restriction.</div>
+      <div class="faq-a">That floor or room is reserved for a different academic year. Check other floors or hostels for rooms allocated to your year. Contact admin if you believe this is an error.</div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">I clicked a room but got "Access Denied" for gender restriction.</div>
+      <div class="faq-a">The hostel is designated for the opposite gender. Please choose a hostel that matches your gender.</div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">The "Unbook" option is not available on my room.</div>
+      <div class="faq-a">Unbooking is only permitted during an active booking period. The admin controls when this window is open. Contact the hostel office for assistance outside this period.</div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">I booked a room but did not receive a confirmation email.</div>
+      <div class="faq-a">Check your spam folder. The email is sent to your college email (<code>XXXXXXXX.cst@rub.edu.bt</code>). If you still don't see it, your booking is still valid — you can check your booking on the floor plan (your room appears highlighted).</div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">I forgot my password.</div>
+      <div class="faq-a">Password reset is handled by the hostel admin. Contact the hostel office with your student ID to get a password reset.</div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">Can I book more than one room?</div>
+      <div class="faq-a">No. Each student is allowed a maximum of one active room booking at a time.</div>
+    </div>
+
+    <div class="faq-item">
+      <div class="faq-q">The room appears available but I cannot click it.</div>
+      <div class="faq-a">The booking period may be closed, or the room may have a year/gender restriction. Check the room colour legend and ensure you are logged in.</div>
+    </div>
+
+  </div>
+
+  <!-- ══ SECTION 8 — CONTACT ══ -->
+  <div class="section-header" id="contact">
+    <div class="num">8</div>
+    <h2>Support &amp; Contact</h2>
+  </div>
+  <div class="section-body">
+    <table>
+      <thead><tr><th>Support Type</th><th>Contact</th></tr></thead>
+      <tbody>
+        <tr><td>Account activation / login issues</td><td>CST IT Support Office</td></tr>
+        <tr><td>Room booking queries</td><td>CST Hostel Management Office</td></tr>
+        <tr><td>Technical errors / bugs</td><td>Report through the <strong>Help</strong> page in the system</td></tr>
+        <tr><td>Counselor assignment</td><td>Admin Dashboard → Counselor section</td></tr>
+      </tbody>
+    </table>
+    <div class="note"><strong>In-app Help</strong> Click the <strong>Help</strong> link in the navigation bar for quick guidance while using the system.</div>
+  </div>
+
+  <footer>
+    <p><strong>CST Room Booking System</strong> &nbsp;·&nbsp; User Manual v1.0</p>
+    <p style="margin-top:6px;">College of Science and Technology, Royal University of Bhutan &nbsp;·&nbsp; 2026</p>
+    <p style="margin-top:6px; font-size:.75rem;">This document is intended for internal use only.</p>
+  </footer>
+
+</div><!-- /wrapper -->
+</body>
+</html>

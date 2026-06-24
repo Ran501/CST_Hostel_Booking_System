@@ -52,7 +52,7 @@ function LoginModal({ open = true, onClose, onSuccess }) {
         return;
       }
 
-      const body = { studentNumber: studentNum, password: password.trim() };
+      const body = { studentNumber: studentNum, password };
 
       const res = await fetch("/api/login", {
         method: "POST",
