@@ -42,7 +42,7 @@ export default function HelpPage() {
         "purnabdrmongar.cst@rub.edu.bt",
         "chimidem.cst@rub.edu.bt",
       ],
-      icon: "🏢"
+      icon: ""
     },
     { 
       title: "IT Support", 
@@ -56,7 +56,7 @@ export default function HelpPage() {
         "02230125.cst@rub.edu.bt",
         "02230129.cst@rub.edu.bt"
       ],
-      icon: "💻"
+      icon: ""
     },
     { 
       title: "Emergency Contact", 
@@ -66,7 +66,7 @@ export default function HelpPage() {
       emails: [
         "kelzangdorji.cst@rub.edu.bt"
       ],
-      icon: "🚨"
+      icon: ""
     }
   ];
 

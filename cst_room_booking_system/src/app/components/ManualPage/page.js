@@ -91,7 +91,7 @@ export default function ManualPage() {
                   </div>
                   <div>
                     <p className="font-medium text-slate-900">Need Help?</p>
-                    <p className="text-slate-500">Contact  +975 17844269</p>
+                    <p className="text-slate-500">Contact  +975 17584420</p>
                   </div>
                 </div>
               </div>
