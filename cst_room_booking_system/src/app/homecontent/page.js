@@ -17,11 +17,16 @@ export default function HomeContentPage() {
   const router = useRouter();
 
   useEffect(() => {
-    // Clear any corrupted session before loading
     try {
-      const session = localStorage.getItem("session");
-      if (session) {
-        JSON.parse(session); // Validate JSON
+      const raw = localStorage.getItem("session");
+      if (!raw) {
+        router.push("/login");
+        return;
+      }
+      const parsed = JSON.parse(raw);
+      // Admin/counselor should never land here
+      if (parsed.role === "admin" || parsed.role === "counselor") {
+        router.push("/admin_dashboard");
       }
     } catch (error) {
       console.error("Clearing corrupted session:", error);

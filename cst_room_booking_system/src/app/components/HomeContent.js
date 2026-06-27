@@ -30,6 +30,13 @@ export default function HomeContent() {
       const session = localStorage.getItem("session");
       if (session) {
         const parsed = JSON.parse(session);
+
+        // Admin/counselor should never see the student page
+        if (parsed.role === "admin" || parsed.role === "counselor") {
+          router.push("/admin_dashboard");
+          return;
+        }
+
         setUserName(parsed.name || parsed.phoneNumber || "Demo User");
         setUserEmail(parsed.email || "");
         setUserGender(parsed.gender || "");

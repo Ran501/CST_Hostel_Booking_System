@@ -27,6 +27,11 @@ export default function HomePage() {
         const parsed = JSON.parse(session);
         // Ensure it's an object with expected properties
         if (typeof parsed === 'object' && parsed !== null) {
+          // Admin/counselor should never see the student page
+          if (parsed.role === "admin" || parsed.role === "counselor") {
+            router.push("/admin_dashboard");
+            return;
+          }
           setIsAuthenticated(true);
         } else {
           throw new Error("Invalid session format");

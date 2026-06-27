@@ -299,12 +299,29 @@ export default function RoomManagement() {
           console.error("Failed to load hostels:", err);
         }
       } else if (isCounselor) {
-        const assignedHostel = user?.counselor?.hostel;
-        if (assignedHostel) {
-          setHostel(assignedHostel);
-          setHostels([assignedHostel]);
-        } else {
+        const assignedHostelId = user?.counselor?.hostelId;
+        if (!assignedHostelId) {
           setError("You are not assigned to any hostel.");
+          return;
+        }
+        try {
+          // Fetch fresh hostel data from API (includes floorAllocations)
+          const res = await fetch("/api/admin/hostel");
+          const json = await res.json();
+          const list = Array.isArray(json) ? json
+            : Array.isArray(json.data) ? json.data
+            : Array.isArray(json.hostels) ? json.hostels
+            : [];
+          const myHostel = list.find((h) => h.id === assignedHostelId);
+          if (myHostel) {
+            setHostel(myHostel);
+            setHostels([myHostel]);
+          } else {
+            setError("Your assigned hostel was not found.");
+          }
+        } catch (err) {
+          console.error("Failed to load counselor hostel:", err);
+          setError("Failed to load your hostel.");
         }
       }
     };
