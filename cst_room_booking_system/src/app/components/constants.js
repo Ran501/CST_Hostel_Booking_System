@@ -108,7 +108,7 @@ export const HOSTELS = [
     lng: 89.396857,
     lat: 26.849049,
     college: "College of Science and Technology",
-    images: ["/new-hostel/1.jpg", "/new-hostel/2.jpg"],
+    images: ["/lhawang/1.jpg"],
     totalRooms: 100,
     occupiedRooms: 0,
     availableRooms: 100,
@@ -125,14 +125,13 @@ export const getHostelCoordinates = (hostel, isMobile = null) => {
   if (typeof window === 'undefined') {
     return { lng: hostel.lng, lat: hostel.lat };
   }
-  
-  const checkIsMobile = isMobile !== null ? isMobile : window.innerWidth < 768;
-  
-  // If hostel has specific coordinates for mobile/desktop
+
+  // If hostel has specific coordinates, always use the desktop position
+  // (single marker, kept at the desktop longitude/latitude on mobile too)
   if (hostel.coordinates) {
-    return checkIsMobile ? hostel.coordinates.mobile : hostel.coordinates.desktop;
+    return hostel.coordinates.desktop;
   }
-  
+
   // Otherwise return the default coordinates
   return { lng: hostel.lng, lat: hostel.lat };
 };

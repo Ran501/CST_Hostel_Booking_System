@@ -115,14 +115,13 @@ useEffect(() => {
   if (!mapRef.current) return;
 
   const handleResize = () => {
-    const isMobile = window.innerWidth < 768;
-    
-    // Update all markers with new responsive coordinates
+    // Keep markers with custom coordinates fixed at their desktop position
+    // (single marker, kept at the desktop longitude/latitude on mobile too)
     Object.values(markersRef.current).forEach((marker, index) => {
       const hostel = HOSTELS[index];
       if (hostel && hostel.coordinates) {
-        const newCoords = isMobile ? hostel.coordinates.mobile : hostel.coordinates.desktop;
-        marker.setLngLat([newCoords.lng, newCoords.lat]);
+        const { lng, lat } = hostel.coordinates.desktop;
+        marker.setLngLat([lng, lat]);
       }
     });
   };
