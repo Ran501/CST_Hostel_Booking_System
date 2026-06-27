@@ -15,6 +15,16 @@ export default function ConfirmationDialog({
   const cancelRef  = useRef(null);
   const [activeIndex, setActiveIndex] = useState(0);
 
+  // Ignore activation for a brief moment after the dialog opens. Otherwise the
+  // very keystroke that opened it — e.g. the Enter that commits a cell edit —
+  // bleeds through to the auto-focused Confirm button and fires it instantly,
+  // robbing the user of the choice.
+  const [armed, setArmed] = useState(false);
+  useEffect(() => {
+    const t = setTimeout(() => setArmed(true), 200);
+    return () => clearTimeout(t);
+  }, []);
+
   // Left/Right arrows move between the buttons; Esc cancels.
   useEffect(() => {
     const onKeyDown = (e) => {
@@ -83,7 +93,7 @@ export default function ConfirmationDialog({
           <div className="mt-6 flex flex-col sm:flex-row items-center justify-center gap-3">
             <button
               ref={confirmRef}
-              onClick={onConfirm}
+              onClick={() => { if (armed) onConfirm?.(); }}
               disabled={isLoading}
               className={`cursor-pointer inline-flex w-full sm:w-auto h-10 items-center justify-center rounded-md px-5 text-sm font-medium text-white shadow-sm focus:outline-none focus:ring-2 focus:ring-offset-2 transition-all duration-300 ${
                 isLoading
