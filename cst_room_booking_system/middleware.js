@@ -40,6 +40,16 @@ export async function middleware(request) {
     return NextResponse.redirect(new URL(dest, request.url));
   }
 
+  // Admin/counselor should never land on student pages
+  const STUDENT_PATHS = ["/", "/homecontent", "/room", "/rooms"];
+  if (
+    session &&
+    (session.role === "admin" || session.role === "counselor") &&
+    STUDENT_PATHS.some((p) => pathname === p || pathname.startsWith(p + "/"))
+  ) {
+    return NextResponse.redirect(new URL("/admin_dashboard", request.url));
+  }
+
   // Public paths — allow through
   if (isPublic(pathname)) return NextResponse.next();
 
