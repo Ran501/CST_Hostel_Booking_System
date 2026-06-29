@@ -73,7 +73,7 @@ export const HOSTELS = [
     lng: 89.394499, 
     lat: 26.849351,
     college: "College of Science and Technology",
-    images: ["/ha/24.jpg"],
+    images: ["/ha/1.jpeg", "/ha/2.jpeg"],
     totalRooms: 70,
     occupiedRooms: 48,
     availableRooms: 7
@@ -84,7 +84,7 @@ export const HOSTELS = [
     lng: 89.394320, 
     lat: 26.849210,
     college: "College of Science and Technology",
-    images: ["/hb/21.jpg", "/hb/20.jpg", "/hb/22.jpg", "/hb/11.jpg"],
+    images: ["/hb/1.jpeg", "/hb/2.jpeg"],
     totalRooms: 70,
     occupiedRooms: 48,
     availableRooms: 7
@@ -96,7 +96,7 @@ export const HOSTELS = [
     lng: 89.395232, 
     lat: 26.849035,
     college: "College of Science and Technology",
-    images: ["/hb/21.jpg", "/hb/20.jpg", "/hb/22.jpg", "/hb/11.jpg"],
+    images: ["/he/1.jpeg", "/he/2.jpeg", "/he/3.jpeg"],
     totalRooms: 70,
     occupiedRooms: 48,
     availableRooms: 7
