@@ -23,7 +23,7 @@ export default function HostelCard({
   const hostelImages = {
   "RKA": "/rkahostel.jpeg",
   "RKB": "/rka/2.jpeg",
-  "Lhawang": "/lhawang/1.jpeg",
+  "Lhawang": "/lhawang/1.jpg",
   "NK": "/nk/1.jpg",
   "HA": "/ha/1.jpeg",
   "HB": "/hb/1.jpeg",
