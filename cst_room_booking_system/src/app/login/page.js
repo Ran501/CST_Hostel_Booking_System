@@ -194,7 +194,7 @@ function LoginModal({ open = true, onClose, onSuccess }) {
                 <div className="relative">
                   {/* Header */}
                   <div className="px-8 py-6 text-center border-b border-white/10 bg-gradient-to-b from-white/5 to-transparent">
-                    <h1 className="text-2xl font-bold text-white">CST Student LOGIN PORTAL</h1>
+                    <h1 className="text-2xl font-bold text-white">CST LOGIN PORTAL</h1>
                     <div className="w-16 h-0.5 bg-gradient-to-r from-transparent via-white to-transparent mx-auto mt-3"></div>
                     <h2 className="text-white mt-5 font-bold text-lg">LOGIN</h2>
                     <p className="text-white/70 mt-1 text-sm">
